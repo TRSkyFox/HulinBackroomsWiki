@@ -1133,6 +1133,23 @@ function Find-GameWindow {
   return [pscustomobject]@{ Hwnd = [IntPtr]$hit.MainWindowHandle; Pid = $hit.Id; Title = $hit.MainWindowTitle }
 }
 
+function Find-RenderWidget {
+  # WebView2 的 Chrome_RenderWidgetHostHWND 不是 Top 的直接子視窗：
+  # Top → WindowsForms10 → Chrome_WidgetWin_0 → Chrome_WidgetWin_1 → RenderWidget。
+  # 只掃直接子／兄弟會找不到，Get-PageRect 就退回整個視窗（標題列也被 OCR）。
+  param([IntPtr]$Parent)
+  $child = [BrWin]::GetWindow($Parent, 5)
+  while ($child -ne [IntPtr]::Zero) {
+    if ([BrWin]::ClassName($child) -eq 'Chrome_RenderWidgetHostHWND' -and [BrWin]::IsWindowVisible($child)) {
+      return $child
+    }
+    $found = Find-RenderWidget -Parent $child
+    if ($found -ne [IntPtr]::Zero) { return $found }
+    $child = [BrWin]::GetWindow($child, 2)
+  }
+  return [IntPtr]::Zero
+}
+
 function Get-PageRect {
   # 回傳相對於視窗左上角的「遊戲畫面」範圍；找不到 render widget 就用整個視窗
   # 注意：PowerShell 變數不分大小寫 —— 視窗寬高一定要叫 $winW/$winH
@@ -1140,18 +1157,15 @@ function Get-PageRect {
   $wr = New-Object 'BrWin+RECT'
   [void][BrWin]::GetWindowRect($Top, [ref]$wr)
   $winW = $wr.Right - $wr.Left; $winH = $wr.Bottom - $wr.Top
-  $child = [BrWin]::GetWindow($Top, 5)
-  while ($child -ne [IntPtr]::Zero) {
-    if ([BrWin]::ClassName($child) -eq 'Chrome_RenderWidgetHostHWND' -and [BrWin]::IsWindowVisible($child)) {
-      $rr = New-Object 'BrWin+RECT'
-      [void][BrWin]::GetWindowRect($child, [ref]$rr)
-      $px = $rr.Left - $wr.Left; $py = $rr.Top - $wr.Top
-      $pw = $rr.Right - $rr.Left; $ph = $rr.Bottom - $rr.Top
-      if ($px -ge 0 -and $py -ge 0 -and $pw -gt 100 -and $ph -gt 100 -and ($px + $pw) -le $winW -and ($py + $ph) -le $winH) {
-        return [pscustomobject]@{ X = $px; Y = $py; W = $pw; H = $ph; WndW = $winW; WndH = $winH; Page = $true }
-      }
+  $child = Find-RenderWidget -Parent $Top
+  if ($child -ne [IntPtr]::Zero) {
+    $rr = New-Object 'BrWin+RECT'
+    [void][BrWin]::GetWindowRect($child, [ref]$rr)
+    $px = $rr.Left - $wr.Left; $py = $rr.Top - $wr.Top
+    $pw = $rr.Right - $rr.Left; $ph = $rr.Bottom - $rr.Top
+    if ($px -ge 0 -and $py -ge 0 -and $pw -gt 100 -and $ph -gt 100 -and ($px + $pw) -le $winW -and ($py + $ph) -le $winH) {
+      return [pscustomobject]@{ X = $px; Y = $py; W = $pw; H = $ph; WndW = $winW; WndH = $winH; Page = $true }
     }
-    $child = [BrWin]::GetWindow($child, 2)
   }
   return [pscustomobject]@{ X = 0; Y = 0; W = $winW; H = $winH; WndW = $winW; WndH = $winH; Page = $false }
 }

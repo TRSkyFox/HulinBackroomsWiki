@@ -168,7 +168,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - `steps` 回填未完成：wiki 仍有 61 條事件是單段格式。
   - `event-import` 的 `isFloorIntroLine` 已接進 results 清洗；仍需用真實場次驗證。
   - `212-發光深淵` 缺完整介紹；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
-  - 客戶端實際 render 是 **1606×929**，不在 `MeasuredRegions` 的 1696×1300／2067×1205 實測表裡；日誌曾量到 main 右界 975 vs 實際 871（差 104px），所以主區會多掃到右側 UI。覆蓋層會同時畫 used（實線）與 measured（橘虛線）。
+  - `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。每層 main 右界仍可能不同（例：Level 0.1 量到 871 vs 目前 972），覆蓋層會同時畫 used（實線）與 measured（橘虛線）。
   - 管線路徑已集中到 `记录器/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
 - 已做的清理：
   - 移除 `记录器/player/`（136.6 MB）。
