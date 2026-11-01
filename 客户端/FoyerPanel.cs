@@ -698,13 +698,14 @@ namespace FoyerPanel
             {
                 this.game = game;
                 Text = "OCR 讀取";
-                FormBorderStyle = FormBorderStyle.FixedToolWindow;
+                FormBorderStyle = FormBorderStyle.SizableToolWindow;
                 ShowInTaskbar = false;
                 TopMost = true;
                 StartPosition = FormStartPosition.Manual;
                 BackColor = Color.FromArgb(16, 18, 22);
-                Width = 400;
+                Width = 640;
                 Height = 620;
+                MinimumSize = new Size(320, 200);
                 box = new RichTextBox();
                 box.Dock = DockStyle.Fill;
                 box.ReadOnly = true;
@@ -713,7 +714,7 @@ namespace FoyerPanel
                 box.ForeColor = Color.Gainsboro;
                 box.Font = new Font("Consolas", 9f);
                 box.WordWrap = false;
-                box.ScrollBars = RichTextBoxScrollBars.Vertical;
+                box.ScrollBars = RichTextBoxScrollBars.Both;
                 Controls.Add(box);
                 timer = new System.Windows.Forms.Timer();
                 timer.Interval = 300;

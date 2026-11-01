@@ -323,7 +323,10 @@ $script:OcrFixRules = @(
   @('r', '(?i)\bleve[Iil1](?![0-9])', 'Level', 'Level 被讀成 LeveI／Leve1'),
   # --- 全形句點當小數點 ---
   # 為什麼安全：只在「數字 ． 數字」時換（小數點），句尾的 。 不受影響。
-  @('r', '(?<=\d)\s*[．·]\s*(?=\d)', '.', '小數點被讀成全形 ．／·')
+  @('r', '(?<=\d)\s*[．·]\s*(?=\d)', '.', '小數點被讀成全形 ．／·'),
+  # --- OCR 把省略號讀成一串引號／逗號：冷靜． “ “ 、文章說 → 冷靜……文章說 ---
+  # 為什麼安全：只處理「CJK 或引號後面連續 2 個以上純符號」且後面接 CJK；正常對話引號不會連成這樣。
+  @('r', '(?<=[\u4e00-\u9fff：:」』】「『])(?:\s*[．.。]\s*)?(?:\s*["“”‘’]\s*[，,、]?\s*|[\s，,、．.。]+){2,}(?=[\u4e00-\u9fff])', '……', 'OCR 省略號／引號雜訊收斂為 ……')
 )
 
 # 套用上面那張表（-NoOcrFix 時整層跳過）。回傳修好的字串。
@@ -408,6 +411,33 @@ function Test-NeedsRapid([string]$Text) {
     }
   }
   return $false
+}
+
+function Get-OcrSuspectCount([string]$Text) {
+  if (-not $Text) { return 0 }
+  $n = 0
+  if ($Text -match '[冂綫迄寰蟋堡刂丶丿丨乀灬]') { $n += 2 }
+  if ($Text -match '[\u3400-\u9fff][A-Za-z][\u3400-\u9fff]') { $n += 2 }
+  if ($Text -match '[-—–]\s*$') { $n += 2 }
+  Initialize-KnownChars
+  if ($script:KnownChars -and $script:KnownChars.Count -gt 500) {
+    foreach ($ch in $Text.ToCharArray()) {
+      $cp = [int]$ch
+      if ($cp -lt 0x3400 -or $cp -gt 0x9FFF) { continue }
+      if (-not $script:KnownChars.Contains($ch)) { $n++ }
+    }
+  }
+  return $n
+}
+
+# 被 UI 蓋住／只讀到半截的長行：寬度明顯小於主面板，而且含 2 個以上可疑字。
+# 這種行進 wiki 只會污染；直接不記。
+function Test-ClippedLine([string]$Text, [int]$W, [string]$Region, [int]$ImgW) {
+  if ($Region -ne 'main' -and $Region -ne 'full') { return $false }
+  if ($ImgW -le 0 -or $W -le 0) { return $false }
+  if ($RxCjkChar.Matches($Text).Count -lt 8) { return $false }
+  if ($W -ge [int]($ImgW * 0.62)) { return $false }
+  return ((Get-OcrSuspectCount $Text) -ge 2)
 }
 
 # ============================ 事件分類 ============================
@@ -4974,6 +5004,14 @@ try {
 
       # ---- 分類 → 事件 ----
       $imgW = $origW
+      # 被 UI 擋住／只讀到半截的長行，不進 overlay、structured、wiki。
+      $cleanFrame = New-Object System.Collections.Generic.List[object]
+      foreach ($l in $rawFrame) {
+        if (-not (Test-ClippedLine -Text ([string]$l.Text) -W ([int]$l.W) -Region ([string]$l.Region) -ImgW $imgW)) {
+          $cleanFrame.Add($l)
+        }
+      }
+      $rawFrame = $cleanFrame
       $frameEvents = New-Object System.Collections.Generic.List[object]
       $optMode = $false
       $added = 0
