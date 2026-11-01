@@ -45,6 +45,7 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
    - `客户端/build.ps1` 改用 `客户端/dist/FoyerRecorder` 的 WebView2 DLL。
    - 舊 Wiki 管線（`_data`、`_drafts`、`_backup`、`_gen`、`_i18n`、`build-site.ps1`、`lib-*.ps1`、`ui-smoke.mjs`、舊 README／ARCHITECTURE）與舊 `交接.md` 壓進 `备份/legacy-wiki-20261101.zip`。
    - `wiki/_design` 與 2026-10-29 failed-run 備份壓進 `备份/20261029-old-runs-and-design.zip`。
+   - `wiki/頁面` 舊 Markdown 頁壓進 `备份/legacy-wiki-pages-20261101.zip`。
 6. **移除對舊 `_data`／`_i18n` 的依賴**：
    - `merge-final` 的新樓層名稱改讀 `floors/_names.json`。
    - `event-import` 的繁簡比對改讀 `记录器/structured/i18n-table.txt`。

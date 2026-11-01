@@ -1,17 +1,17 @@
 # 結構化 logs → Wiki staging
 
-這個資料夾是**管線唯一來源**。`player-logger/app/structured` 與
-`player-logger/dist/FoyerRecorder/structured` 都是同步副本，不要在那兩份上改。
+這個資料夾是**管線唯一來源**。`客户端/app/structured` 與
+`客户端/dist/FoyerRecorder/structured` 都是同步副本，不要在那兩份上改。
 
 ```powershell
-node logger/structured/sync.mjs           # 同步到 app／可攜版
-node logger/structured/sync.mjs --check   # 有漂移就 exit 1
+node 记录器/structured/sync.mjs           # 同步到 app／可攜版
+node 记录器/structured/sync.mjs --check   # 有漂移就 exit 1
 ```
 
 ## 流程
 
 ```text
-logger/backroom-logger.ps1
+记录器/backroom-logger.ps1
   → session/structured.jsonl     每幀的區塊、座標、文字
   → font-correct.mjs             形近字校正（只改 SAFE 清單內的字）
   → clean-levels.mjs             刪掉換層瞬間的假樓層檔（只有恢復畫面／空白）
@@ -35,23 +35,23 @@ RapidOCR 會對 `linecrops` 重認，失敗時退回 Windows OCR。
 
 ```powershell
 # 收工自動匯入（postprocess 預設就是這個）
-node logger/structured/run.mjs <session> --auto
+node 记录器/structured/run.mjs <session> --auto
 
 # 只產生 staging／審查報告
-node logger/structured/run.mjs <session>
+node 记录器/structured/run.mjs <session>
 
 # 明確要把事件寫進正式樓層（人工審查後）
-node logger/structured/run.mjs <session> --apply-events
+node 记录器/structured/run.mjs <session> --apply-events
 
 # 明確要合併樓層／實體並重建
-node logger/structured/run.mjs <session> --merge
+node 记录器/structured/run.mjs <session> --merge
 ```
 
 分步跑：
 
 ```powershell
-node logger/structured/event-import.mjs <session> --apply
-node logger/structured/merge-final.mjs <stagingDir> --confirm
+node 记录器/structured/event-import.mjs <session> --apply
+node 记录器/structured/merge-final.mjs <stagingDir> --confirm
 node wiki/content/build.mjs
 ```
 
@@ -86,7 +86,7 @@ staging/merge-final-report.json  哪些樓層／實體會被改、哪些被跳�
 
 ## 簡繁轉換
 
-`i18n.mjs` 負責。**不要**把 `wiki/_i18n` 的繁→簡表按位置反推：
+`i18n.mjs` 負責。**不要**把舊 `wiki/_i18n`（已封存）的繁→簡表按位置反推：
 
 - 那張表本身混有反序 pair（例：`发 髮`）。
 - 反推會把「四面」變「四麵」、「皇后」變「皇後」。
@@ -105,7 +105,7 @@ staging/merge-final-report.json  哪些樓層／實體會被改、哪些被跳�
 node tests/i18n.test.mjs
 node tests/font.test.mjs
 node tests/data.test.mjs
-node tests/verify-final.mjs     # 全部 121 項
+node tests/verify-final.mjs     # 以輸出 summary 為準
 ```
 
 ## Palette 取樣

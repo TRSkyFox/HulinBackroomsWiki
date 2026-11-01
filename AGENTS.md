@@ -56,9 +56,10 @@ D:\BACKROOMS\
 
 已歸檔／移除：
 
-- `wiki/_data`、`wiki/_drafts`、`wiki/_backup`、`wiki/_gen`、`wiki/_i18n`、`wiki/页面`、
+- `wiki/_data`、`wiki/_drafts`、`wiki/_backup`、`wiki/_gen`、`wiki/_i18n`、
   `wiki/build-site.ps1`、`wiki/lib-*.ps1`、`wiki/sync-floor-colors.ps1`、`wiki/ui-smoke.mjs`、
   `wiki/README.md`、`wiki/ARCHITECTURE.md`、`文档/交接.md` → `备份/legacy-wiki-20261101.zip`。
+- `wiki/頁面` → `备份/legacy-wiki-pages-20261101.zip`。
 - `wiki/_design`、2026-10-29 的 failed-run 備份 → `备份/20261029-old-runs-and-design.zip`。
 - `记录器/player/`（舊 FoyerPlayer 副本與 135.8 MB 測試 profile）已移除；
   `客户端/build.ps1` 改用 `客户端/dist/FoyerRecorder` 的 WebView2 DLL。

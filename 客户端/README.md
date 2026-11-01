@@ -62,16 +62,16 @@ clean\run-02\13-玻璃之狂.md
 關閉遊戲後，若該場有 `structured.jsonl`，`postprocess.mjs` 會再執行：
 
 ```text
-logger\structured\run.mjs --auto
+记录器\structured\run.mjs --auto
   → parse／event-parse／input-bind
-  → event-import（事件只寫 staging）
+  → event-import（乾淨事件可自動寫正式 events.json；其餘留 staging）
   → import-wiki.mjs → D:\BACKROOMS\wiki\_incoming\<session>\
   → validate.mjs → merge-final.mjs（只合併高信心樓層／配色）
   → build.mjs（重建站點）
 ```
 
 **自動匯入規則：** 高信心樓層／配色自動寫正式 Wiki；低信心或 validation error 只留 staging；
-**事件永遠只留 staging**，不自動寫 `events.json`。收工時看這四個檔：
+事件會先用固定區域邊界清洗，通過門閘的乾淨事件自動寫 `events.json`，其餘留 staging。收工時看這四個檔：
 
 ```text
 wiki\_incoming\<session>\validation.json
@@ -87,8 +87,8 @@ node D:\BACKROOMS\记录器\structured\event-import.mjs <session> --apply
 node D:\BACKROOMS\wiki\content\build.mjs
 ```
 
-> `logger\structured` 是管線唯一來源；`app\structured` 是同步副本。
-> 改程式請改 `logger\structured`，再跑 `node logger\structured\sync.mjs`。
+> `记录器\structured` 是管線唯一來源；`app\structured` 是同步副本。
+> 改程式請改 `记录器\structured`，再跑 `node 记录器\structured\sync.mjs`。
 
 ## 給別人的可攜版
 
