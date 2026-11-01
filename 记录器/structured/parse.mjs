@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { FLOORS } from './paths.mjs';
 import { report as reportProgress } from './progress.mjs';
 import { floorName, text } from './text.mjs';
 /* 樓層名的比對一律先繁化再比：配色表是 OCR 原文（简体）、正式樓層是繁體，
@@ -85,7 +86,7 @@ function jsonl(file) {
   }).filter(Boolean);
 }
 function floors() {
-  const root = 'D:/BACKROOMS/wiki/content/floors';
+  const root = FLOORS;
   const out = [];
   if (!fs.existsSync(root)) return out;
   for (const e of fs.readdirSync(root, { withFileTypes: true })) {

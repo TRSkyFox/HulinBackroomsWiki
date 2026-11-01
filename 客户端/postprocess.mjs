@@ -102,10 +102,21 @@ try {
      可攜版是「啟動時把 app/ 複製到 %LOCALAPPDATA%」，如果客戶端早就開著，
      它手上那份複製就是舊的 —— 2026-10-29 20:13 就是這樣：記錄器跑的是改動前的
      管線，把已經清乾淨的 content 又寫回帶玩家名、帶 UI 的版本。
-     repo 在的話一律用 repo，複製過不過期都不影響。 */
-  const repoRun = 'D:/BACKROOMS/记录器/structured/run.mjs';
+     這裡從目前位置往上找 `记录器/structured/run.mjs`；找到就用 repo，否則用本地副本。 */
+  function findRepoRun(start) {
+    let d = start;
+    for (let i = 0; i < 8; i++) {
+      const p = path.join(d, '记录器', 'structured', 'run.mjs');
+      if (fs.existsSync(p)) return p;
+      const parent = path.dirname(d);
+      if (parent === d) break;
+      d = parent;
+    }
+    return null;
+  }
+  const repoRun = findRepoRun(here);
   const localRun = path.join(here, 'structured', 'run.mjs');
-  const structuredRun = fs.existsSync(repoRun) ? repoRun : localRun;
+  const structuredRun = repoRun || localRun;
   const sf = path.join(dir, 'structured.jsonl');
   if (fs.existsSync(structuredRun) && fs.existsSync(sf)) {
     writeProgress('structured', 35, '結構化管線');

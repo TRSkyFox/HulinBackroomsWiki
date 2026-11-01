@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONTENT } from './paths.mjs';
 import { text, paragraphs, floorName, safePath, looksGarbled, cleanResults } from './text.mjs';
 
 /*
@@ -142,7 +143,7 @@ function paletteFor(r, sessionDir, hName) {
 function bigrams(s){ const n=String(s||'').replace(/\s+/g,''); const m=new Map(); for(let i=0;i<n.length-1;i++){const g=n.slice(i,i+2);m.set(g,(m.get(g)||0)+1);} return m; }
 function simName(a,b){ const A=bigrams(a),B=bigrams(b); if(!A.size||!B.size) return 0; let x=0; for(const k of A.keys()) if(B.has(k)) x++; return x/Math.max(A.size,B.size); }
 function loadEntityIndex(){
-  const root='D:/BACKROOMS/wiki/content/entities'; const list=[];
+  const root=path.join(CONTENT,'entities'); const list=[];
   if(!fs.existsSync(root)) return list;
   for(const d of fs.readdirSync(root,{withFileTypes:true})){
     if(!d.isDirectory()) continue;

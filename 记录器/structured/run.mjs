@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { WIKI, INCOMING } from './paths.mjs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -10,9 +11,9 @@ const session = path.resolve(args[0]);
 // 先清掉換層瞬間產生的空白樓層檔（只有標題、沒有事件）
 spawnSync(process.execPath, [path.join(here, 'clean-levels.mjs'), session], { stdio: 'inherit' });
 const si = args.indexOf('--staging');
-const wikiBuild = 'D:/BACKROOMS/wiki/content/build.mjs';
+const wikiBuild = path.join(WIKI, 'content', 'build.mjs');
 const portable = args.includes('--portable') || fs.existsSync(path.join(here, '..', 'portable.flag')) || !fs.existsSync(wikiBuild);
-const staging = si >= 0 ? path.resolve(args[si + 1]) : (portable ? path.join(session, 'staging') : path.join('D:/BACKROOMS/wiki/_incoming', path.basename(session)));
+const staging = si >= 0 ? path.resolve(args[si + 1]) : (portable ? path.join(session, 'staging') : path.join(INCOMING, path.basename(session)));
 
 function writeProgress(stage, percent, detail) {
   try {

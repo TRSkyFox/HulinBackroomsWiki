@@ -59,15 +59,9 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
 
 ### 3.1 內容引用完整性
 
-目前沒有 build-time 檢查以下東西：
+`validate-content.mjs` 已建立並接進 `verify-final`，會檢查角色 `items[]`、實體 `drops[]`、商店 `it[]`、樓層 `info.items[]`、`recipes`／`enhancements` 的材料是否存在。目前缺條目是 warning，不擋建置。
 
-- 角色 `items[]` 是否存在於物品庫。
-- 實體 `drops[]` 是否存在。
-- 商店 `it[]` 的商品是否存在。
-- 樓層 `info.items[]` 是否存在。
-- `recipes`／`enhancements` 的材料是否存在。
-
-這次審計約有 116 處懸空引用（角色、實體、商店、配方／強化加總），有些是 OCR 雜訊（`1 硬幣。`、`「手繪地圖」`），有些是真缺條目（`刮痕之門`、`母親的項鍊`、`特里普斯合金`）。另外有 43 個 JSON 仍帶 `D:\BACKROOMS\...` 絕對路徑。`validate-content.mjs` 已建立並接進 `verify-final`；缺條目目前是 warning，不擋建置。
+這次審計約有 116 處懸空引用（角色、實體、商店、配方／強化加總），有些是 OCR 雜訊（`1 硬幣。`、`「手繪地圖」`），有些是真缺條目（`刮痕之門`、`母親的項鍊`、`特里普斯合金`）。另外有 43 個 JSON 仍帶 `D:\BACKROOMS\...` 絕對路徑。
 
 ### 3.2 多段事件回填
 
@@ -75,18 +69,18 @@ wiki 仍有 61 條事件是單段格式。`steps.mjs` 與 `event-parse` 已經�
 
 ### 3.3 事件結果錯配
 
-`event-import.mjs` 已預置 `isFloorIntroLine`（bigram 重疊 ≥ 0.7 丟棄），但還沒接進流程。接上之前，results 仍可能混進樓層介紹或上一則事件的句子。
+`event-import.mjs` 的 `isFloorIntroLine`（bigram 重疊 ≥ 0.7 丟棄）已接進 results 清洗：和樓層介紹／自身 intro 高度重疊的句子會丟掉。還需要拿真實場次驗證，尤其是多段事件。
 
 ### 3.4 樓層資料債
 
 - `212-發光深淵` 只有碎片，介紹為空，等下次進該層重錄。
 - `14-冷漠病院`、`40-有害的衰敗` 沒有配色；`1-停車區` 只有底色。
-- 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`；建議區分「故意留空」與「漏寫」，用 `_stub` 或 `_status` 標記。
+- 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`；**多數是使用者尚未截圖，先不要代寫**，等他自己補。若要標記，用 `_stub` 或 `_status`，不要猜效果。
 - 少數 `floor.json` 的 `_staging`／`_observations` 還留著 `D:\BACKROOMS\...` 絕對路徑；搬家前要清。
 
 ### 3.5 管線可攜性
 
-`event-import`、`parse`、`validate`、`validate-events`、`apply-wiki`、`run` 等仍有 `D:/BACKROOMS/...` 硬編碼。建議做一個 `记录器/structured/paths.mjs`，從 `import.meta.url` 往上找含 `wiki/content` 的根目錄，統一匯出 `ROOT`／`WIKI`／`CONTENT`／`LOGS`。
+路徑已集中到 `记录器/structured/paths.mjs`：從 `import.meta.url` 往上找含 `wiki/content` 的根目錄，統一匯出 `ROOT`／`WIKI`／`CONTENT`／`FLOORS`／`INCOMING`／`LOGS`。`event-import`、`parse`、`event-parse`、`validate`、`apply-wiki`、`run`、`merge-final` 都已改用；`postprocess` 也改成往上找 repo。新腳本不要再寫死 `D:/BACKROOMS`。
 
 ### 3.6 前端與工程衛生
 

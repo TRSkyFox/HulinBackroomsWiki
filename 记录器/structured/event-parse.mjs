@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { FLOORS } from './paths.mjs';
 import { report } from './progress.mjs';
 import { collapseRepeats } from './text.mjs';
 import { classifyFrame, headerScore } from './ink.mjs';
@@ -26,7 +27,7 @@ const frames = fs.readFileSync(path.join(session, 'structured.jsonl'), 'utf8')
   .split(/\r?\n/).filter(Boolean).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
 
 const FLOOR_LIST = (() => {
-  const root = 'D:/BACKROOMS/wiki/content/floors';
+  const root = FLOORS;
   const out = [];
   try {
     for (const d of fs.readdirSync(root, { withFileTypes: true })) {

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONTENT } from './paths.mjs';
 
 /*
  * 檢查 staging 是否可以合併進正式 Wiki。
@@ -11,7 +12,7 @@ import path from 'node:path';
 const staging = process.argv[2];
 if (!staging) { console.error('usage: node validate.mjs <stagingDir>'); process.exit(2); }
 const root = path.resolve(staging);
-const content = 'D:/BACKROOMS/wiki/content';
+const content = CONTENT;
 
 function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } }
 function walk(dir, name, out = []) {

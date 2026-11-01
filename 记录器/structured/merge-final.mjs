@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { CONTENT } from './paths.mjs';
 import { floorName, safePath } from './text.mjs';
 
 /*
@@ -21,8 +21,7 @@ const confirm = args.includes('--confirm');
    舊的 AUTO-EVENTS 機制會產生第二份事件（而且 verify-final 明確禁止），
    只有真的要除錯時才加 --with-doc-events。 */
 const writeDocEvents = args.includes('--with-doc-events');
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'wiki');
-const content = path.join(root, 'content');
+const content = CONTENT;
 const valPath = path.join(staging, 'validation.json');
 if (!fs.existsSync(valPath)) { console.error('缺 validation.json'); process.exit(2); }
 const val = JSON.parse(fs.readFileSync(valPath, 'utf8'));

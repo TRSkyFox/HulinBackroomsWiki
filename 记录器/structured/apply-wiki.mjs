@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { CONTENT, WIKI } from './paths.mjs';
 
 /*
  * 將已驗證的 staging 合併進正式 content。
@@ -14,7 +15,7 @@ if (!args[0]) { console.error('usage: node apply-wiki.mjs <stagingDir> --confirm
 const staging = path.resolve(args[0]);
 const confirm = args.includes('--confirm');
 const update = args.includes('--update');
-const content = 'D:/BACKROOMS/wiki/content';
+const content = CONTENT;
 const reportPath = path.join(staging, 'validation.json');
 if (!fs.existsSync(reportPath)) { console.error('缺少 validation.json，先跑 validate.mjs'); process.exit(2); }
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
@@ -25,14 +26,14 @@ if (!confirm) {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-const backup = path.join('D:/BACKROOMS/wiki/_backup', 'apply-' + stamp);
+const backup = path.join(WIKI, '_backup', 'apply-' + stamp);
 fs.mkdirSync(backup, { recursive: true });
 const applied = { stamp, staging, floors: [], entities: [], skipped: [] };
 
 function copyIfNew(src, dst, meta) {
   if (fs.existsSync(dst) && !update) { applied.skipped.push({ file: dst, reason: 'already exists' }); return false; }
   if (fs.existsSync(dst)) {
-    const rel = path.relative('D:/BACKROOMS/wiki', dst).replace(/[\\/]/g, '__');
+    const rel = path.relative(WIKI, dst).replace(/[\\/]/g, '__');
     fs.copyFileSync(dst, path.join(backup, rel));
   }
   fs.mkdirSync(path.dirname(dst), { recursive: true });

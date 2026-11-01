@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CONTENT, INCOMING } from './paths.mjs';
 import { report } from './progress.mjs';
 import { cleanEvent, cleanActions } from './event-clean.mjs';
 import { text, cleanResults, floorName, paragraphs } from './text.mjs';
@@ -19,7 +20,7 @@ if (!args[0]) { console.error('usage: node event-import.mjs <sessionDir> [--appl
 const session = path.resolve(args[0]);
 const apply = args.includes('--apply');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const wikiRoot = 'D:/BACKROOMS/wiki/content';
+const wikiRoot = CONTENT;
 const floorsRoot = path.join(wikiRoot, 'floors');
 const jsonl = f => fs.existsSync(f) ? fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean) : [];
 const norm = s => String(s || '').replace(/\s+/g, '').replace(/[“”「」『』]/g, '').replace(/[，。！？、；：]/g, '').trim();
@@ -44,6 +45,7 @@ const badName = s => !s || s.length < 2 || /^(?:力量|敏捷|體質|体质|感�
 
 const floorNames = new Map();
 const floorDirs = new Map();
+const floorIntros = new Map();
 if (fs.existsSync(floorsRoot)) {
   for (const d of fs.readdirSync(floorsRoot, { withFileTypes: true })) {
     if (!d.isDirectory()) continue;
@@ -54,12 +56,13 @@ if (fs.existsSync(floorsRoot)) {
     /* 正式庫的名字也可能帶括號；對外一律用清乾淨的版本。 */
     floorNames.set(fid, floorName(f.name || ''));
     floorDirs.set(fid, path.join(floorsRoot, d.name));
+    floorIntros.set(fid, String(f.doc || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ''));
   }
 }
 
 const floorConf = new Map();
 try {
-  const sd = path.join('D:/BACKROOMS/wiki/_incoming', path.basename(session), 'floors');
+  const sd = path.join(INCOMING, path.basename(session), 'floors');
   if (fs.existsSync(sd)) {
     for (const d of fs.readdirSync(sd, { withFileTypes: true })) {
       if (!d.isDirectory()) continue;
@@ -107,14 +110,17 @@ for (const r of records) {
   if (seen.has(key)) continue;
   seen.add(key);
   if (!byFloor.has(fid)) byFloor.set(fid, []);
+  const evIntro = text(r.intro || '');
+  const floorIntro = floorIntros.get(fid) || '';
   const ev = {
     name: text(r.name),
     kind: r.kind || 'event',
-    intro: text(r.intro || ''),
+    intro: evIntro,
     actions: actions.map(a => ({ ...a, text: text(a.text), hint: text(a.hint || '') })),
     selected: r.selected ? text(r.selected.text) : null,
-    /* 結果不再是原封不動搬進來：截斷的殘句（「地上有一支手电筒，开关是」）直接丟。 */
-    results: cleanResults(r.results),
+    /* 結果不再是原封不動搬進來：截斷的殘句（「地上有一支手电筒，开关是」）直接丟；
+       和樓層介紹／自身 intro 高度重疊的句子也丟（事件與結果錯配）。 */
+    results: cleanResults(r.results).filter(line => !isFloorIntroLine(line, floorIntro, evIntro)),
     check: r.check || null,
     effects: r.effects || [],
     progress: r.progress || null,

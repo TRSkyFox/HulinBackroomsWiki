@@ -160,14 +160,13 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 - 角色 97、實體 71、物品 453、商店 17。
 - 驗收：`verify-final` **870 / 870**（warnings 5）；`smoke` **9 / 9**；`sync --check` **80 項對齊**。
 - 已知內容債：
-  - 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`（這次審計值）。
+  - 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`（這次審計值）；**多數是使用者尚未截圖，先不要代寫**，等他自己補。
   - 116 處角色／實體／商店／配方引用找不到對應物品（含 OCR 雜訊與真缺條目）。
   - 43 個 JSON 仍含 `D:\BACKROOMS\...` 絕對路徑（多在 `_staging`／`_observations`）。
   - `steps` 回填未完成：wiki 仍有 61 條事件是單段格式。
-  - `event-import` 的 `isFloorIntroLine` 已預置，還沒接進流程。
+  - `event-import` 的 `isFloorIntroLine` 已接進 results 清洗；仍需用真實場次驗證。
   - `212-發光深淵` 缺完整介紹；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
-  - 部分管線腳本仍有 `D:/BACKROOMS/...` 硬編碼（`event-import`、`parse`、`validate`、`run` 等），
-    換機器／換目錄前要先改成相對路徑。
+  - 管線路徑已集中到 `记录器/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
 - 已做的清理：
   - 移除 `记录器/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
