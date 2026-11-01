@@ -78,7 +78,8 @@ wiki 仍有 61 條事件是單段格式。`steps.mjs` 與 `event-parse` 已經�
 - `14-冷漠病院`、`40-有害的衰敗` 沒有配色；`1-停車區` 只有底色。
 - 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`；**多數是使用者尚未截圖，先不要代寫**，等他自己補。若要標記，用 `_stub` 或 `_status`，不要猜效果。
 - 少數 `floor.json` 的 `_staging`／`_observations` 還留著 `D:\BACKROOMS\...` 絕對路徑；搬家前要清。
-- `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。每層 main 右界仍可能不同（例：Level 0.1 量到 871 vs 目前 972），覆蓋層會同時畫 used（實線）與 measured（橘虛線），可直接看差異。
+- `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。
+- 1600×900 normal 已加專用分區（1696×1300 基準座標）：`main 21,1030,116,880`、`opts 21,1030,880,1281`、`enemy 10,450,61,130`、`char -647,-5,95,217`；換算後 main `20,80,952,529`、opts `20,609,952,278`，enemy 只到 y=90，不會再蓋到第一行故事。此尺寸不要開 AutoRegion：measured main 會量到 x≈990（實際面板右緣 972）。
 
 ### 3.5 管線可攜性
 

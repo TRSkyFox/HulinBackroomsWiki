@@ -4594,10 +4594,25 @@ try {
       $layout = 'normal'
       if (Test-NearBlackScreen -Bmp $crop) { $layout = 'ending' }
 
+      # 1600x900 是客戶端實際 render；1696x1300 的比例換算會把 main 上緣算太低，
+      # 導致 enemy 蓋到故事、main/opts 重疊。這裡直接給這個尺寸的 normal 實測值。
+      $regionOverride = $false
+      if (-not $AutoRegion -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
+        # 這些是 1696x1300 基準座標（ConvertTo-RegionRect 會再換算成 1600x900）
+        $RegionTitle = '10,1091,0,95'
+        $RegionEnemy = '10,450,61,130'
+        $RegionMain = '21,1030,116,880'
+        $RegionOpts = '21,1030,880,1281'
+        $RegionChar = '-647,-5,95,217'
+        $regionSpecs = Get-RegionSpecs
+        $state.LastMeasured = $null
+        $regionOverride = $true
+      }
+
       # ---- 配色自動校正分區（要在 OCR 之前算：-AutoRegion 會換掉本幀要用的座標）----
       $effMain = $RegionMain; $effOpts = $RegionOpts
       $frameSpecs = $regionSpecs
-      if ($RegionMode -and $bg -and $layout -eq 'normal') {
+      if ($RegionMode -and $bg -and $layout -eq 'normal' -and -not $regionOverride) {
         try {
           $rr = Resolve-FrameRegion -S $state -Bmp $crop -Bg $bg -W $origW -H $origH -FillHex $(if ($fillInfo) { $fillInfo.Hex } else { '' })
           if ($rr) {
