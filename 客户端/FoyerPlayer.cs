@@ -26,8 +26,9 @@ namespace FoyerPlayer
         static bool Record = true, RecorderStarted = false;
         static bool ShowOverlay = true;
         static double CaptureInterval = 0.5;
-        static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false, PendingShutdown = false;
+        static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false;
         static bool ClientOpening = false, WebViewInitializing = false;
+        static string LastProcessedSession;
         static Form Window;
         static Form ControlWindow;
         static OcrOverlayForm Overlay;
@@ -243,7 +244,6 @@ namespace FoyerPlayer
                 WebViewInitializing = false;
                 GameClosed = false;
                 RecorderStarted = false;
-                PendingShutdown = false;
                 ActiveSession = null;
                 ExportSession = null;
                 CreateGameWindow();
@@ -271,16 +271,30 @@ namespace FoyerPlayer
 
             Window.FormClosed += delegate
             {
-                /* 遊戲視窗關閉 → 讓視窗消失，但控制視窗與整理流程留在背景。
-                   整理完成後控制視窗仍可由「開啟客戶端」再開新的一局。 */
+                /* 關閉遊戲視窗 = 只關遊戲＋快速停記錄器，不跑整理。
+                   整理是獨立動作（控制視窗的「停止並整理」），避免每次關遊戲都卡整理流程。 */
                 GameClosed = true;
                 CloseOverlay();
-                /* 這裡以前會把「開啟客戶端」設成 Enabled=false，但 RefreshStatus 已經
-                   不再重新啟用它 —— 結果關一次遊戲之後那顆按鈕就永久變灰、按不下去，
-                   想開下一局只能重開整個程式。按鈕現在一律保持可按。 */
                 foreach (var p in LoginPopups.ToArray()) { try { p.Close(); } catch { } }
-                if (PipelineRunning) PendingShutdown = true;
-                else BeginShutdown(false);
+                RecorderStarted = false;
+                Paused = false;
+                bool wasRecording = Recorder != null && !Recorder.HasExited;
+                if (wasRecording)
+                {
+                    SetState(T("狀態：客戶端已關閉，正在停止記錄器…", "状态：客户端已关闭，正在停止记录器…"), Color.FromArgb(255, 190, 100));
+                    var t = new Thread(delegate ()
+                    {
+                        try { StopRecorderCore(true); }
+                        catch (Exception ex) { Log("close client stop recorder: " + ex.Message); }
+                        finally { SetState(T("狀態：客戶端已關閉（記錄器已停止，未整理）", "状态：客户端已关闭（记录器已停止，未整理）"), Color.FromArgb(200, 200, 200)); }
+                    });
+                    t.IsBackground = true;
+                    t.Start();
+                }
+                else
+                {
+                    SetState(T("狀態：客戶端已關閉（未整理）", "状态：客户端已关闭（未整理）"), Color.FromArgb(200, 200, 200));
+                }
             };
 
             Window.Shown += async delegate
@@ -409,7 +423,7 @@ namespace FoyerPlayer
             PauseRecBtn = new Button();
             PauseRecBtn.SetBounds(142, 72, 120, 28);
             PauseRecBtn.Click += delegate { PauseRecording(); };
-            Ui(PauseRecBtn, "暫停記錄", "暂停记录", 9F, false);
+            Ui(PauseRecBtn, "停止記錄", "停止记录", 9F, false);
             StyleBtn(PauseRecBtn, false);
             grpClient.Controls.Add(PauseRecBtn);
 
@@ -424,7 +438,7 @@ namespace FoyerPlayer
             SnapStatus.AutoEllipsis = true;
             SnapStatus.SetBounds(14, 104, 388, 18);
             SnapStatus.ForeColor = Color.FromArgb(185, 185, 185);
-            Ui(SnapStatus, "暫停後再按「開始記錄」會續錄同一場；截圖存到 logs\\manual", "暂停后再按「开始记录」会续录同一场；截图存到 logs\\manual", 8.5F, false);
+            Ui(SnapStatus, "停止後再按「開始記錄」會續錄同一場；關閉客戶端不會跑整理", "停止后再按「开始记录」会续录同一场；关闭客户端不会跑整理", 8.5F, false);
             grpClient.Controls.Add(SnapStatus);
 
             /* ── 2. 整理 ── */
@@ -799,9 +813,9 @@ namespace FoyerPlayer
             {
                 try
                 {
-                    StopRecorderCore();
+                    StopRecorderCore(true);
                     Paused = true;
-                    SetState(T("狀態：已暫停（遊戲還開著）", "状态：已暂停（游戏还开着）"), Color.FromArgb(255, 190, 100));
+                    SetState(T("狀態：已停止記錄（遊戲還開著）", "状态：已停止记录（游戏还开着）"), Color.FromArgb(255, 190, 100));
                     Log("recording paused");
                 }
                 catch (Exception ex) { Log("pause failed: " + ex); }
@@ -818,9 +832,13 @@ namespace FoyerPlayer
                 SetState(T("狀態：已經在錄影", "状态：已经在录像"), Color.FromArgb(130, 220, 140));
                 return;
             }
-            if (Window == null || Window.IsDisposed)
+            if (Window == null || Window.IsDisposed || GameClosed)
             {
-                SetState(T("狀態：遊戲視窗不在，請先開啟客戶端", "状态：游戏窗口不在，请先开启客户端"), Color.FromArgb(255, 190, 100));
+                /* 記錄器可以獨立把客戶端叫起來；遊戲載入後會自動開始記錄。 */
+                Record = true;
+                Paused = false;
+                SetState(T("狀態：正在開啟客戶端…", "状态：正在开启客户端…"), Color.FromArgb(255, 190, 100));
+                OpenGameClient();
                 return;
             }
             string resume = Paused ? ActiveSession : null;
@@ -837,23 +855,24 @@ namespace FoyerPlayer
                 SetState("整理中，完成後會自動結束", Color.FromArgb(255, 190, 100));
                 return;
             }
-            if (Recorder != null && !Recorder.HasExited)
-            {
-                BeginShutdown(true);
-                return;
-            }
+            /* 關程式是快速動作：停記錄器、關遊戲，不跑整理。
+               要整理請按「停止並整理」，整理與關閉視窗完全分開。 */
+            try { StopRecorderCore(true); } catch { }
             AllowAppExit = true;
+            try { if (Window != null && !Window.IsDisposed) Window.Close(); } catch { }
             Application.Exit();
         }
 
         static void BeginShutdown(bool exitAfter)
         {
             if (PipelineRunning) return;
-            /* 沒有在錄影就不要觸發整理（避免誤按）；但「暫停中」是例外 ——
-               使用者按了暫停、又把遊戲關掉，這時還是要把這一場整理掉。 */
-            if ((Recorder == null || Recorder.HasExited) && !Paused)
+            /* 「停止並整理」只做整理，不關客戶端。
+               就算客戶端已經關了，只要還有上一場，也可以手動整理。 */
+            string ses = (!string.IsNullOrEmpty(ActiveSession) && Directory.Exists(ActiveSession))
+                ? ActiveSession : LatestSession();
+            if ((Recorder == null || Recorder.HasExited) && string.IsNullOrEmpty(ses))
             {
-                SetState(T("狀態：目前沒有在錄影", "状态：目前没有在录像"), Color.FromArgb(200, 200, 200));
+                SetState(T("狀態：沒有可整理的場次", "状态：没有可整理的场次"), Color.FromArgb(200, 200, 200));
                 return;
             }
             PipelineRunning = true;
@@ -865,7 +884,7 @@ namespace FoyerPlayer
             {
                 try
                 {
-                    StopRecorderCore();
+                    StopRecorderCore(false);
                     RunPostprocess();
                 }
                 catch (Exception ex) { Log("shutdown: " + ex); }
@@ -879,7 +898,7 @@ namespace FoyerPlayer
                     }
                     else
                     {
-                        SetState("狀態：整理完成", Color.FromArgb(130, 220, 140));
+                        SetState(T("狀態：整理完成", "状态：整理完成"), Color.FromArgb(130, 220, 140));
                     }
                 }
             });
@@ -928,11 +947,6 @@ namespace FoyerPlayer
                     if (StopButton != null) StopButton.Enabled = Recorder != null && !Recorder.HasExited;
                     if (ExitButton != null) ExitButton.Enabled = true;
                     if (CloseClientButton != null) CloseClientButton.Enabled = !GameClosed;
-                    if (PendingShutdown)
-                    {
-                        PendingShutdown = false;
-                        BeginShutdown(false);
-                    }
                 }
             });
             t.IsBackground = true;
@@ -1019,12 +1033,13 @@ namespace FoyerPlayer
             if (p.ExitCode != 0) throw new Exception("structured/run.mjs exit " + p.ExitCode);
         }
 
-        static void StopRecorderCore()
+        static void StopRecorderCore(bool fast = false)
         {
             try
             {
                 if (!string.IsNullOrEmpty(StopFile)) File.WriteAllText(StopFile, "stop");
-                if (Recorder != null && !Recorder.HasExited && !Recorder.WaitForExit(5000))
+                int waitMs = fast ? 1200 : 5000;
+                if (Recorder != null && !Recorder.HasExited && !Recorder.WaitForExit(waitMs))
                 { try { Recorder.Kill(); } catch { } }
             }
             catch { }
@@ -1032,7 +1047,8 @@ namespace FoyerPlayer
             try
             {
                 if (!string.IsNullOrEmpty(VolumeStopFile)) File.WriteAllText(VolumeStopFile, "stop");
-                if (VolumeWatcher != null && !VolumeWatcher.HasExited && !VolumeWatcher.WaitForExit(2000))
+                int volWait = fast ? 700 : 2000;
+                if (VolumeWatcher != null && !VolumeWatcher.HasExited && !VolumeWatcher.WaitForExit(volWait))
                 { try { VolumeWatcher.Kill(); } catch { } }
                 if (!string.IsNullOrEmpty(VolumeStopFile) && File.Exists(VolumeStopFile)) File.Delete(VolumeStopFile);
             }
@@ -1209,7 +1225,7 @@ namespace FoyerPlayer
 
                 if (Paused && !GameClosed)
                 {
-                    SetState(T("狀態：已暫停", "状态：已暂停"), Color.FromArgb(255, 190, 100));
+                    SetState(T("狀態：已停止記錄（遊戲還開著）", "状态：已停止记录（游戏还开着）"), Color.FromArgb(255, 190, 100));
                     if (StageLabel != null) StageLabel.Text = T("按「開始記錄」續錄同一場", "按「开始记录」续录同一场");
                     SetProgressBar(0);
                     return;
@@ -1217,9 +1233,17 @@ namespace FoyerPlayer
 
                 if (GameClosed)
                 {
-                    SetState(T("狀態：客戶端已關閉", "状态：客户端已关闭"), Color.FromArgb(200, 200, 200));
-                    if (StageLabel != null) StageLabel.Text = pct >= 0 ? T("整理完成：", "整理完成：") + (stage ?? T("完成", "完成")) + " (" + pct + "/100)" : T("已完成或無場次", "已完成或無场次");
-                    SetProgressBar(pct);
+                    bool processed = !string.IsNullOrEmpty(ActiveSession) && ActiveSession == LastProcessedSession;
+                    SetState(processed
+                        ? T("狀態：客戶端已關閉（已整理）", "状态：客户端已关闭（已整理）")
+                        : T("狀態：客戶端已關閉（未整理）", "状态：客户端已关闭（未整理）"), Color.FromArgb(200, 200, 200));
+                    if (StageLabel != null)
+                    {
+                        StageLabel.Text = processed
+                            ? T("上一場已整理完成", "上一场已整理完成")
+                            : T("記錄器已停止；要整理請按「停止並整理」", "记录器已停止；要整理请按「停止并整理」");
+                    }
+                    SetProgressBar(processed && pct >= 0 ? pct : 0);
                 }
                 else
                 {
@@ -1335,7 +1359,8 @@ namespace FoyerPlayer
             {
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
                 string script = Path.Combine(exeDir, "postprocess.mjs");
-                string session = LatestSession();
+                string session = (!string.IsNullOrEmpty(ActiveSession) && Directory.Exists(ActiveSession))
+                    ? ActiveSession : LatestSession();
                 if (string.IsNullOrEmpty(session)) { SetState("狀態：沒有可整理的場次", Color.FromArgb(255, 150, 120)); return; }
                 ActiveSession = session;
                 if (!File.Exists(script)) return;
@@ -1345,6 +1370,7 @@ namespace FoyerPlayer
                 psi.WorkingDirectory = exeDir;
                 var p = Process.Start(psi);
                 if (p != null) p.WaitForExit();
+                if (p != null && p.ExitCode == 0) LastProcessedSession = session;
                 Log("已整理：" + Path.Combine(session, "clean"));
             }
             catch (Exception ex) { Log("整理失敗：" + ex.Message); }
