@@ -326,7 +326,13 @@ $script:OcrFixRules = @(
   @('r', '(?<=\d)\s*[．·]\s*(?=\d)', '.', '小數點被讀成全形 ．／·'),
   # --- OCR 把省略號讀成一串引號／逗號：冷靜． “ “ 、文章說 → 冷靜……文章說 ---
   # 為什麼安全：只處理「CJK 或引號後面連續 2 個以上純符號」且後面接 CJK；正常對話引號不會連成這樣。
-  @('r', '(?<=[\u4e00-\u9fff：:」』】「『])(?:\s*[．.。]\s*)?(?:\s*["“”‘’]\s*[，,、]?\s*|[\s，,、．.。]+){2,}(?=[\u4e00-\u9fff])', '……', 'OCR 省略號／引號雜訊收斂為 ……')
+  @('r', '(?<=[\u4e00-\u9fff：:」』】「『])(?:\s*[．.。]\s*)?(?:\s*["“”‘’]\s*[，,、]?\s*|[\s，,、．.。]+){2,}(?=[\u4e00-\u9fff])', '……', 'OCR 省略號／引號雜訊收斂為 ……'),
+  # --- 字型把 Latin d 讀成「山」：Void → Voi 山 ---
+  # 只在 Latin 單字後面接「山」時修；正常中文「…山」不受影響。
+  @('r', '(?i)\bVoi\s*山', 'Void', 'Void 的 d 被讀成 山'),
+  @('r', '(?i)\bVoid(?=\s*「)', 'Void」', 'Void 後面的 」 被吃掉'),
+  # --- 引號結尾被讀成半角 ]：「会议] → 「会议」 ---
+  @('r', '「([^」]{1,12})\]$', '「$1」', '引號結尾被讀成 ]')
 )
 
 # 套用上面那張表（-NoOcrFix 時整層跳過）。回傳修好的字串。
@@ -581,7 +587,7 @@ function Add-ClassifiedLine {
     $gapX = $ev.X - ($prev.X + $prev.W)
     if ($gapX -ge -8 -and $gapX -le 36 -and
       (($prev.V -notmatch '[。！？!?」』）)]$') -or ($ev.V -match '^[「『（(。，、；：！？!?…]'))) {
-      $prev.V = $prev.V + $ev.V
+      $prev.V = Repair-OcrText ($prev.V + $ev.V)
       $prev.W = ($ev.X + $ev.W) - $prev.X
       $prev.H = [Math]::Max($prev.H, $ev.H)
       return 'M'
@@ -593,7 +599,7 @@ function Add-ClassifiedLine {
     ([Math]::Abs($prev.X - $ev.X) -le 14) -and
     (($ev.Y - ($prev.Y + $prev.H)) -le [Math]::Max(14, [int](0.75 * $Hh))) -and
     ($prev.V -notmatch '[。！？!?」』）)]$')) {
-    $prev.V = $prev.V + $ev.V
+    $prev.V = Repair-OcrText ($prev.V + $ev.V)
     $prev.H = ($ev.Y + $ev.H) - $prev.Y
     return 'M'
   }
@@ -2058,7 +2064,7 @@ function Invoke-RegionOcr {
               # 判斷：殘渣字／中英夾雜／Wiki 語料沒收過的字；同一段文字只留一張。
               if ($txt -and $script:CropByText.ContainsKey($txt)) {
                 $cropRel = $script:CropByText[$txt]
-              } elseif ($txt -and ((Test-NeedsRapid -Text $txt) -or ($sp.Name -eq 'opts'))) {
+              } elseif ($txt -and ((Test-NeedsRapid -Text $txt) -or ($sp.Name -eq 'opts') -or ($txt -match '[A-Za-z]'))) {
                 # 選項區常把第一個字讀掉（例如「绕开」只剩「开」），
                 # 裁圖往左多留 24px，RapidOCR 才有機會把被漏掉的字補回來。
                 $padL = $(if ($sp.Name -eq 'opts') { 24 } else { 6 })
