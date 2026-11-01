@@ -51,6 +51,7 @@ namespace FoyerPlayer
         static Button StartRecBtn;
         static Button PauseRecBtn;
         static CheckBox OcrReadoutCheck;
+        static NotifyIcon TrayIcon;
         static System.Windows.Forms.Timer UiTimer;
 
         /* ── 介面語言（繁體／簡體）──
@@ -543,23 +544,17 @@ namespace FoyerPlayer
             ExitButton = new Button();
             ExitButton.SetBounds(152, 486, 276, 28);
             ExitButton.Click += delegate { ExitApplication(); };
-            Ui(ExitButton, "結束程式", "结束程序", 9F, false);
+            Ui(ExitButton, "徹底退出（含客戶端）", "彻底退出（含客户端）", 9F, false);
             StyleBtn(ExitButton, false);
             ControlWindow.Controls.Add(ExitButton);
 
+            /* 關閉控制窗只收進托盤，不關客戶端、不跑整理。
+               「徹底退出」才是關掉整個程式（含遊戲）。 */
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
             {
                 if (AllowAppExit) return;
-                bool busy = PipelineRunning || (Recorder != null && !Recorder.HasExited);
-                if (busy)
-                {
-                    e.Cancel = true;
-                    SetState("請先按「停止並整理」或「結束程式」", Color.FromArgb(255, 190, 100));
-                }
-                else
-                {
-                    AllowAppExit = true;
-                }
+                e.Cancel = true;
+                HideControlWindow();
             };
 
             UiTimer = new System.Windows.Forms.Timer();
@@ -863,6 +858,59 @@ namespace FoyerPlayer
             SetState(T("狀態：記錄中", "状态：记录中"), Color.FromArgb(130, 220, 140));
         }
 
+        static void HideControlWindow()
+        {
+            try
+            {
+                if (ControlWindow == null || ControlWindow.IsDisposed) return;
+                EnsureTrayIcon();
+                if (TrayIcon == null)
+                {
+                    SetState(T("狀態：托盤建立失敗，控制台保持開啟", "状态：托盘创建失败，控制台保持开启"), Color.FromArgb(255, 150, 120));
+                    return;
+                }
+                ControlWindow.Hide();
+                TrayIcon.Visible = true;
+                SetState(T("狀態：控制台已收進托盤；客戶端仍開著", "状态：控制台已收进托盘；客户端仍开着"), Color.FromArgb(200, 200, 200));
+            }
+            catch (Exception ex) { Log("hide control: " + ex.Message); }
+        }
+
+        static void ShowControlWindow()
+        {
+            try
+            {
+                if (ControlWindow == null || ControlWindow.IsDisposed) return;
+                if (TrayIcon != null) TrayIcon.Visible = false;
+                ControlWindow.Show();
+                ControlWindow.WindowState = FormWindowState.Normal;
+                ControlWindow.Activate();
+            }
+            catch { }
+        }
+
+        static void EnsureTrayIcon()
+        {
+            if (TrayIcon != null) return;
+            try
+            {
+                var menu = new ContextMenuStrip();
+                menu.Items.Add(T("顯示控制台", "显示控制台"), null, delegate { ShowControlWindow(); });
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add(T("停止記錄", "停止记录"), null, delegate { PauseRecording(); });
+                menu.Items.Add(T("停止並整理", "停止并整理"), null, delegate { BeginShutdown(false); });
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add(T("徹底退出（含客戶端）", "彻底退出（含客户端）"), null, delegate { ExitApplication(); });
+
+                TrayIcon = new NotifyIcon();
+                TrayIcon.Icon = SystemIcons.Application;
+                TrayIcon.Text = "狐霖記錄器控制";
+                TrayIcon.ContextMenuStrip = menu;
+                TrayIcon.DoubleClick += delegate { ShowControlWindow(); };
+            }
+            catch (Exception ex) { Log("tray icon: " + ex.Message); }
+        }
+
         static void ExitApplication()
         {
             if (PipelineRunning)
@@ -870,10 +918,10 @@ namespace FoyerPlayer
                 SetState("整理中，完成後會自動結束", Color.FromArgb(255, 190, 100));
                 return;
             }
-            /* 關程式是快速動作：停記錄器、關遊戲，不跑整理。
-               要整理請按「停止並整理」，整理與關閉視窗完全分開。 */
+            /* 徹底退出才關客戶端；關控制台只是隱藏到托盤。 */
             try { StopRecorderCore(true); } catch { }
             AllowAppExit = true;
+            try { if (TrayIcon != null) { TrayIcon.Visible = false; TrayIcon.Dispose(); TrayIcon = null; } } catch { }
             try { if (Window != null && !Window.IsDisposed) Window.Close(); } catch { }
             Application.Exit();
         }
