@@ -75,6 +75,7 @@ namespace FoyerPanel
                 ControlWindow.Show();
                 FindClient();
                 if (GameHwnd == IntPtr.Zero) StartClient();
+                else { SetState("狀態：客戶端已開", Color.FromArgb(130, 220, 140)); ScheduleAutoRecord(); }
                 Application.Run(new ApplicationContext(ControlWindow));
                 return 0;
             }
