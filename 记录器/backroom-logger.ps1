@@ -1307,6 +1307,43 @@ function Get-RapidFix {
   return $null
 }
 
+# 字型模板比對：用 font-match.exe 對裁圖逐字比對，只修「1~2 個字」的形近錯字。
+$script:FontMatchCache = @{}
+function Get-FontMatchFix {
+  param([string]$CropPath, [string]$Text)
+  if (-not $CropPath -or -not $Text) { return $null }
+  if ($Text -notmatch '[A-Za-z]') { return $null }
+  if ($script:FontMatchCache.ContainsKey($CropPath)) { return $script:FontMatchCache[$CropPath] }
+  $exeCands = @(
+    (Join-Path $PSScriptRoot 'structured\font-match.exe'),
+    (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\font-match.exe'),
+    'D:\BACKROOMS\客户端\font-match.exe'
+  )
+  $fontCands = @(
+    (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\fonts\NotoSansCJKtc-Regular.otf'),
+    (Join-Path $PSScriptRoot 'fonts\NotoSansCJKtc-Regular.otf'),
+    'D:\BACKROOMS\客户端\fonts\NotoSansCJKtc-Regular.otf'
+  )
+  $exe = $exeCands | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+  $font = $fontCands | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+  if (-not $exe -or -not $font -or -not (Test-Path -LiteralPath $CropPath)) { return $null }
+  try {
+    $raw = & $exe $CropPath $Text $font 2>$null
+    if (-not $raw) { return $null }
+    $o = ($raw -join "`n") | ConvertFrom-Json
+    $out = [string]$o.text
+    $a = ($Text -replace '\s', '')
+    $b = ($out -replace '\s', '')
+    if (-not $out -or $a -eq $b -or $a.Length -ne $b.Length) { return $null }
+    $diff = 0
+    for ($i = 0; $i -lt $a.Length; $i++) { if ($a[$i] -ne $b[$i]) { $diff++ } }
+    if ($diff -lt 1 -or $diff -gt 2) { return $null }
+    $script:FontMatchCache[$CropPath] = $out
+    return $out
+  } catch { }
+  return $null
+}
+
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
 function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
@@ -2105,6 +2142,8 @@ function Invoke-RegionOcr {
           }
           # 背景 RapidOCR 已有同一張裁圖的結果 → 下一幀直接換掉 Windows OCR 的錯字。
           if ($cropRel) {
+            $fm = Get-FontMatchFix -CropPath (Join-Path $LineDir $cropRel) -Text $txt
+            if ($fm) { $txt = Repair-OcrText (Convert-OcrText $fm) }
             $fix = Get-RapidFix -LineDir $LineDir -Name $cropRel
             if ($fix) {
               # RapidOCR 會把「Void」認成 [Void]；保留原本的中文引號，否則會被當成場景標題 H。

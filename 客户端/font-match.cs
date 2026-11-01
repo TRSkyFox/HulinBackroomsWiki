@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -161,7 +161,8 @@ class FontMatch
         var map = new Dictionary<char, string> {
             {'夭',"天"}, {'天',"夭"}, {'潦',"流"}, {'流',"潦"}, {'冂',"门"}, {'门',"冂"},
             {'囗',"口"}, {'口',"囗"}, {'麵',"面"}, {'面',"麵"}, {'迴',"回"}, {'回',"迴"},
-            {'祂',"他"}, {'牠',"它"}, {'祇',"只"}, {'齣',"出"}, {'證',"证"}, {'証',"证"}
+            {'祂',"他"}, {'牠',"它"}, {'祇',"只"}, {'齣',"出"}, {'證',"证"}, {'証',"证"},
+            {'山',"山dD"}  /* d + 」被 OCR 併成山 */
         };
         var list = new List<char> { c };
         if (map.ContainsKey(c)) foreach (var x in map[c]) if (!list.Contains(x)) list.Add(x);
