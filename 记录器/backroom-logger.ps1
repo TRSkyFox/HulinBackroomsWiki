@@ -5043,16 +5043,20 @@ try {
       $optMode = $false
       $added = 0
       $prevLine = $null
+      $prevSkipped = $false
       foreach ($l in @($rawFrame | Sort-Object Y, X)) {
         $sameLineRight = $prevLine -and ([Math]::Abs($prevLine.Y - $l.Y) -le 4) -and
           (($l.X - ($prevLine.X + $prevLine.W)) -ge -8) -and
           (($l.X - ($prevLine.X + $prevLine.W)) -le 36)
         $prevLine = $l
-        if ($pageRect.Page -and $RxChromeNoise.IsMatch($l.Text)) { continue }
-        if ($RxPrompt.IsMatch($l.Text)) { $optMode = $true; continue }
+        # 左邊那截如果是重複／片段／UI 而被跳過，右邊同線的碎片也不能重新記一次。
+        if ($sameLineRight -and $prevSkipped) { continue }
+        $prevSkipped = $false
+        if ($pageRect.Page -and $RxChromeNoise.IsMatch($l.Text)) { $prevSkipped = $true; continue }
+        if ($RxPrompt.IsMatch($l.Text)) { $optMode = $true; $prevSkipped = $true; continue }
         if (-not $sameLineRight) {
-          if (Test-Duplicate -S $state -Text $l.Text) { continue }
-          if (Test-Fragment -S $state -Text $l.Text) { Add-Recent -S $state -Text $l.Text; continue }
+          if (Test-Duplicate -S $state -Text $l.Text) { $prevSkipped = $true; continue }
+          if (Test-Fragment -S $state -Text $l.Text) { Add-Recent -S $state -Text $l.Text; $prevSkipped = $true; continue }
         }
         $ev = Add-ClassifiedLine -S $state -Text $l.Text -X $l.X -Y $l.Y -Hh $l.H -ImgW $imgW -T ([datetime]::Now) -SameFrame $true -FrameEvents $frameEvents -Region ([string]$l.Region) -FrameNo $state.FrameNo -W $l.W
         if ($ev -is [string]) { Add-Recent -S $state -Text $l.Text; continue }
@@ -5063,7 +5067,7 @@ try {
           if ($optMode -and $ev.K -eq 'N' -and ($fromOpts -or $ev.V.Length -le 24)) { $ev.K = 'O' }
           if ($ev.K -ne 'N' -and $ev.K -ne 'O') { $optMode = $false }
           $added++
-        }
+        } else { $prevSkipped = $true }
       }
 
       # 事件流這一幀【沒有】H 樓層標題行時，才讓 title 區當後備。
