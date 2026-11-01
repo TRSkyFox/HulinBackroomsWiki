@@ -19,6 +19,8 @@
 3. 從本機那份啟動 `FoyerPlayer.exe`
 4. 遊戲載入後自動開始記錄
 
+> 如果舊的 FoyerPlayer／「狐霖記錄器控制」還在跑，`start.ps1` 會提示先關閉，不會幫你殺程序。
+
 > 為什麼要複製到本機：Windows 會把 `D:\BACKROOMS` 的執行檔當成網路來源擋掉；
 > 複製到 `%LOCALAPPDATA%` 才能正常載入 WebView2。
 
@@ -39,6 +41,29 @@
 - **開啟 logs**
 
 手動截圖是暫存素材；確認文字已轉錄後請自行刪除，不要放進 Wiki。
+
+## OCR 覆蓋層（除錯用）
+
+啟動客戶端後，會多兩個**不影響操作**的視窗：
+
+- **透明框線**：浮在遊戲畫面上，畫出記錄器這一幀實際使用的
+  `title／enemy／main／opts／char` 區塊（只畫線、不填色，滑鼠可穿透）。
+- **OCR 讀取面板**：放在遊戲視窗右側（右邊放不下就放左側，兩邊都放不下就收起），
+  顯示目前 frame、區塊座標、OCR 行、`measured` 自動校正邊界。
+- 虛線橘框 = 自動校正量到的邊界；實線 = 這一幀真正送進 OCR 的邊界。
+
+記錄器每幀會寫 `记录器\logs\overlay.json`；這是除錯資料，不進正式 Wiki。
+不要看覆蓋層時，啟動時加 `-NoOverlay`：
+
+```text
+啟動.bat -NoOverlay
+```
+
+也可以直接給 FoyerPlayer：
+
+```text
+FoyerPlayer.exe --no-overlay
+```
 
 ## 自動整理（clean\）
 
@@ -189,6 +214,7 @@ I 你：得到「急救毯」
 
 ```powershell
 啟動.bat -NoRecord                 # 只開遊戲，不錄
+啟動.bat -NoOverlay                # 不顯示 OCR 覆蓋層／讀取面板
 啟動.bat -Preset 1600x900          # 1280x720 / 1600x900 / 1920x1080
 啟動.bat -Url https://...          # 換測試網址
 ```

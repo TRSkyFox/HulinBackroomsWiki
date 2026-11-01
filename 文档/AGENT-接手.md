@@ -51,7 +51,8 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
    - `event-import` 的繁簡比對改讀 `记录器/structured/i18n-table.txt`。
    - `build-char-freq` 只讀 `wiki/content`。
 7. **重寫 `AGENTS.md`**：只留現行規則、目錄、指令、狀態與禁區。
-8. **建立 git 基線**：第一個 commit 是清理後的可運作狀態。
+8. **OCR 覆蓋層（除錯）**：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPlayer 讀它，畫透明區塊框（title／enemy／main／opts／char）＋右側 OCR 讀取面板；框線只畫邊、滑鼠穿透，`--no-overlay`／`啟動.bat -NoOverlay` 可關。
+9. **建立 git 基線**：第一個 commit 是清理後的可運作狀態。
 
 ---
 

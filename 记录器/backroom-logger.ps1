@@ -107,6 +107,8 @@ param(
   # 2026-10-31：每一行 OCR 除了文字，再記下這行的「字色」（QTE 字體顏色不同）。
   # 想省 CPU 或舊行為可以加這個開關關掉。
   [switch]$NoLineColor,
+  # 不在 logs 根目錄寫 overlay.json（給客戶端畫 OCR 覆蓋層用）；預設會寫。
+  [switch]$NoOverlay,
 
   # ---- 分區 OCR（預設開啟）----
   # 座標系 = render 區（$crop）像素，且一定在 Scale-Image 放大「之前」裁切。
@@ -1864,6 +1866,68 @@ function Write-StructuredDup {
   }
   $json = $obj | ConvertTo-Json -Compress -Depth 3
   [System.IO.File]::AppendAllText($Path, $json + [Environment]::NewLine, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+# 給客戶端覆蓋層用的輕量狀態：只寫「這一幀用了哪些區塊、讀到哪些行」。
+# 刻意不寫進 structured.jsonl：overlay 是除錯 UI，不該污染正式紀錄。
+function Write-OverlayState {
+  param(
+    $S, [int]$FrameNo, [int]$W, [int]$H, [string]$Layout, [string]$ColorHex,
+    $Specs, $Lines, [int]$Fallbacks = 0, [string]$Detail = '', [bool]$Running = $true
+  )
+  if ($NoOverlay) { return }
+  try {
+    $regions = @()
+    $specArr = @()
+    if ($null -ne $Specs) { $specArr = [object[]]$Specs }
+    foreach ($sp in $specArr) {
+      if (-not $sp) { continue }
+      $r = ConvertTo-RegionRect -Spec ([string]$sp.Spec) -CropW $W -CropH $H -Name ([string]$sp.Name)
+      if ($r) {
+        $regions += [pscustomobject]@{ n = [string]$sp.Name; x = [int]$r.Left; y = [int]$r.Top; w = [int]$r.Width; h = [int]$r.Height }
+      }
+    }
+    $measured = @()
+    if ($S.LastMeasured) {
+      foreach ($pair in @(@('main', [string]$S.LastMeasured.Main), @('opts', [string]$S.LastMeasured.Opts))) {
+        $spec = [string]$pair[1]
+        if (-not $spec) { continue }
+        $p = @($spec -split '[,\s]+' | Where-Object { $_ -ne '' })
+        if ($p.Count -eq 4) {
+          $x0 = [int]$p[0]; $x1 = [int]$p[1]; $y0 = [int]$p[2]; $y1 = [int]$p[3]
+          if ($x1 -gt $x0 -and $y1 -gt $y0) {
+            $measured += [pscustomobject]@{ n = ('measured-' + [string]$pair[0]); x = $x0; y = $y0; w = ($x1 - $x0); h = ($y1 - $y0) }
+          }
+        }
+      }
+    }
+    $outLines = @()
+    $lineArr = @()
+    if ($null -ne $Lines) { $lineArr = [object[]]$Lines }
+    $n = 0
+    foreach ($l in $lineArr) {
+      if ($n -ge 80) { break }
+      $t = [string]$l.Text
+      if ($t.Length -gt 140) { $t = $t.Substring(0, 140) }
+      $outLines += [pscustomobject]@{
+        r = [string]$l.Region; t = $t;
+        x = [int]$l.X; y = [int]$l.Y; w = [int]$l.W; h = [int]$l.H
+      }
+      $n++
+    }
+    $obj = [pscustomobject]@{
+      running = $Running; session = [string]$S.SessionName; frame = $FrameNo;
+      w = $W; h = $H; layout = $Layout; bg = $ColorHex;
+      regions = @($regions); measured = @($measured); lines = @($outLines);
+      fallbacks = $Fallbacks; detail = [string]$Detail
+    }
+    $json = $obj | ConvertTo-Json -Depth 6 -Compress
+    $tmp = $overlayFile + '.tmp'
+    [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
+    Move-Item -LiteralPath $tmp -Destination $overlayFile -Force
+  } catch {
+    try { Write-Log $S ('overlay 寫入失敗：' + $_.Exception.Message) } catch { }
+  }
 }
 
 # 分區 OCR 用的區塊表（名稱／座標規格／固定輸出順序）
@@ -4198,6 +4262,8 @@ $files = @{
   LevelsDir   = Join-Path $sessionDir 'levels'
   Transitions = Join-Path $sessionDir '_transitions.log'
 }
+# 給客戶端覆蓋層讀的「目前這一幀」；放在 logs 根目錄，不進單一場次。
+$overlayFile = Join-Path $OutDir 'overlay.json'
 [System.IO.File]::WriteAllText($files.Raw, '[' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '] 原始 OCR 逐幀記錄（完整保留，未經過濾）' + [Environment]::NewLine, $utf8Bom)
 [System.IO.File]::WriteAllText($files.FloorColors, '[' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + '] 各樓層介面配色（自動偵測；底色變化超過 ' + $ColorThreshold + ' 就記一筆）' + [Environment]::NewLine, $utf8Bom)
 # 逐層分檔：levels\ 放各樓層，_transitions.log 放跨樓層事件（額外產出，不動既有檔案）
@@ -4756,6 +4822,10 @@ try {
       $state.Frames++
       $lines = $rawFrame
 
+      # 給客戶端浮層的即時狀態（只有區塊與 OCR 行；不進正式紀錄）
+      Write-OverlayState -S $state -FrameNo $state.FrameNo -W $origW -H $origH -Layout $layout `
+        -ColorHex $colorHex -Specs $frameSpecs -Lines $rawFrame -Fallbacks $state.Fallbacks -Detail ''
+
       # ---- 樓層配色（自動記錄 ＋ 累積配色快取） ----
       if ($bg) {
         $titleLines = @($rawFrame | Where-Object { $_.Region -eq 'title' })
@@ -4977,6 +5047,11 @@ try {
     try { Write-StructuredDup -Path $state.Files.Structured -From $state.DupStart -To $state.DupEnd -Layout 'normal' -ColorHex '' } catch { }
     $state.DupStart = 0; $state.DupEnd = 0
   }
+  try {
+    Write-OverlayState -S $state -FrameNo $state.FrameNo -W ([int]$origW) -H ([int]$origH) `
+      -Layout ([string]$state.LastLayout) -ColorHex '' -Specs $regionSpecs -Lines $state.LastRawFrame `
+      -Fallbacks $state.Fallbacks -Detail 'stopped' -Running $false
+  } catch { }
   Write-Log $state ('結束。共 ' + $state.Frames + ' 幀（其中 ' + $state.DupFrames + ' 幀與上一幀相同、已合併成區間）、' + $state.Events.Count + ' 個事件、自動校正掃描 ' + $state.Scans + ' 次' + $(if ($AutoRegion) { '、-AutoRegion 套用 ' + $state.AutoRegionUses + ' 次' } else { '' }))
   Remove-Item -LiteralPath $state.TmpPng -Force -ErrorAction SilentlyContinue
   if (-not $Quiet) {

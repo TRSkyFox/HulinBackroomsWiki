@@ -85,6 +85,8 @@ FoyerPlayer（客户端）
   **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
 - `客户端/postprocess.mjs`、`volume-watch.ps1` 是管線的一部分，原始檔在 `客户端/`；
   `sync.mjs` 會把它們複製到 app／dist。
+- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPlayer 讀它，畫透明區塊框
+  與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
 
 ---
 
@@ -171,6 +173,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - 移除 `记录器/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
+  - FoyerPlayer 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關。
   - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
 
 ---
@@ -281,6 +284,9 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 → sync.mjs（把 backroom-logger／postprocess／volume-watch 同步到 app／dist）
 → 用獨立 profile 實測；不要動使用者正在玩的視窗
 ```
+
+啟動前確認 `%LOCALAPPDATA%\FoyerLogger\app\FoyerPlayer.exe` 與 `客户端/app/FoyerPlayer.exe` 是同一版；
+舊客戶端在跑時 `start.ps1` 會複製失敗並提示先關閉，**不要用批次殺程序**。
 
 ---
 

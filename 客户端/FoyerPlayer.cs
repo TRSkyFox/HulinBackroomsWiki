@@ -1,12 +1,14 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Web.Script.Serialization;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -21,11 +23,14 @@ namespace FoyerPlayer
         static Process VolumeWatcher;
         static string VolumeStopFile;
         static bool Record = true, RecorderStarted = false;
+        static bool ShowOverlay = true;
         static double CaptureInterval = 0.5;
         static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false, PendingShutdown = false;
         static bool ClientOpening = false, WebViewInitializing = false;
         static Form Window;
         static Form ControlWindow;
+        static OcrOverlayForm Overlay;
+        static OcrReadoutForm Readout;
         static Mutex SingleInstance;
         static WebView2 View;
         static CoreWebView2Environment WebEnv;
@@ -187,6 +192,8 @@ namespace FoyerPlayer
                         case "--interval": { double iv; if (i + 1 < args.Length && double.TryParse(args[++i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out iv) && iv >= 0.1 && iv <= 5) CaptureInterval = iv; break; }
                         case "--record": Record = true; break;
                         case "--no-record": Record = false; break;
+                        case "--overlay": ShowOverlay = true; break;
+                        case "--no-overlay": ShowOverlay = false; break;
                     }
                 }
                 bool createdNew = false;
@@ -240,6 +247,7 @@ namespace FoyerPlayer
                 ExportSession = null;
                 CreateGameWindow();
                 Window.Show();
+                if (ShowOverlay) CreateOverlay();
             }
             catch (Exception ex) { Log("OpenGameClient: " + ex); }
             finally { ClientOpening = false; }
@@ -265,6 +273,7 @@ namespace FoyerPlayer
                 /* 遊戲視窗關閉 → 讓視窗消失，但控制視窗與整理流程留在背景。
                    整理完成後控制視窗仍可由「開啟客戶端」再開新的一局。 */
                 GameClosed = true;
+                CloseOverlay();
                 /* 這裡以前會把「開啟客戶端」設成 Enabled=false，但 RefreshStatus 已經
                    不再重新啟用它 —— 結果關一次遊戲之後那顆按鈕就永久變灰、按不下去，
                    想開下一局只能重開整個程式。按鈕現在一律保持可按。 */
@@ -752,7 +761,8 @@ namespace FoyerPlayer
                 try { if (File.Exists(StopFile)) File.Delete(StopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + RecorderScript + "\""
                     + " -OutDir \"" + RecordOut + "\" -Hwnd " + hwnd.ToInt64()
-                    + " -NoResize -Quiet -Interval " + CaptureInterval.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " -SaveLineCrops -AutoFloorShots -StopFile \"" + StopFile + "\"";
+                    + " -NoResize -Quiet -Interval " + CaptureInterval.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " -SaveLineCrops -AutoFloorShots -StopFile \"" + StopFile + "\""
+                    + (ShowOverlay ? "" : " -NoOverlay");
                 if (!string.IsNullOrEmpty(resumeDir) && Directory.Exists(resumeDir))
                     ps += " -SessionDir \"" + resumeDir + "\"";
                 var psi = new ProcessStartInfo("powershell.exe", ps);
@@ -1359,9 +1369,324 @@ namespace FoyerPlayer
 
         static string Esc(string s) { return s == null ? "" : s.Replace("\\", "\\\\").Replace("\"", "\\\""); }
 
+        static string OverlayPath()
+        {
+            return string.IsNullOrEmpty(RecordOut) ? null : Path.Combine(RecordOut, "overlay.json");
+        }
+
+        static OcrOverlayState ReadOverlay()
+        {
+            try
+            {
+                string p = OverlayPath();
+                if (string.IsNullOrEmpty(p) || !File.Exists(p)) return null;
+                string json = File.ReadAllText(p, Encoding.UTF8);
+                return new JavaScriptSerializer().Deserialize<OcrOverlayState>(json);
+            }
+            catch { return null; }
+        }
+
+        static void CreateOverlay()
+        {
+            try
+            {
+                if (Window == null || Window.IsDisposed) return;
+                if (Overlay != null && !Overlay.IsDisposed) return;
+                Overlay = new OcrOverlayForm(Window);
+                Overlay.Show();
+                Readout = new OcrReadoutForm(Window);
+                Readout.Show();
+                Log("OCR 覆蓋層已啟動");
+            }
+            catch (Exception ex) { Log("OCR 覆蓋層啟動失敗：" + ex.Message); }
+        }
+
+        static void CloseOverlay()
+        {
+            try { if (Overlay != null && !Overlay.IsDisposed) Overlay.Close(); } catch { }
+            try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
+            Overlay = null;
+            Readout = null;
+        }
+
         static void Log(string line)
         {
             try { File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "player.log"), "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " + line + Environment.NewLine, new UTF8Encoding(false)); } catch { }
         }
+
+        /* 透明、點擊穿透的區塊框；只畫線，不畫底色，不擋操作。 */
+        class OcrOverlayForm : Form
+        {
+            readonly Form game;
+            readonly System.Windows.Forms.Timer timer;
+            OcrOverlayState state;
+
+            public OcrOverlayForm(Form game)
+            {
+                this.game = game;
+                FormBorderStyle = FormBorderStyle.None;
+                ShowInTaskbar = false;
+                TopMost = true;
+                StartPosition = FormStartPosition.Manual;
+                BackColor = Color.Magenta;
+                TransparencyKey = Color.Magenta;
+                SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
+                Width = 120; Height = 120;
+                timer = new System.Windows.Forms.Timer();
+                timer.Interval = 180;
+                timer.Tick += delegate { RefreshOverlay(); };
+                timer.Start();
+            }
+
+            protected override bool ShowWithoutActivation { get { return true; } }
+
+            protected override CreateParams CreateParams
+            {
+                get
+                {
+                    CreateParams cp = base.CreateParams;
+                    /* WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW */
+                    cp.ExStyle |= 0x00000020 | 0x00080000 | 0x08000000 | 0x00000080;
+                    return cp;
+                }
+            }
+
+            void RefreshOverlay()
+            {
+                try
+                {
+                    if (game == null || game.IsDisposed || !game.Visible || game.WindowState == FormWindowState.Minimized)
+                    {
+                        if (Visible) Visible = false;
+                        return;
+                    }
+                    Rectangle b = game.RectangleToScreen(game.ClientRectangle);
+                    if (Bounds != b) Bounds = b;
+                    state = Program.ReadOverlay();
+                    if (!Visible) Visible = true;
+                    Invalidate();
+                }
+                catch { }
+            }
+
+            static Color RegionColor(string name)
+            {
+                switch ((name ?? "").ToLowerInvariant())
+                {
+                    case "title": return Color.Gold;
+                    case "enemy": return Color.OrangeRed;
+                    case "main": return Color.Lime;
+                    case "opts": return Color.Cyan;
+                    case "char": return Color.Magenta;
+                    default: return Color.White;
+                }
+            }
+
+            protected override void OnPaintBackground(PaintEventArgs e)
+            {
+                /* 一定要填 TransparencyKey 的顏色；留空會變成黑色不透明，整個遊戲被蓋住。 */
+                e.Graphics.Clear(BackColor);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                OcrOverlayState st = state;
+                if (st == null || st.w <= 0 || st.h <= 0 || ClientSize.Width <= 0 || ClientSize.Height <= 0) return;
+                Graphics g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                float sx = ClientSize.Width / (float)st.w;
+                float sy = ClientSize.Height / (float)st.h;
+                g.ScaleTransform(sx, sy);
+                float penW = 1.6f / Math.Max(0.2f, Math.Min(sx, sy));
+
+                if (st.regions != null)
+                {
+                    foreach (OcrOverlayRegion r in st.regions)
+                    {
+                        using (Pen p = new Pen(RegionColor(r.n), penW))
+                            g.DrawRectangle(p, r.x, r.y, r.w, r.h);
+                    }
+                }
+                if (st.measured != null)
+                {
+                    using (Pen p = new Pen(Color.Orange, penW))
+                    {
+                        p.DashStyle = DashStyle.Dash;
+                        foreach (OcrOverlayRegion r in st.measured)
+                            g.DrawRectangle(p, r.x, r.y, r.w, r.h);
+                    }
+                }
+                if (st.lines != null)
+                {
+                    foreach (OcrOverlayLine l in st.lines)
+                    {
+                        using (Pen p = new Pen(Color.FromArgb(170, RegionColor(l.r)), penW * 0.55f))
+                            g.DrawRectangle(p, l.x, l.y, Math.Max(1, l.w), Math.Max(1, l.h));
+                    }
+                }
+            }
+        }
+
+        /* 放在遊戲視窗旁邊的讀取面板；不覆蓋遊戲，能看目前 OCR 行。 */
+        class OcrReadoutForm : Form
+        {
+            readonly Form game;
+            readonly RichTextBox box;
+            readonly System.Windows.Forms.Timer timer;
+            string lastText = "";
+
+            public OcrReadoutForm(Form game)
+            {
+                this.game = game;
+                Text = "OCR 讀取";
+                FormBorderStyle = FormBorderStyle.FixedToolWindow;
+                ShowInTaskbar = false;
+                TopMost = true;
+                StartPosition = FormStartPosition.Manual;
+                BackColor = Color.FromArgb(16, 18, 22);
+                Width = 400;
+                Height = 620;
+                box = new RichTextBox();
+                box.Dock = DockStyle.Fill;
+                box.ReadOnly = true;
+                box.BorderStyle = BorderStyle.None;
+                box.BackColor = Color.FromArgb(16, 18, 22);
+                box.ForeColor = Color.Gainsboro;
+                box.Font = new Font("Consolas", 9f);
+                box.WordWrap = false;
+                box.ScrollBars = RichTextBoxScrollBars.Vertical;
+                Controls.Add(box);
+                timer = new System.Windows.Forms.Timer();
+                timer.Interval = 300;
+                timer.Tick += delegate { RefreshReadout(); };
+                timer.Start();
+            }
+
+            protected override bool ShowWithoutActivation { get { return true; } }
+
+            protected override CreateParams CreateParams
+            {
+                get
+                {
+                    CreateParams cp = base.CreateParams;
+                    /* WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW */
+                    cp.ExStyle |= 0x08000000 | 0x00000080;
+                    return cp;
+                }
+            }
+
+            void RefreshReadout()
+            {
+                try
+                {
+                    if (game == null || game.IsDisposed || !game.Visible || game.WindowState == FormWindowState.Minimized)
+                    {
+                        if (Visible) Visible = false;
+                        return;
+                    }
+                    Rectangle b = game.RectangleToScreen(game.ClientRectangle);
+                    Rectangle wa = Screen.FromControl(game).WorkingArea;
+                    int x;
+                    if (b.Right + 10 + Width <= wa.Right) x = b.Right + 10;
+                    else if (b.Left - 10 - Width >= wa.Left) x = b.Left - 10 - Width;
+                    else { if (Visible) Visible = false; return; }   // 兩側都放不下就收起，不蓋遊戲
+                    int y = Math.Max(wa.Top, Math.Min(b.Top, wa.Bottom - Height));
+                    Location = new Point(x, y);
+                    if (!Visible) Visible = true;
+
+                    OcrOverlayState st = Program.ReadOverlay();
+                    string text = FormatState(st);
+                    if (text != lastText)
+                    {
+                        lastText = text;
+                        int keep = box.SelectionStart;
+                        box.Text = text;
+                        box.SelectionStart = Math.Min(keep, box.TextLength);
+                    }
+                }
+                catch { }
+            }
+
+            static string Trunc(string s, int n)
+            {
+                s = s ?? "";
+                return s.Length <= n ? s : s.Substring(0, n) + "…";
+            }
+
+            static string FormatState(OcrOverlayState st)
+            {
+                StringBuilder sb = new StringBuilder();
+                if (st == null)
+                {
+                    sb.AppendLine("等待記錄器 overlay.json …");
+                    sb.AppendLine(Program.OverlayPath() ?? "（RecordOut 尚未設定）");
+                    return sb.ToString();
+                }
+                sb.AppendLine("FRAME " + st.frame + "  " + st.w + "x" + st.h + "  layout=" + st.layout + "  bg=" + st.bg);
+                sb.AppendLine("SESSION " + st.session + "  fallbacks=" + st.fallbacks + "  running=" + st.running);
+                sb.AppendLine("顏色：title 金／enemy 紅／main 綠／opts 青／char 洋紅；measured 橘虛線");
+                sb.AppendLine();
+                sb.AppendLine("REGIONS（實線）");
+                if (st.regions != null)
+                {
+                    foreach (OcrOverlayRegion r in st.regions)
+                        sb.AppendLine("  " + (r.n ?? "?").PadRight(7) + " x=" + r.x + " y=" + r.y + "  " + r.w + "x" + r.h);
+                }
+                sb.AppendLine();
+                sb.AppendLine("MEASURED（虛線，自動校正量到的邊界）");
+                if (st.measured != null && st.measured.Length > 0)
+                {
+                    foreach (OcrOverlayRegion r in st.measured)
+                        sb.AppendLine("  " + (r.n ?? "?").PadRight(15) + " x=" + r.x + " y=" + r.y + "  " + r.w + "x" + r.h);
+                }
+                else sb.AppendLine("  （這一幀沒有量到）");
+                sb.AppendLine();
+                sb.AppendLine("LINES " + (st.lines == null ? 0 : st.lines.Length));
+                if (st.lines != null)
+                {
+                    foreach (OcrOverlayLine l in st.lines)
+                        sb.AppendLine("[" + (l.r ?? "?") + "] (" + l.x + "," + l.y + " " + l.w + "x" + l.h + ") " + Trunc(l.t, 120));
+                }
+                if (!st.running) sb.AppendLine();
+                if (!st.running) sb.AppendLine("（記錄器已停止；這是 Close 前最後一幀）");
+                return sb.ToString();
+            }
+        }
     }
+}
+
+/* JavaScriptSerializer 用的公開資料模型（overlay.json 由 backroom-logger.ps1 產生）。 */
+public class OcrOverlayRegion
+{
+    public string n { get; set; }
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+}
+
+public class OcrOverlayLine
+{
+    public string r { get; set; }
+    public string t { get; set; }
+    public int x { get; set; }
+    public int y { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+}
+
+public class OcrOverlayState
+{
+    public bool running { get; set; }
+    public string session { get; set; }
+    public int frame { get; set; }
+    public int w { get; set; }
+    public int h { get; set; }
+    public string layout { get; set; }
+    public string bg { get; set; }
+    public OcrOverlayRegion[] regions { get; set; }
+    public OcrOverlayRegion[] measured { get; set; }
+    public OcrOverlayLine[] lines { get; set; }
+    public int fallbacks { get; set; }
+    public string detail { get; set; }
 }
