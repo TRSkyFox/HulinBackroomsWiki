@@ -331,6 +331,7 @@ $script:OcrFixRules = @(
   # 只在 Latin 單字後面接「山」時修；正常中文「…山」不受影響。
   @('r', '(?i)\bVoi\s*山', 'Void', 'Void 的 d 被讀成 山'),
   @('r', '(?i)\bVoid(?=\s*「)', 'Void」', 'Void 後面的 」 被吃掉'),
+  @('r', '(?i)\bVoid(?=\s*的)', 'Void」', 'Void 後面接「的」時補回引號'),
   # --- 引號結尾被讀成半角 ]：「会议] → 「会议」 ---
   @('r', '「([^」]{1,12})\]$', '「$1」', '引號結尾被讀成 ]')
 )
@@ -501,7 +502,7 @@ function ConvertTo-LogEvent {
     }
     return (New-LogEvent 'H' $v $T -X $X -Y $Y -H $Hh)
   }
-  if ($v.Length -le 26 -and $RxSceneHead.IsMatch($v)) { return (New-LogEvent 'H' $v $T -X $X -Y $Y -H $Hh) }
+  if ($v.Length -le 26 -and $RxSceneHead.IsMatch($v) -and ($v -match '[\u4e00-\u9fff]')) { return (New-LogEvent 'H' $v $T -X $X -Y $Y -H $Hh) }
 
   # --- 檢定宣告（天狐 · 知檢定 · 難度 16） ---
   if ($RxCheck.IsMatch($v)) {
@@ -2105,7 +2106,14 @@ function Invoke-RegionOcr {
           # 背景 RapidOCR 已有同一張裁圖的結果 → 下一幀直接換掉 Windows OCR 的錯字。
           if ($cropRel) {
             $fix = Get-RapidFix -LineDir $LineDir -Name $cropRel
-            if ($fix) { $txt = Repair-OcrText (Convert-OcrText $fix) }
+            if ($fix) {
+              # RapidOCR 會把「Void」認成 [Void]；保留原本的中文引號，否則會被當成場景標題 H。
+              if ($txt -match '^[「『]') {
+                $mFix = [regex]::Match($fix, '^\[(.+)\]$')
+                if ($mFix.Success) { $fix = '「' + $mFix.Groups[1].Value + '」' }
+              }
+              $txt = Repair-OcrText (Convert-OcrText $fix)
+            }
           }
           $all.Add([pscustomobject]@{
               Text = $txt; Region = $sp.Name
