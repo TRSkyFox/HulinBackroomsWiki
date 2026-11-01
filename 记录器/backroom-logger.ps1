@@ -4902,6 +4902,19 @@ try {
       $state.Frames++
       $lines = $rawFrame
 
+      # ---- 被 UI 擋住／只讀到半截的長行：先過濾，再寫 overlay／raw／structured／wiki ----
+      $imgW = $origW
+      $cleanFrame = New-Object System.Collections.Generic.List[object]
+      foreach ($l in $rawFrame) {
+        if (-not (Test-ClippedLine -Text ([string]$l.Text) -W ([int]$l.W) -Region ([string]$l.Region) -ImgW $imgW)) {
+          $cleanFrame.Add($l)
+        }
+      }
+      $rawFrame = $cleanFrame
+      $state.LastRawFrame = @($rawFrame | ForEach-Object {
+          [pscustomobject]@{ Text = $_.Text; Region = $_.Region; X = $_.X; Y = $_.Y; W = $_.W; H = $_.H; Crop = $_.Crop }
+        })
+
       # 給客戶端浮層的即時狀態（只有區塊與 OCR 行；不進正式紀錄）
       Write-OverlayState -S $state -FrameNo $state.FrameNo -W $origW -H $origH -Layout $layout `
         -ColorHex $colorHex -Specs $frameSpecs -Lines $rawFrame -Fallbacks $state.Fallbacks -Detail ''
@@ -5004,14 +5017,6 @@ try {
 
       # ---- 分類 → 事件 ----
       $imgW = $origW
-      # 被 UI 擋住／只讀到半截的長行，不進 overlay、structured、wiki。
-      $cleanFrame = New-Object System.Collections.Generic.List[object]
-      foreach ($l in $rawFrame) {
-        if (-not (Test-ClippedLine -Text ([string]$l.Text) -W ([int]$l.W) -Region ([string]$l.Region) -ImgW $imgW)) {
-          $cleanFrame.Add($l)
-        }
-      }
-      $rawFrame = $cleanFrame
       $frameEvents = New-Object System.Collections.Generic.List[object]
       $optMode = $false
       $added = 0
