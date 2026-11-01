@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -1374,6 +1375,44 @@ namespace FoyerPlayer
             return string.IsNullOrEmpty(RecordOut) ? null : Path.Combine(RecordOut, "overlay.json");
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        struct RECT { public int Left, Top, Right, Bottom; }
+        delegate bool EnumChildProc(IntPtr hwnd, IntPtr lParam);
+        [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumChildProc cb, IntPtr lParam);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, StringBuilder s, int n);
+        [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out RECT r);
+        [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hwnd);
+
+        /* 覆蓋層要貼在 WebView2 的 render 子視窗，不是整個 Form client：
+           render 子視窗不一定從 (0,0) 開始，也不一定等於 ClientSize。
+           找不到時才退回 game.ClientRectangle。 */
+        static Rectangle GetGameRenderRect(Form game)
+        {
+            Rectangle fallback = game.RectangleToScreen(game.ClientRectangle);
+            IntPtr found = IntPtr.Zero;
+            EnumChildWindows(game.Handle, delegate(IntPtr h, IntPtr lp)
+            {
+                StringBuilder cn = new StringBuilder(128);
+                GetClassName(h, cn, 128);
+                if (IsWindowVisible(h) && cn.ToString() == "Chrome_RenderWidgetHostHWND")
+                {
+                    found = h;
+                    return false;
+                }
+                return true;
+            }, IntPtr.Zero);
+            if (found != IntPtr.Zero)
+            {
+                RECT r;
+                if (GetWindowRect(found, out r))
+                {
+                    Rectangle rect = Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom);
+                    if (rect.Width > 100 && rect.Height > 100) return rect;
+                }
+            }
+            return fallback;
+        }
+
         static OcrOverlayState ReadOverlay()
         {
             try
@@ -1460,7 +1499,7 @@ namespace FoyerPlayer
                         if (Visible) Visible = false;
                         return;
                     }
-                    Rectangle b = game.RectangleToScreen(game.ClientRectangle);
+                    Rectangle b = Program.GetGameRenderRect(game);
                     if (Bounds != b) Bounds = b;
                     state = Program.ReadOverlay();
                     if (!Visible) Visible = true;
@@ -1584,7 +1623,7 @@ namespace FoyerPlayer
                         if (Visible) Visible = false;
                         return;
                     }
-                    Rectangle b = game.RectangleToScreen(game.ClientRectangle);
+                    Rectangle b = Program.GetGameRenderRect(game);
                     Rectangle wa = Screen.FromControl(game).WorkingArea;
                     int x;
                     if (b.Right + 10 + Width <= wa.Right) x = b.Right + 10;
