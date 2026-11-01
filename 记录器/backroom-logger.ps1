@@ -4615,7 +4615,7 @@ try {
       $regionOverride = $false
       if (-not $AutoRegion -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
         # 這些是 1696x1300 基準座標（ConvertTo-RegionRect 會再換算成 1600x900）
-        $RegionTitle = '10,1091,0,95'
+        $RegionTitle = '10,705,0,95'          # 只到黃色出口進度條左側（x≈665）
         if ($isCombat) {
           $RegionEnemy = '16,201,101,282'      # 左上敵人卡（x15..190, y70..195）
           $RegionMain = '21,1087,289,880'      # 卡片下方 y200..609
