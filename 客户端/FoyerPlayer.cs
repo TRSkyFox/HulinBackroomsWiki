@@ -24,8 +24,7 @@ namespace FoyerPlayer
         static Process VolumeWatcher;
         static string VolumeStopFile;
         static bool Record = true, RecorderStarted = false;
-        static bool ShowOverlay = true;
-        static bool ShowReadout = true;
+        static bool ShowOcrVisual = true;
         static double CaptureInterval = 0.5;
         static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false;
         static bool ClientOpening = false, WebViewInitializing = false;
@@ -196,8 +195,8 @@ namespace FoyerPlayer
                         case "--interval": { double iv; if (i + 1 < args.Length && double.TryParse(args[++i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out iv) && iv >= 0.1 && iv <= 5) CaptureInterval = iv; break; }
                         case "--record": Record = true; break;
                         case "--no-record": Record = false; break;
-                        case "--overlay": ShowOverlay = true; break;
-                        case "--no-overlay": ShowOverlay = false; break;
+                        case "--overlay": ShowOcrVisual = true; break;
+                        case "--no-overlay": ShowOcrVisual = false; break;
                     }
                 }
                 bool createdNew = false;
@@ -250,7 +249,7 @@ namespace FoyerPlayer
                 ExportSession = null;
                 CreateGameWindow();
                 Window.Show();
-                if (ShowOverlay) CreateOverlay();
+                if (ShowOcrVisual) CreateOverlay();
             }
             catch (Exception ex) { Log("OpenGameClient: " + ex); }
             finally { ClientOpening = false; }
@@ -445,16 +444,16 @@ namespace FoyerPlayer
 
             OcrReadoutCheck = new CheckBox();
             OcrReadoutCheck.SetBounds(270, 103, 132, 22);
-            OcrReadoutCheck.Checked = ShowReadout;
+            OcrReadoutCheck.Checked = ShowOcrVisual;
             OcrReadoutCheck.FlatStyle = FlatStyle.Flat;
             OcrReadoutCheck.ForeColor = Color.FromArgb(214, 214, 220);
             OcrReadoutCheck.BackColor = Color.FromArgb(44, 44, 47);
-            Ui(OcrReadoutCheck, "OCR 讀取", "OCR 读取", 8.5F, false);
+            Ui(OcrReadoutCheck, "OCR 浮層", "OCR 浮层", 8.5F, false);
             OcrReadoutCheck.CheckedChanged += delegate
             {
-                ShowReadout = OcrReadoutCheck.Checked;
-                if (ShowReadout) EnsureReadout();
-                else CloseReadoutOnly();
+                ShowOcrVisual = OcrReadoutCheck.Checked;
+                if (ShowOcrVisual) CreateOverlay();
+                else CloseOverlay();
             };
             grpClient.Controls.Add(OcrReadoutCheck);
 
@@ -793,8 +792,7 @@ namespace FoyerPlayer
                 try { if (File.Exists(StopFile)) File.Delete(StopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + RecorderScript + "\""
                     + " -OutDir \"" + RecordOut + "\" -Hwnd " + hwnd.ToInt64()
-                    + " -NoResize -Quiet -Interval " + CaptureInterval.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " -SaveLineCrops -AutoFloorShots -StopFile \"" + StopFile + "\""
-                    + (ShowOverlay ? "" : " -NoOverlay");
+                    + " -NoResize -Quiet -Interval " + CaptureInterval.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " -SaveLineCrops -AutoFloorShots -StopFile \"" + StopFile + "\"";
                 if (!string.IsNullOrEmpty(resumeDir) && Directory.Exists(resumeDir))
                     ps += " -SessionDir \"" + resumeDir + "\"";
                 var psi = new ProcessStartInfo("powershell.exe", ps);
@@ -1476,7 +1474,7 @@ namespace FoyerPlayer
                 if (Overlay != null && !Overlay.IsDisposed) return;
                 Overlay = new OcrOverlayForm(Window);
                 Overlay.Show();
-                if (ShowReadout) EnsureReadout();
+                EnsureReadout();
                 Log("OCR 覆蓋層已啟動");
             }
             catch (Exception ex) { Log("OCR 覆蓋層啟動失敗：" + ex.Message); }
