@@ -430,13 +430,13 @@ function Get-OcrSuspectCount([string]$Text) {
   return $n
 }
 
-# 被 UI 蓋住／只讀到半截的長行：寬度明顯小於主面板，而且含 2 個以上可疑字。
-# 這種行進 wiki 只會污染；直接不記。
+# 被 UI 蓋住／只讀到半截的長行：寬度不到主面板一半，而且含 2 個以上可疑字。
+# 門檻不能太高：事件正文常是 800~960px 的長段落，設 0.62 會把正常段落一起砍掉。
 function Test-ClippedLine([string]$Text, [int]$W, [string]$Region, [int]$ImgW) {
   if ($Region -ne 'main' -and $Region -ne 'full') { return $false }
   if ($ImgW -le 0 -or $W -le 0) { return $false }
   if ($RxCjkChar.Matches($Text).Count -lt 8) { return $false }
-  if ($W -ge [int]($ImgW * 0.62)) { return $false }
+  if ($W -ge [int]($ImgW * 0.45)) { return $false }
   return ((Get-OcrSuspectCount $Text) -ge 2)
 }
 
