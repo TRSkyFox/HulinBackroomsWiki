@@ -4596,14 +4596,35 @@ try {
 
       # 1600x900 是客戶端實際 render；1696x1300 的比例換算會把 main 上緣算太低，
       # 導致 enemy 蓋到故事、main/opts 重疊。這裡直接給這個尺寸的 normal 實測值。
+      # 戰鬥時左上有敵人卡（名稱／HP／防禦），main 要從卡片下方開始；先 OCR 一小塊
+      # 選項區判斷是不是戰鬥，避免每幀都做整張探測。
+      $isCombat = $false
+      if ($origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
+        try {
+          $probeSpec = @([pscustomobject]@{ Name = 'probe'; Spec = '21,339,880,1011' })
+          $probe = Invoke-RegionOcr -Crop $crop -Engine $ocrEngine -Scale $OcrScale -TmpPng $state.TmpPng -Specs $probeSpec
+          $probeLines = @()
+          if ($null -ne $probe.Lines) { $probeLines = [object[]]$probe.Lines }
+          $probeText = (($probeLines | ForEach-Object { [string]$_.Text }) -join ' ')
+          if ($probeText -match '右手|撤退|切换|使用物品|战利品|攻击|攻擊|技能|防御|防禦|閃躲|闪躲|逃跑|回合|选择行动|選擇行動') {
+            $isCombat = $true
+          }
+        } catch { Write-Log $state ('combat probe error: ' + $_.Exception.Message) }
+      }
+
       $regionOverride = $false
       if (-not $AutoRegion -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
         # 這些是 1696x1300 基準座標（ConvertTo-RegionRect 會再換算成 1600x900）
         $RegionTitle = '10,1091,0,95'
-        $RegionEnemy = '10,450,61,130'
-        $RegionMain = '21,1030,116,880'
-        $RegionOpts = '21,1030,880,1281'
-        $RegionChar = '-647,-5,95,217'
+        if ($isCombat) {
+          $RegionEnemy = '16,201,101,282'      # 左上敵人卡（x15..190, y70..195）
+          $RegionMain = '21,1087,289,880'      # 卡片下方 y200..609
+        } else {
+          $RegionEnemy = '10,138,61,130'       # 只有「第 N 層｜岔路」這條
+          $RegionMain = '21,1087,116,880'      # 故事 y80..609
+        }
+        $RegionOpts = '21,1087,880,1281'
+        $RegionChar = '-604,-5,95,217'
         $regionSpecs = Get-RegionSpecs
         $state.LastMeasured = $null
         $regionOverride = $true
