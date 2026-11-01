@@ -580,7 +580,7 @@ function Add-ClassifiedLine {
     ([Math]::Abs($prev.Y - $ev.Y) -le 4)) {
     $gapX = $ev.X - ($prev.X + $prev.W)
     if ($gapX -ge -8 -and $gapX -le 36 -and
-      (($prev.V -notmatch '[。！？!?」』）)]$') -or ($ev.V -match '^[「『（(]'))) {
+      (($prev.V -notmatch '[。！？!?」』）)]$') -or ($ev.V -match '^[「『（(。，、；：！？!?…]'))) {
       $prev.V = $prev.V + $ev.V
       $prev.W = ($ev.X + $ev.W) - $prev.X
       $prev.H = [Math]::Max($prev.H, $ev.H)
