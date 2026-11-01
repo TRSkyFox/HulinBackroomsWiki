@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -19,10 +20,13 @@ namespace FoyerPanel
         static bool ClientOwned = false;
         static IntPtr GameHwnd = IntPtr.Zero;
         static bool PipelineRunning = false, AllowExit = false, ShowOcr = true;
+        static bool ProgressDone = false;
         static string ActiveSession;
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel;
+        static Label StageLabel;
+        static ProgressBar StageBar;
         static CheckBox OcrCheck;
         static Button StartRecBtn, StopRecBtn;
         static System.Windows.Forms.Timer UiTimer;
@@ -81,7 +85,7 @@ namespace FoyerPanel
         {
             ControlWindow = new Form();
             ControlWindow.Text = "狐霖記錄器控制";
-            ControlWindow.ClientSize = new Size(430, 300);
+            ControlWindow.ClientSize = new Size(430, 340);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -137,8 +141,22 @@ namespace FoyerPanel
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
             StateLabel.Text = "狀態：等待客戶端";
             ControlWindow.Controls.Add(StateLabel);
+
+            StageLabel = new Label();
+            StageLabel.SetBounds(14, 250, 402, 18);
+            StageLabel.ForeColor = Color.FromArgb(205, 205, 210);
+            StageLabel.Text = "目前整理：—";
+            ControlWindow.Controls.Add(StageLabel);
+
+            StageBar = new ProgressBar();
+            StageBar.SetBounds(14, 272, 402, 14);
+            StageBar.Minimum = 0;
+            StageBar.Maximum = 100;
+            StageBar.Value = 0;
+            ControlWindow.Controls.Add(StageBar);
+
             var output = new Label();
-            output.SetBounds(14, 250, 402, 34);
+            output.SetBounds(14, 294, 402, 30);
             output.ForeColor = Color.FromArgb(170, 170, 176);
             output.Text = "記錄器在另一個程序；只要重開控制台，不會重開遊戲。";
             ControlWindow.Controls.Add(output);
@@ -207,6 +225,7 @@ namespace FoyerPanel
                     StopRecorder(true);
                 }
                 bool rec = Recorder != null && !Recorder.HasExited;
+                RefreshProgress();
                 if (PipelineRunning) SetState("狀態：整理中…", Color.FromArgb(255, 190, 100));
                 else if (rec) SetState("狀態：記錄中", Color.FromArgb(130, 220, 140));
                 else if (GameHwnd != IntPtr.Zero) SetState("狀態：客戶端已開（未記錄）", Color.FromArgb(200, 200, 200));
@@ -352,6 +371,9 @@ namespace FoyerPanel
                 psi.WorkingDirectory = Path.GetDirectoryName(RecorderScript);
                 Recorder = Process.Start(psi);
                 if (ShowOcr) CreateOverlay();
+                ProgressDone = false;
+                StageLabel.Text = "目前整理：—";
+                StageBar.Value = 0;
                 SetState("狀態：記錄中", Color.FromArgb(130, 220, 140));
             }
             catch (Exception ex)
@@ -374,6 +396,7 @@ namespace FoyerPanel
             string ses = LatestSession();
             if (ses == null) { SetState("沒有可整理的場次", Color.FromArgb(255, 150, 120)); return; }
             PipelineRunning = true;
+            ProgressDone = false;
             SetState("狀態：停止記錄並整理…", Color.FromArgb(255, 190, 100));
             var t = new Thread(delegate ()
             {
@@ -384,10 +407,72 @@ namespace FoyerPanel
                     SetState("狀態：整理完成", Color.FromArgb(130, 220, 140));
                 }
                 catch (Exception ex) { Log("process: " + ex); SetState("整理失敗（看 player.log）", Color.FromArgb(255, 120, 110)); }
-                finally { PipelineRunning = false; }
+                finally
+                {
+                    PipelineRunning = false;
+                    ProgressDone = true;
+                    StageLabel.Text = "上次整理：完成";
+                    StageBar.Value = 100;
+                }
             });
             t.IsBackground = true;
             t.Start();
+        }
+
+        static void RefreshProgress()
+        {
+            try
+            {
+                if (!PipelineRunning)
+                {
+                    if (ProgressDone) return;
+                    StageLabel.Text = "目前整理：—";
+                    StageBar.Value = 0;
+                    return;
+                }
+                string ses = LatestSession();
+                string pf = string.IsNullOrEmpty(ses) ? null : Path.Combine(ses, "progress.json");
+                int pct = -1, cur = 0, total = 0;
+                string stage = null, item = null;
+                if (!string.IsNullOrEmpty(pf) && File.Exists(pf))
+                {
+                    var d = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(pf));
+                    pct = DInt(d, "percent", -1);
+                    stage = DStr(d, "stage");
+                    item = DStr(d, "item");
+                    cur = DInt(d, "current", 0);
+                    total = DInt(d, "total", 0);
+                }
+                string line = "目前整理：" + (string.IsNullOrEmpty(stage) ? "準備中…" : stage);
+                if (pct >= 0) line += " (" + pct + "/100)";
+                if (cur > 0 && total > 0) line += "　" + cur + "/" + total + (string.IsNullOrEmpty(item) ? "" : "：" + item);
+                StageLabel.Text = line;
+                int v = pct < 0 ? 0 : (pct > 100 ? 100 : pct);
+                if (StageBar.Value != v) StageBar.Value = v;
+            }
+            catch { }
+        }
+
+        static int DInt(Dictionary<string, object> d, string key, int fallback)
+        {
+            try
+            {
+                object v;
+                if (d != null && d.TryGetValue(key, out v) && v != null) return Convert.ToInt32(v);
+            }
+            catch { }
+            return fallback;
+        }
+
+        static string DStr(Dictionary<string, object> d, string key)
+        {
+            try
+            {
+                object v;
+                if (d != null && d.TryGetValue(key, out v) && v != null) return Convert.ToString(v);
+            }
+            catch { }
+            return null;
         }
 
         static void StopRecorder(bool fast)
