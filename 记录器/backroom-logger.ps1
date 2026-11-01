@@ -1279,9 +1279,41 @@ function Get-WindowImage {
   return $bmp
 }
 
+# 背景 RapidOCR 已經認好的同一張裁圖 → 直接採用它的文字。
+# 這樣 overlay／wiki 不用等收工，下一幀就會從 Windows OCR 的錯字換成 RapidOCR 的結果。
+$script:RapidFixMap = @{}
+$script:RapidFixStamp = [datetime]::MinValue
+$script:RapidFixLen = -1
+$script:RapidFixPath = ''
+function Get-RapidFix {
+  param([string]$LineDir, [string]$Name)
+  if (-not $LineDir -or -not $Name) { return $null }
+  $p = Join-Path (Split-Path $LineDir -Parent) 'rapid.jsonl'
+  if (-not (Test-Path -LiteralPath $p)) { return $null }
+  try {
+    $fi = Get-Item -LiteralPath $p
+    if ($p -ne $script:RapidFixPath -or $fi.LastWriteTimeUtc -ne $script:RapidFixStamp -or $fi.Length -ne $script:RapidFixLen) {
+      $map = @{}
+      foreach ($ln in [System.IO.File]::ReadLines($p)) {
+        if (-not $ln.Trim()) { continue }
+        try {
+          $o = $ln | ConvertFrom-Json
+          if ($o.name -and $o.text) { $map[[string]$o.name] = [pscustomobject]@{ Text = [string]$o.text; Score = [double]$o.score } }
+        } catch { }
+      }
+      $script:RapidFixMap = $map
+      $script:RapidFixPath = $p
+      $script:RapidFixStamp = $fi.LastWriteTimeUtc
+      $script:RapidFixLen = $fi.Length
+    }
+    $hit = $script:RapidFixMap[$Name]
+    if ($hit -and $hit.Score -ge 0.75 -and $hit.Text) { return $hit.Text }
+  } catch { }
+  return $null
+}
+
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
-function Scale-Image {
-  param($Bmp, [double]$Factor)
+function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
   if ($Factor -le 1.0001) { return $Bmp }
   $nw = [int][Math]::Round($Bmp.Width * $Factor)
@@ -2038,11 +2070,15 @@ function Invoke-RegionOcr {
               # 判斷：殘渣字／中英夾雜／Wiki 語料沒收過的字；同一段文字只留一張。
               if ($txt -and $script:CropByText.ContainsKey($txt)) {
                 $cropRel = $script:CropByText[$txt]
-              } elseif ($txt -and (Test-NeedsRapid -Text $txt)) {
-                $lx = [int][Math]::Max(0, [Math]::Floor($x1 + $rc.Left) - 2)
-                $ly = [int][Math]::Max(0, [Math]::Floor($y1 + $rc.Top) - 2)
-                $lw = [int][Math]::Min($Crop.Width - $lx, [Math]::Ceiling($x2 - $x1) + 4)
-                $lh = [int][Math]::Min($Crop.Height - $ly, [Math]::Ceiling($y2 - $y1) + 4)
+              } elseif ($txt -and ((Test-NeedsRapid -Text $txt) -or ($sp.Name -eq 'opts'))) {
+                # 選項區常把第一個字讀掉（例如「绕开」只剩「开」），
+                # 裁圖往左多留 24px，RapidOCR 才有機會把被漏掉的字補回來。
+                $padL = $(if ($sp.Name -eq 'opts') { 24 } else { 6 })
+                $padR = 6; $padT = 3; $padB = 3
+                $lx = [int][Math]::Max(0, [Math]::Floor($x1 + $rc.Left) - $padL)
+                $ly = [int][Math]::Max(0, [Math]::Floor($y1 + $rc.Top) - $padT)
+                $lw = [int][Math]::Min($Crop.Width - $lx, [Math]::Ceiling($x2 - $x1) + $padL + $padR)
+                $lh = [int][Math]::Min($Crop.Height - $ly, [Math]::Ceiling($y2 - $y1) + $padT + $padB)
                 if ($lw -gt 2 -and $lh -gt 2) {
                   New-Item -ItemType Directory -Force -Path $LineDir | Out-Null
                   $lb = $Crop.Clone((New-Object System.Drawing.Rectangle($lx, $ly, $lw, $lh)), $Crop.PixelFormat)
@@ -2071,6 +2107,11 @@ function Invoke-RegionOcr {
               }
               }
             } catch { $cropRel = '' }
+          }
+          # 背景 RapidOCR 已有同一張裁圖的結果 → 下一幀直接換掉 Windows OCR 的錯字。
+          if ($cropRel) {
+            $fix = Get-RapidFix -LineDir $LineDir -Name $cropRel
+            if ($fix) { $txt = Repair-OcrText (Convert-OcrText $fix) }
           }
           $all.Add([pscustomobject]@{
               Text = $txt; Region = $sp.Name
