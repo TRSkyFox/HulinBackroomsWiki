@@ -536,10 +536,11 @@ function ConvertTo-LogEvent {
 
 # 把一行分類後併進事件串（處理：段落合併、選項綁難度、打字機覆蓋）
 function Add-ClassifiedLine {
-  param($S, [string]$Text, [int]$X, [int]$Y, [int]$Hh, [int]$ImgW, [datetime]$T, [bool]$SameFrame, $FrameEvents, [string]$Region = '', [int]$FrameNo = 0)
+  param($S, [string]$Text, [int]$X, [int]$Y, [int]$Hh, [int]$ImgW, [datetime]$T, [bool]$SameFrame, $FrameEvents, [string]$Region = '', [int]$FrameNo = 0, [int]$W = 0)
 
   $ev = ConvertTo-LogEvent -Text $Text -X $X -Y $Y -Hh $Hh -ImgW $ImgW -T $T -Region $Region
   if ($null -eq $ev) { return $null }
+  if ($W -gt 0) { $ev | Add-Member -NotePropertyName W -NotePropertyValue $W -Force }
 
   # 選項的難度 → 綁到上一個短行
   if ($ev.K -eq 'DC') {
@@ -569,6 +570,20 @@ function Add-ClassifiedLine {
     if (([BrWin]::Overlap($ra, $rb) -ge 0.45) -and ($ev.V.Length -gt $prev.V.Length) -and
       (($ev.V.StartsWith($prev.V)) -or ([BrWin]::Sim($prev.V, $ev.V) -ge 0.7))) {
       $prev.V = $ev.V; $prev.X = $ev.X; $prev.Y = $ev.Y; $prev.H = $ev.H; $prev.T = $T
+      return 'M'
+    }
+  }
+
+  # 同一行被 OCR 拆成左右兩個 box（左：…說：／右：「我、我們是不是該）
+  # 這時 X 差很多，不能再要求同 X；只要求同一 Y、右邊緊接、沒有太大空隙。
+  if ($prev -and $prev.K -eq 'N' -and $ev.K -eq 'N' -and $prev.W -and $ev.W -and
+    ([Math]::Abs($prev.Y - $ev.Y) -le 4)) {
+    $gapX = $ev.X - ($prev.X + $prev.W)
+    if ($gapX -ge -8 -and $gapX -le 36 -and
+      (($prev.V -notmatch '[。！？!?」』）)]$') -or ($ev.V -match '^[「『（(]'))) {
+      $prev.V = $prev.V + $ev.V
+      $prev.W = ($ev.X + $ev.W) - $prev.X
+      $prev.H = [Math]::Max($prev.H, $ev.H)
       return 'M'
     }
   }
@@ -5027,12 +5042,19 @@ try {
       $frameEvents = New-Object System.Collections.Generic.List[object]
       $optMode = $false
       $added = 0
+      $prevLine = $null
       foreach ($l in @($rawFrame | Sort-Object Y, X)) {
+        $sameLineRight = $prevLine -and ([Math]::Abs($prevLine.Y - $l.Y) -le 4) -and
+          (($l.X - ($prevLine.X + $prevLine.W)) -ge -8) -and
+          (($l.X - ($prevLine.X + $prevLine.W)) -le 36)
+        $prevLine = $l
         if ($pageRect.Page -and $RxChromeNoise.IsMatch($l.Text)) { continue }
         if ($RxPrompt.IsMatch($l.Text)) { $optMode = $true; continue }
-        if (Test-Duplicate -S $state -Text $l.Text) { continue }
-        if (Test-Fragment -S $state -Text $l.Text) { Add-Recent -S $state -Text $l.Text; continue }
-        $ev = Add-ClassifiedLine -S $state -Text $l.Text -X $l.X -Y $l.Y -Hh $l.H -ImgW $imgW -T ([datetime]::Now) -SameFrame $true -FrameEvents $frameEvents -Region ([string]$l.Region) -FrameNo $state.FrameNo
+        if (-not $sameLineRight) {
+          if (Test-Duplicate -S $state -Text $l.Text) { continue }
+          if (Test-Fragment -S $state -Text $l.Text) { Add-Recent -S $state -Text $l.Text; continue }
+        }
+        $ev = Add-ClassifiedLine -S $state -Text $l.Text -X $l.X -Y $l.Y -Hh $l.H -ImgW $imgW -T ([datetime]::Now) -SameFrame $true -FrameEvents $frameEvents -Region ([string]$l.Region) -FrameNo $state.FrameNo -W $l.W
         if ($ev -is [string]) { Add-Recent -S $state -Text $l.Text; continue }
         if ($ev) {
           Add-Recent -S $state -Text $l.Text
