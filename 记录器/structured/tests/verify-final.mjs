@@ -6,6 +6,7 @@ import { run as runI18n } from './i18n.test.mjs';
 import { run as runFont } from './font.test.mjs';
 import { run as runData } from './data.test.mjs';
 import { run as runRecorder } from './recorder.test.mjs';
+import { run as runContent } from '../validate-content.mjs';
 import { floorName } from '../text.mjs';
 
 /*
@@ -218,11 +219,13 @@ for (const p of [
   '客户端/volume-watch.ps1'
 ]) check('file_' + p, fs.existsSync(path.join(root, p)), p);
 
-/* ── 四組回歸測試 ── */
-for (const r of [runI18n(), runFont(), runData(), runRecorder()]) {
+/* ── 四組回歸測試＋內容引用完整性 ── */
+const contentResult = runContent();
+for (const r of [runI18n(), runFont(), runData(), runRecorder(), contentResult]) {
   for (const c of r.checks) check(c.name, c.ok, c.detail);
 }
+out.warnings = contentResult.warnings || [];
 
-out.summary = { total: out.checks.length, failed: out.checks.filter(x => !x.ok).length };
+out.summary = { total: out.checks.length, failed: out.checks.filter(x => !x.ok).length, warnings: out.warnings.length };
 console.log(JSON.stringify(out, null, 2));
 if (!out.ok) process.exit(1);
