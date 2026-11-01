@@ -1344,6 +1344,46 @@ function Get-FontMatchFix {
   return $null
 }
 
+# 垂直裁切：字被畫面上緣／下緣切掉時，OCR 仍會回一行，但墨跡只剩一半。
+# 用裁圖的墨跡高度判斷，不看段落長度。
+function Test-VerticalCut([string]$Path, [int]$LineH = 0) {
+  if (-not $Path -or -not (Test-Path -LiteralPath $Path)) { return $false }
+  try {
+    $b = [System.Drawing.Bitmap]::new($Path)
+    try {
+      $w = $b.Width; $h = $b.Height
+      if ($w -lt 3 -or $h -lt 6) { return $false }
+      $min = 255; $max = 0
+      for ($y = 0; $y -lt $h; $y++) {
+        for ($x = 0; $x -lt $w; $x++) {
+          $p = $b.GetPixel($x, $y)
+          $lum = [int](0.299 * $p.R + 0.587 * $p.G + 0.114 * $p.B)
+          if ($lum -lt $min) { $min = $lum }
+          if ($lum -gt $max) { $max = $lum }
+        }
+      }
+      if ($max - $min -lt 30) { return $false }
+      $thr = $min + ($max - $min) * 0.55
+      $rows = New-Object 'System.Collections.Generic.List[int]'
+      for ($y = 0; $y -lt $h; $y++) {
+        $n = 0
+        for ($x = 0; $x -lt $w; $x++) {
+          $p = $b.GetPixel($x, $y)
+          $lum = 0.299 * $p.R + 0.587 * $p.G + 0.114 * $p.B
+          if ($lum -gt $thr) { $n++ }
+        }
+        if ($n -ge [Math]::Max(2, [int]($w * 0.02))) { $rows.Add($y) }
+      }
+      if ($rows.Count -lt 2) { return $false }
+      $inkH = $rows[$rows.Count - 1] - $rows[0] + 1
+      # 正常字墨跡約佔 OCR 行高 55~90%；只剩上半或下半時會明顯變矮。
+      $refH = $(if ($LineH -gt 0) { $LineH } else { $h })
+      return ($inkH -lt [Math]::Max(7, [int]($refH * 0.55)))
+    } finally { $b.Dispose() }
+  } catch { }
+  return $false
+}
+
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
 function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
@@ -2154,6 +2194,9 @@ function Invoke-RegionOcr {
               $txt = Repair-OcrText (Convert-OcrText $fix)
             }
           }
+          $vcut = $false
+          if ($cropRel) { $vcut = Test-VerticalCut -Path (Join-Path $LineDir $cropRel) -LineH ([int]($y2 - $y1)) }
+          if (-not $vcut) {
           $all.Add([pscustomobject]@{
               Text = $txt; Region = $sp.Name
               X = [int]($x1 + $rc.Left); Y = [int]($y1 + $rc.Top)
@@ -2161,6 +2204,7 @@ function Invoke-RegionOcr {
               Crop = $cropRel
             })
           $n++
+          }
         }
       } finally {
         if ($bitmap) { $bitmap.Dispose() }
