@@ -767,6 +767,50 @@ namespace FoyerPanel
                 return s.Length <= n ? s : s.Substring(0, n) + "…";
             }
 
+            static bool EndsPunct(string s)
+            {
+                return !string.IsNullOrEmpty(s) && "。！？!?」』）)".IndexOf(s[s.Length - 1]) >= 0;
+            }
+
+            static bool StartsPunct(string s)
+            {
+                return !string.IsNullOrEmpty(s) && "「『（(。，、；：！？!?…".IndexOf(s[0]) >= 0;
+            }
+
+            static OcrOverlayLine[] MergeLines(OcrOverlayLine[] raw)
+            {
+                if (raw == null) return null;
+                var arr = (OcrOverlayLine[])raw.Clone();
+                Array.Sort(arr, delegate (OcrOverlayLine a, OcrOverlayLine b)
+                {
+                    int c = a.y.CompareTo(b.y);
+                    return c != 0 ? c : a.x.CompareTo(b.x);
+                });
+                var list = new List<OcrOverlayLine>();
+                foreach (var l in arr)
+                {
+                    var last = list.Count > 0 ? list[list.Count - 1] : null;
+                    bool sameLine = last != null
+                        && Math.Abs(last.y - l.y) <= 4
+                        && (l.x - (last.x + last.w)) >= -8
+                        && (l.x - (last.x + last.w)) <= 36
+                        && (!EndsPunct(last.t) || StartsPunct(l.t));
+                    bool wrapped = last != null
+                        && !EndsPunct(last.t)
+                        && Math.Abs(last.x - l.x) <= 14
+                        && (l.y - (last.y + last.h)) <= Math.Max(14, (int)(0.75 * l.h));
+                    if (sameLine || wrapped)
+                    {
+                        last.t = (last.t ?? "") + (l.t ?? "");
+                        last.w = Math.Max(last.w, (l.x + l.w) - last.x);
+                        last.h = Math.Max(last.h, (l.y + l.h) - last.y);
+                        continue;
+                    }
+                    list.Add(new OcrOverlayLine { r = l.r, t = l.t, x = l.x, y = l.y, w = l.w, h = l.h });
+                }
+                return list.ToArray();
+            }
+
             static string FormatState(OcrOverlayState st)
             {
                 var sb = new StringBuilder();
@@ -779,9 +823,10 @@ namespace FoyerPanel
                 if (st.regions != null)
                     foreach (var r in st.regions) sb.AppendLine("  " + (r.n ?? "?").PadRight(7) + " x=" + r.x + " y=" + r.y + "  " + r.w + "x" + r.h);
                 sb.AppendLine();
-                sb.AppendLine("LINES " + (st.lines == null ? 0 : st.lines.Length));
-                if (st.lines != null)
-                    foreach (var l in st.lines) sb.AppendLine("[" + (l.r ?? "?") + "] (" + l.x + "," + l.y + " " + l.w + "x" + l.h + ") " + Trunc(l.t, 120));
+                var merged = MergeLines(st.lines);
+                sb.AppendLine("LINES " + (merged == null ? 0 : merged.Length));
+                if (merged != null)
+                    foreach (var l in merged) sb.AppendLine("[" + (l.r ?? "?") + "] (" + l.x + "," + l.y + " " + l.w + "x" + l.h + ") " + Trunc(l.t, 500));
                 if (!st.running) sb.AppendLine();
                 if (!st.running) sb.AppendLine("（記錄器已停止；這是 Close 前最後一幀）");
                 return sb.ToString();
