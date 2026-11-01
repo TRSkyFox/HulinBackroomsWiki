@@ -1,0 +1,37 @@
+{
+  "key": "13|玻璃之狂",
+  "id": "13",
+  "name": "玻璃之狂",
+  "info": {
+    "id": "13",
+    "name": "玻璃之狂"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>你睜開眼睛的時候，身邊一個人都沒有。<br>四面八方都是玻璃。一條長長的溫室走廊，中間鋪著一條凹凸不平的石板路，兩邊擺著桌椅和盆栽，天花板上<br>掛著一串一串的小燈，玻璃外面是霧，白茫茫的一片，看不到地面。<br>雨打在玻璃屋頂上，滴滴答答。空氣里有一股很淡的杏仁味。<br>很遠的地方，有人在放音樂——輕快的、像派對一樣的音樂。<br>你喊了一聲，玻璃把聲音彈了回來，一層一層，越來越小。</blockquote>",
+  "palette": {
+    "bg": "#182C18",
+    "background": "#182C18",
+    "card": "#18301C",
+    "line": "#182C1C",
+    "acc": "#9CE0A0",
+    "tx": "#80888C",
+    "panel": "#18301C",
+    "accent": "#9CE0A0",
+    "text": "#80888C"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "玻璃之狂"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "intro": "你睁开眼睛的时候，身边一个人都没有。\n四面八方都是玻璃。一条长长的温室走廊，中间铺着一条凹凸不平的石板路，两边摆着桌椅和盆栽，天花板\n挂着一串一串的小灯°玻璃外面是雾，白茫茫的一片，看不到地面。\n雨打在玻璃屋顶上，滴滴答答。空气里有一股很淡的杏仁味。\n很远的地方，有人在放音乐一一轻快的、像派对一样的音乐。\n你喊了一声。玻璃把声音弹了回来，一层一层，越来越小。"
+  },
+  "_introSource": "backroom-20261029-104803",
+  "_introUpdated": "2026-11-01T03:20:05.716Z"
+}

@@ -1,0 +1,388 @@
+{
+  "floorId": "83.1",
+  "floorName": "木槿之丘",
+  "junctions": [
+    {
+      "text": "要走哪條路",
+      "paths": [
+        {
+          "text": "沿著粉紅色的小河走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往山丘上面走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          348
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "走哪條路",
+      "paths": [
+        {
+          "text": "沿著粉紅色的小河走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往山丘上走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          350
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "走哪條路",
+      "paths": [
+        {
+          "text": "沿著粉紅色的小河走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往山丘上固走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          352
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "走哪條路",
+      "paths": [
+        {
+          "text": "沿著粉紅色河走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "治著粉紅色的小河是",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往山丘上面走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          355
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "粉紅色的小河",
+      "kind": "event",
+      "intro": "山谷底下有一條小河，水是粉紅色的，很淺，清得看得到底下圓圓的石頭。水流得很慢，聲音很好聽。水甜甜的，涼涼的，有一點點草莓的味道。喝完整個人都輕了。天狐：口渴 + 3",
+      "actions": [
+        {
+          "text": "捧起來喝",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "腳底下是草——粉紅色的草，軟得像地毯。四周是一座接一座的山丘，起起伏伏，一直延伸到天邊。",
+                "太陽停在山丘的邊上，一動也不動，整片天空是橘色的，橘色裡面有粉紅、有深紅，雲慢慢地飄。",
+                "空氣里有花香，淡淡的，到處都有。",
+                "山坡上開滿了白色的「棉花」一一不是棉花，是一種沒見過的花。"
+              ],
+              "effects": [
+                {
+                  "kind": "經驗",
+                  "amount": 7
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "沿著河往下游走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "撿地上掉下來的",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "捧起來喝",
+      "results": [
+        "腳底下是草——粉紅色的草，軟得像地毯。四周是一座接一座的山丘，起起伏伏，一直延伸到天邊。",
+        "太陽停在山丘的邊上，一動也不動，整片天空是橘色的，橘色裡面有粉紅、有深紅，雲慢慢地飄。",
+        "空氣里有花香，淡淡的，到處都有。",
+        "山坡上開滿了白色的「棉花」一一不是棉花，是一種沒見過的花。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "經驗",
+          "amount": 7
+        }
+      ],
+      "progress": {
+        "current": 1,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 395,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "盛開的大樹",
+      "kind": "event",
+      "intro": "一棵很大、很大的樹，整棵開滿了花，花瓣一片一片地發著光。樹下的草被花瓣蓋住了，厚厚一層，軟軟樹很好爬。爬上去，躺在發光的花瓣底下，好像會睡得很好。你爬上大樹，在發光的花瓣底下找了一根粗粗的樹枝躺下來。光暖暖的，花瓣一片一片落在臉上。睡著之好像聽到有人在很遠的地方說「歡迎」。醒來的時候，還在樹上。可是睡得好好。",
+      "actions": [
+        {
+          "text": "爬上去，在花 0 底下休息",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐：得到「繃帶」",
+                "一座比其他都高的山丘，高到擋住了半邊天。",
+                "這裡的花，不是整層那種粉紅色。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "在樹下坐一下",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "爬上去，在花 0 底下休息",
+      "results": [
+        "天狐：得到「繃帶」",
+        "一座比其他都高的山丘，高到擋住了半邊天。",
+        "這裡的花，不是整層那種粉紅色。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 2,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 407,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "山坡上的樹",
+      "kind": "event",
+      "intro": "山坡上有一棵開滿花的樹，樹下的草被花瓣蓋住了，厚厚的一層。夕陽照過來，樹影一格一格的。風很暖。你躺在花瓣上睡了一覺。醒來的時候，陽還在同一個地方，好像一秒都沒過，可是身體休息得好好。天狐的肚子餓到發疼，再不吃點東西就撐不住了。(飢餓0)紅色的木槿花一朵比一朵大，大到可以當帽子戴。區域：櫻花小徑一排一排的櫻花樹，排成了迷宮。樹和樹之間只有窄窄的小路，地上鋪著好幾層花瓣。葉子在落——每一片都在發著微光，越靠近地面越亮。",
+      "actions": [
+        {
+          "text": "在樹下的一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "聊聊天，夕陽",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "0 天，輯夕陽",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "好像聽到有人在很遠的地方說「歡迎」",
+                "地上的草厚得不像話，踩下去整只腳都陷進去。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "0 天，輯夕陽",
+      "results": [
+        "好像聽到有人在很遠的地方說「歡迎」",
+        "地上的草厚得不像話，踩下去整只腳都陷進去。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 3,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 413,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "掛著風鈴的樹",
+      "kind": "event",
+      "intro": "一棵矮矮的樹枝子上掛滿了東西：玻璃瓶做的風鈴、鑰匙圈、褪色的絲帶、一張一張折成小船的紙。風一，叮叮當當地響。每一樣東西，看起來都是不同的人留下的。",
+      "actions": [
+        {
+          "text": "在樹上掛一樣自己的東西",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "櫻花樹的枝子在頭頂交纏，像一條花做的隧道。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "讀讀那些紙船上寫了什麼",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "聽一下風鈴就定",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "在樹上掛一樣自己的東西",
+      "results": [
+        "櫻花樹的枝子在頭頂交纏，像一條花做的隧道。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 5,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 425,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "蓮花海的盡頭",
+      "kind": "event",
+      "intro": "蓮花海一直延伸到夕陽底下。岸邊，路分成了好幾條：一條沒進水裡，水底有冷冷的水流；一條沿著岸邊，",
+      "actions": [
+        {
+          "text": "潛進水裡，讓水流帶著走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true
+        },
+        {
+          "text": "走進那一段很眼熟的地方",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "先不走，再多探景幾步",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "潛進水裡，讓水流帶著走",
+      "results": [],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 8,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 440,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

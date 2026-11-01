@@ -1,0 +1,20 @@
+[
+  {
+    "category": "bad",
+    "label": "壞結局",
+    "name": "全員迷失",
+    "status": "待補",
+    "floors": "Level 1",
+    "lv": "1",
+    "trigger": "",
+    "lines": [],
+    "after": "",
+    "owns": [],
+    "floorId": "1",
+    "_src": {
+      "session": "backroom-20261029-125010",
+      "frame": null,
+      "rule": "event-clean@2026-10-29"
+    }
+  }
+]

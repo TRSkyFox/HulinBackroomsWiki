@@ -1,0 +1,34 @@
+{
+  "n": "感染蟲",
+  "skills": [
+    {
+      "n": "攻擊",
+      "eff": ""
+    },
+    {
+      "n": "咬",
+      "eff": ""
+    }
+  ],
+  "desc": "",
+  "resist": {
+    "res": "",
+    "weak": ""
+  },
+  "drops": [],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-104803",
+    "rawName": "感染虫",
+    "evidence": {
+      "skills": {
+        "攻擊": 1,
+        "咬": 1
+      },
+      "drops": {},
+      "resist": {},
+      "descVariants": 1
+    },
+    "resistNotes": []
+  }
+}

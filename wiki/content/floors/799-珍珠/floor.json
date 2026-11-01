@@ -1,0 +1,37 @@
+{
+  "key": "799|珍珠",
+  "id": "799",
+  "name": "珍珠",
+  "info": {
+    "id": "799",
+    "name": "珍珠"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>可是每一扇門的另一邊，好像都比這裡更。也許，這裡的人一直薩<br>門一推開，生日歌停了。好黑。茶幾上著一根蠟燭，天花板上綁著氣球。身後的門不見了。</blockquote>",
+  "palette": {
+    "bg": "#14100C",
+    "background": "#14100C",
+    "card": "#1C1814",
+    "line": "#181414",
+    "acc": "#787050",
+    "tx": "#787068",
+    "panel": "#1C1814",
+    "accent": "#787050",
+    "text": "#787068"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "珍珠"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "intro": "可是每一扇门的另一边，好像都比这里更。也许，这里的人一直萨\n门一推开，生日歌停了。好黑。茶几上着一根蜡烛，天花板上绑着气球。身后的门不见了。"
+  },
+  "_introSource": "backroom-20261030-113538",
+  "_introUpdated": "2026-11-01T03:20:05.759Z"
+}

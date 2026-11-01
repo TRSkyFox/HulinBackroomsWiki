@@ -1,0 +1,390 @@
+{
+  "floorId": "40",
+  "floorName": "有害的衰敗",
+  "junctions": [
+    {
+      "text": "比外圍整齊。門口有門牌，窗戶有窗簾，燒剩一半的窗簾。 霧變薄了。腳下的灰、倒下的樹，一下子都清楚了起來。",
+      "paths": [
+        {
+          "text": "往地上透著紅光的地方走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "在門牌比較新的那一排定",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "治著那排帳縫的骨渠定",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "往地上透著紅光的地方走",
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frames": [
+          191
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "運木頭的拖車",
+      "kind": "event",
+      "intro": "路邊翻倒著一台拖車，車上的原木滾了一地，全燒成了炭。車身上漆著一行字：拖車的工具箱鎖著，鎖頭被熏得發黑。「伍德蘭木材M.E.G.訂單隨多數：天狐敲到手都麻了，鎖頭還掛在那裡。揚起來的灰慢慢往上飄，跟霧混在一起。",
+      "actions": [
+        {
+          "text": "力氣大的人，把鎖頭敲掉",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "就揚起一陣。",
+                "霧很濃，帶著焦木頭的味道。吸一口，喉嚨就刺一下。",
+                "很遠的地方，有一團暗暗的紅，好像還在燒。",
+                "每吸一口氣，喉嚨就刺一下。在這裡，想清楚了就要趕快決定——著氣，撐不了太久。",
+                "一棵樹上釘著一排鐵釘，鐵釘上什麼都沒有掛。",
+                "霧濃得像一面牆。伸出手，手指的尖端就看不見了。每一口氣都是焦的。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "看看收據上寫什麼",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "力氣大的人，把鎖頭敲掉",
+      "results": [
+        "就揚起一陣。",
+        "霧很濃，帶著焦木頭的味道。吸一口，喉嚨就刺一下。",
+        "很遠的地方，有一團暗暗的紅，好像還在燒。",
+        "每吸一口氣，喉嚨就刺一下。在這裡，想清楚了就要趕快決定——著氣，撐不了太久。",
+        "一棵樹上釘著一排鐵釘，鐵釘上什麼都沒有掛。",
+        "霧濃得像一面牆。伸出手，手指的尖端就看不見了。每一口氣都是焦的。"
+      ],
+      "check": {
+        "attribute": "力量",
+        "hasCheck": true,
+        "difficulty": 16,
+        "roll": null,
+        "outcome": "failure"
+      },
+      "effects": [],
+      "progress": {
+        "current": 1,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 182,
+        "ts": null,
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "一片余煙",
+      "kind": "event",
+      "intro": "一大片地上鋪滿了余燼，紅紅的，一閃一閃，像有人把星星撒在地上。熱氣往上冒，霧在這裡散開了。很暖。這是走進這片森林之後，第一次覺得暖。你坐在余炽的邊上，伸出手烤火。沒有人說話，只聽得到余炽劈劈啪啪地響。熱氣把四周的霧推開了一大圈。",
+      "actions": [
+        {
+          "text": "鏟一塊余煙帶走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "風把灰吹起來，在半空中慢慢轉，又慢慢落下。",
+                "樹變稀了，換成一排一排的帳篷和木屋。帳篷燒得只剩骨架，木屋燒掉了一半，還有一半站著。",
+                "比外圍整齊。門口有門牌，窗戶有窗簾，燒剩一半的窗簾。",
+                "霧變薄了。腳下的灰、倒下的樹，一下子都清楚了起來。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "很靈活的人，踩著沒燒的石頭直接穿過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "鏟一塊余煙帶走",
+      "results": [
+        "風把灰吹起來，在半空中慢慢轉，又慢慢落下。",
+        "樹變稀了，換成一排一排的帳篷和木屋。帳篷燒得只剩骨架，木屋燒掉了一半，還有一半站著。",
+        "比外圍整齊。門口有門牌，窗戶有窗簾，燒剩一半的窗簾。",
+        "霧變薄了。腳下的灰、倒下的樹，一下子都清楚了起來。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 3,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 193,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "還亮著燈的路由器",
+      "kind": "event",
+      "intro": "大房子的二樓，書房的桌上擺著一台路由器，綠燈一閃一閃，旁邊的筆電螢幕碎了，鍵盤上落了一層灰。天狐的手機一下子就連上了，沒有網路，只有區網里的一個資料夾：「公告」，最新一則是：「外圍的不于少數。中心區生活一切照常。」日期是大火的那一天。",
+      "actions": [
+        {
+          "text": "帶著手機的人，連上去看看",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你開口說了一句話，聲首一出口就心掉了。",
+                "一根晾衣繩還綁在兩棵樹中間，上面掛著兩件燒焦的襯衫。",
+                "霧的後面，出現了一棟很大的房子。兩層樓，石頭的地基，大片的窗戶，燒黑了一半。",
+                "旁邊是一座干掉的游泳池，再過去是一塊鋪了人工草皮的小球場。",
+                "中心的人，住得跟外圍完全不一樣。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": 1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "聰明的人，修修看那台筆電",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "只是看看",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "帶著手機的人，連上去看看",
+      "results": [
+        "你開口說了一句話，聲首一出口就心掉了。",
+        "一根晾衣繩還綁在兩棵樹中間，上面掛著兩件燒焦的襯衫。",
+        "霧的後面，出現了一棟很大的房子。兩層樓，石頭的地基，大片的窗戶，燒黑了一半。",
+        "旁邊是一座干掉的游泳池，再過去是一塊鋪了人工草皮的小球場。",
+        "中心的人，住得跟外圍完全不一樣。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": 1
+        }
+      ],
+      "progress": {
+        "current": 4,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 202,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "創建者的房子",
+      "kind": "event",
+      "intro": "大房子的正門沒有鎖。裡面很大，挑高的客廳、木頭的樓梯、一整面的書架。一半燒黑了，一半好好的。客廳的牆上掛著一張照片：三個人站在一棵大樹前面，笑得很開心。照片底下寫著：「伍德蘭，1990。」是創建者之一的日記，前面寫著蓋房子、跟M.E.G.談生意、封住入口，後面越寫越短：「外圍又有人偷東了。」「要加配給嗎？不行，不然中心就不夠。」",
+      "actions": [
+        {
+          "text": "讀書架上那本日記",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "于少數。中心區生活一切照常。」",
+                "日期是大火的那一天。",
+                "人工草皮燒出了一個一個的洞，洞底是黑色的塑膠。",
+                "灰跟霧混在一起，一團一團地往臉上撲。吸氣的時候，要很用力。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": -1
+                },
+                {
+                  "kind": "經驗",
+                  "amount": 1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "細心的人，翻翻書架",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "讀書架上那本日記",
+      "results": [
+        "于少數。中心區生活一切照常。」",
+        "日期是大火的那一天。",
+        "人工草皮燒出了一個一個的洞，洞底是黑色的塑膠。",
+        "灰跟霧混在一起，一團一團地往臉上撲。吸氣的時候，要很用力。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": -1
+        },
+        {
+          "kind": "經驗",
+          "amount": 1
+        }
+      ],
+      "progress": {
+        "current": 6,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 207,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "配給處",
+      "kind": "event",
+      "intro": "一座木頭棚子，前面擺著一張長桌，桌上有一本攤開的帳本、一把秤。這裡是發配給的地方。棚子前面立著一根柱子，柱子上綁著一段燒斷的繩子，繩子上還纏著幾根頭髮，柱子下面的灰是暗紅色的。",
+      "actions": [
+        {
+          "text": "讀帳本",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "敲到手都麻了，鎖頭還掛在那裡。",
+                "場起來的灰慢慢往上飄，跟霧混在一起。",
+                "一隻燒焦的睡袋攤在地上，拉鍊熔成了一條黑線。",
+                "霧裡有一團暗紅色的光，一閃一閃，好像還在燒。",
+                "，綁柱子一晚°」"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "饥饿",
+                  "amount": 3
+                },
+                {
+                  "kind": "理智",
+                  "amount": -3
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "力氣大的人，把那根柱子拔掉",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "趕快離開這裡",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "讀帳本",
+      "results": [
+        "敲到手都麻了，鎖頭還掛在那裡。",
+        "場起來的灰慢慢往上飄，跟霧混在一起。",
+        "一隻燒焦的睡袋攤在地上，拉鍊熔成了一條黑線。",
+        "霧裡有一團暗紅色的光，一閃一閃，好像還在燒。",
+        "，綁柱子一晚°」"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "饥饿",
+          "amount": 3
+        },
+        {
+          "kind": "理智",
+          "amount": -3
+        }
+      ],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 188,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

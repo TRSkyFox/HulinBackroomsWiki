@@ -1,0 +1,10 @@
+{
+  "n": "黑影",
+  "skills": [],
+  "desc": "",
+  "resist": {
+    "res": "火焰",
+    "weak": "寒冷"
+  },
+  "boss": true
+}

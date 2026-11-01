@@ -1,0 +1,10 @@
+{
+  "n": "Qwerty",
+  "skills": [],
+  "desc": "",
+  "resist": {
+    "res": "穿刺",
+    "weak": "電擊"
+  },
+  "boss": true
+}

@@ -1,0 +1,37 @@
+{
+  "key": "37.1|深水區",
+  "id": "37.1",
+  "name": "深水區",
+  "info": {
+    "id": "37.1",
+    "name": "深水區"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>越往裡面走，光越少，水越冷。<br>等你回過神來，四周的磁磚已經不是白色的了：有的發黃、有的碎了一半、有的形狀歪七扭八，磁磚縫里<br>了黑黑的東西。<br>池子里的水是混濁的深綠色，看不到底。空氣又干又悶，有一股很難聞的味道。<br>牆上零零星星有幾個開口，透出一點點不知道從哪裡來的、灰灰的光。</blockquote>",
+  "palette": {
+    "bg": "#04181C",
+    "background": "#04181C",
+    "card": "#081C24",
+    "line": "#081C20",
+    "acc": "#649CA4",
+    "tx": "#40686C",
+    "panel": "#081C24",
+    "accent": "#649CA4",
+    "text": "#40686C"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "深水区"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "越往里面走，光越少，水越冷。\n等你回过神来，四周的磁砖已经不是白色的了：有的发黄、有的碎了一半、有的形状歪七扭八，磁砖缝里\n了黑黑的东西。\n池子里的水是混浊的深绿色，看不到底。空气又干又闷，有一股很难闻的味道。\n墙上零零星星有几个开口，透出一点点不知道从哪里来的、灰灰的光。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:20:05.746Z"
+}

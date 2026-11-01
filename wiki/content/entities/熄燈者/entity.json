@@ -1,0 +1,43 @@
+{
+  "n": "熄燈者",
+  "skills": [
+    {
+      "n": "吃光",
+      "eff": "四周一下子冷了下來，那裡有一團比黑暗更黑、很高的東西，正在吃光。\n無需檢定，寒冷傷害，失溫"
+    },
+    {
+      "n": "攻擊",
+      "eff": ""
+    }
+  ],
+  "desc": "比黑暗更黑、很高的東西，會把光拉向自己並吃掉；被強光打中會退開。",
+  "resist": {
+    "res": "鈍擊",
+    "weak": "閃光、穿刺、電擊"
+  },
+  "boss": true,
+  "drops": [
+    {
+      "n": "不會熄滅的燈泡",
+      "e": "-"
+    },
+    {
+      "n": "不會熄滅的燈泡",
+      "e": "-"
+    }
+  ],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-120043",
+    "rawName": "熄灯者",
+    "evidence": {
+      "skills": {
+        "攻擊": 1
+      },
+      "drops": {},
+      "resist": {},
+      "descVariants": 1
+    },
+    "resistNotes": []
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "floorId": "37",
+  "floorName": "崇高",
+  "junctions": [],
+  "events": [
+    {
+      "name": "溫暖的池水",
+      "kind": "event",
+      "intro": "前面只剩一片寬闊的池水，對岸隱約看得到一扇門。水溫剛好，水裡有淡淡的鹽味——泡進去的瞬間，全身酸痛都松開了。水裡還有一些不知道是什麼的東西，讓這種放鬆的效果強得不太自然。可是水面上漂著一點說不出是什麼的東西。最好別喝。",
+      "actions": [
+        {
+          "text": "慢慢游過去，蟲便泡一泡",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "綠色的，微微起伏著，永遠有細小的漣漪。",
+                "角落亮得刺眼，有些角落一片漆黑。",
+                "一座巨大的室內泳池，對岸遠到看不清楚。池子里豎著幾十根柱子，多到毫無道理。",
+                "1 +0=1 大失敗！",
+                "火光能讓某些東西退開，也能把水煮開。",
+                "體力 + 3 、治好「扭傷」「出血」"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": 11
+                },
+                {
+                  "kind": "理智",
+                  "amount": 17
+                },
+                {
+                  "kind": "饥饿",
+                  "amount": 0
+                },
+                {
+                  "kind": "口渴",
+                  "amount": 4
+                },
+                {
+                  "kind": "體力",
+                  "amount": 3
+                },
+                {
+                  "kind": "體力",
+                  "amount": 1
+                },
+                {
+                  "kind": "體力",
+                  "amount": 14
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "口好渴，喝一",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "沿著慢慢走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "慢慢游過去，蟲便泡一泡",
+      "results": [
+        "綠色的，微微起伏著，永遠有細小的漣漪。",
+        "角落亮得刺眼，有些角落一片漆黑。",
+        "一座巨大的室內泳池，對岸遠到看不清楚。池子里豎著幾十根柱子，多到毫無道理。",
+        "1 +0=1 大失敗！",
+        "火光能讓某些東西退開，也能把水煮開。",
+        "體力 + 3 、治好「扭傷」「出血」"
+      ],
+      "check": {
+        "attribute": "體質",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 13,
+        "outcome": "failure"
+      },
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": 11
+        },
+        {
+          "kind": "理智",
+          "amount": 17
+        },
+        {
+          "kind": "饥饿",
+          "amount": 0
+        },
+        {
+          "kind": "口渴",
+          "amount": 4
+        },
+        {
+          "kind": "體力",
+          "amount": 3
+        },
+        {
+          "kind": "體力",
+          "amount": 1
+        },
+        {
+          "kind": "體力",
+          "amount": 14
+        }
+      ],
+      "progress": {
+        "current": 1,
+        "total": 9
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 451,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "蒸氣室",
+      "kind": "event",
+      "intro": "一間小小的蒸氣室，木頭長椅，暖暖的白霧。在這裡，連呼吸都變得很輕鬆。",
+      "actions": [
+        {
+          "text": "坐下來蒸一蒸",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "一座巨大的室內泳池，對岸遠到看不清楚。",
+                "一台半泡在水裡的販賣機，燈還亮著。投幣口在滴水。在一個沒有人的地方，這台機器看起來很孤單。",
+                "你離開了商店。",
+                "一條長長的白色走廊，兩旁是一格一格的淋浴間，每一間的水龍頭都開著，水聲卻像隔著牆一樣悶。",
+                "★天狐升到2級！得到1個升級點（打開背包分配)"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "在長椅底下找找",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "坐下來蒸一蒸",
+      "results": [
+        "一座巨大的室內泳池，對岸遠到看不清楚。",
+        "一台半泡在水裡的販賣機，燈還亮著。投幣口在滴水。在一個沒有人的地方，這台機器看起來很孤單。",
+        "你離開了商店。",
+        "一條長長的白色走廊，兩旁是一格一格的淋浴間，每一間的水龍頭都開著，水聲卻像隔著牆一樣悶。"
+      ],
+      "check": {
+        "attribute": "感知",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 13,
+        "outcome": "failure"
+      },
+      "effects": [],
+      "progress": {
+        "current": 1,
+        "total": 9
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 264,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "被曬暖的平台",
+      "kind": "event",
+      "intro": "一塊干干的平台，磁磚被粉紅色的光曬得暖暖的。四周的水輕輕地拍著平台的邊緣，聲音好小好小。一隻充氣獨角獸漂過來，停在平台旁邊，好像也要休息。",
+      "actions": [
+        {
+          "text": "躺在瞠的磁磚上 0 一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "這裡的東西，好像永遠不會壞。",
+                "天狐用粉筆在磁磚上寫了自己的名字。字慢慢地變淡，可是沒有完全消失，留下了一個很淡很淡的痕跡。",
+                "「至少留下了一點點。」",
+                "一隻充氣獨角獸慢慢地漂過去，停在你前面，好像在看你，又慢慢地漂走了。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": 2
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "把濕衣服晾干、整理行李",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "躺在瞠的磁磚上 0 一覺",
+      "results": [
+        "這裡的東西，好像永遠不會壞。",
+        "天狐用粉筆在磁磚上寫了自己的名字。字慢慢地變淡，可是沒有完全消失，留下了一個很淡很淡的痕跡。",
+        "「至少留下了一點點。」",
+        "一隻充氣獨角獸慢慢地漂過去，停在你前面，好像在看你，又慢慢地漂走了。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": 2
+        }
+      ],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 293,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

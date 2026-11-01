@@ -1,0 +1,282 @@
+{
+  "floorId": "499",
+  "floorName": "無盡的保齡球館",
+  "junctions": [
+    {
+      "text": "要走哪條路",
+      "paths": [
+        {
+          "text": "往那塊巨大的計分板走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往那條沒有人的走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "往那塊巨大的計分板走",
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          63
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間餐館的廚房門開著，裡面傳來炒菜的聲音。",
+      "paths": [
+        {
+          "text": "往掛著「巡邏員」 牌子的櫃合走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "沿著走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          103
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間餐館的廚房門開著，裡面傳來炒菜的聲音。",
+      "paths": [
+        {
+          "text": "往掛著「巡邏員」牌子的櫃台走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "沿著球過走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "往掛著「巡邏員」牌子的櫃台走",
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          104
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間餐館的廚房門開著，裡面傳來炒菜的聲音。",
+      "paths": [
+        {
+          "text": "往掛著「巡邏員」牌子的櫃台走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "沿球道往前走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          105
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "球道後面",
+      "kind": "event",
+      "intro": "球道後面是一整排餐廳和酒吧，每一間都亮著小燈，飄出食物的香味。你走進了餐廳區。一一區域：餐廳和酒吧——球道後面是一整排餐廳和酒吧，裝潢很好，桌上點著小燈，沒有臉的服務生端著託盤走來走去，空氣里是炸、湯和咖啡的香味。",
+      "actions": [
+        {
+          "text": "用那支沒訊號的手機連上去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "不要管它",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "主廚先端了一盤今天的菜上來’一人一份’熱騰騰的，這個不用錢。",
+                "你離開了商店。",
+                "一間餐廳空了，桌椅還排得整整齊齊——之前的人搬走了。",
+                "你決定：「往碰碰車那邊走」",
+                "〖電梯里的 Wi-Fi)",
+                "在后室里，這是你第一次看到 Wi-Fi 。"
+              ],
+              "effects": [
+                {
+                  "kind": "經驗",
+                  "amount": 2
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "不要管它",
+      "results": [
+        "主廚先端了一盤今天的菜上來’一人一份’熱騰騰的，這個不用錢。",
+        "你離開了商店。",
+        "一間餐廳空了，桌椅還排得整整齊齊——之前的人搬走了。",
+        "你決定：「往碰碰車那邊走」",
+        "〖電梯里的 Wi-Fi)",
+        "在后室里，這是你第一次看到 Wi-Fi 。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "經驗",
+          "amount": 2
+        }
+      ],
+      "progress": {
+        "current": 3,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 87,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "空掉的餐廳",
+      "kind": "event",
+      "intro": "一間餐廳的燈還亮著，桌椅排得整整齊齊，吧台擦得亮晶晶的，可是一個人都沒有。門口貼著一張紙：搬到隔壁區了。冰箱里的東西請自由取用。一一互助管家」罐頭冰箱里整整齊齊地放著飲料和三明治’還附了一張紙條：「請慢用」°消耗品得到了瓶裝水天狐使用了「瓶裝水」，口渴 +4",
+      "actions": [
+        {
+          "text": "箱空，一樣 - 留",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "在后室里，這是你第一次看到 Wi-Fi 。",
+                "- 你決定：「用那支沒訊號的手機連上去」",
+                "是「你在哪裡？」",
+                "天狐想回復，訊息一直轉圈圈，傳不出去。可是天狐把那幾百則訊息，一則一則全部讀完了。",
+                "一間餐館的廚房門開著，裡面傳來炒菜的聲音。",
+                "你決定：「沿著球道往前走」"
+              ],
+              "effects": [
+                {
+                  "kind": "經驗",
+                  "amount": 2
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "打開冰箱",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "箱空，一樣 - 留",
+      "results": [
+        "在后室里，這是你第一次看到 Wi-Fi 。",
+        "- 你決定：「用那支沒訊號的手機連上去」",
+        "是「你在哪裡？」",
+        "天狐想回復，訊息一直轉圈圈，傳不出去。可是天狐把那幾百則訊息，一則一則全部讀完了。",
+        "一間餐館的廚房門開著，裡面傳來炒菜的聲音。",
+        "你決定：「沿著球道往前走」"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "經驗",
+          "amount": 2
+        }
+      ],
+      "progress": {
+        "current": 5,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 106,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "下一站",
+      "kind": "event",
+      "intro": "你在球館里待了很久，角落的電梯亮著燈；巨大的計分板閃著數字；那個無面者小孩跑過來’拉著你的衣角「要走了嗎？」",
+      "actions": [
+        {
+          "text": "等那台電梯",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true
+        },
+        {
+          "text": "先不走，再多探景幾步",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "坐下來，一起生日快樂歌",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "等那台電梯",
+      "results": [],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 6,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 119,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

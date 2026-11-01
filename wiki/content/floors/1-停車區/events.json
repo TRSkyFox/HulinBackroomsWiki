@@ -1,0 +1,634 @@
+{
+  "floorId": "1",
+  "floorName": "停車區",
+  "junctions": [
+    {
+      "text": "天花板上吊著的日光燈一盞接一盞，延伸到霧裡，這裡很熱，汗水一直從額頭滴下來。",
+      "paths": [
+        {
+          "text": "走向那扇黑色的金屬門",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "跟著發電機的聲音走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往那條掛滿鏡子的走廊走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "跟著發電機的聲音走",
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frames": [
+          2545
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "很遠很遠的地方，一盞綠色的逃生燈，熄了。 什麼都看不見。腳下踢到了什麼硬硬的東西一",
+      "paths": [
+        {
+          "text": "摸著柱子往前走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往有一點綠光的地方摸過去",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "用腳沿著停車格的線摸過去",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "看柱子住前定",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "摸著柱子往前走",
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frames": [
+          2685
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一片沒有車、也沒有霧的空地，乾淨得像剛打掃過。地上散落著幾個空的物資箱，箱子上的編號一個比一個（停車區）",
+      "paths": [
+        {
+          "text": "往空氣熱得發燙的方向走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "沿著停車格的黃線走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "穿過那排空著的停車格",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "沿著停車格的黃線走",
+      "_src": {
+        "session": "backroom-20261029-212222",
+        "frames": [
+          715
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "天花板上吊著的日光燈一盞接一盞，延伸到霧裡，這裡很熱，汗水一直從額頭滴下來。",
+      "paths": [
+        {
+          "text": "走向那扇燈一直亮著的黑門（路上有一灘積水）",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "走向傳出的膀拍動聲的角落",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "走向那扇燈一直亮著的黑門（路上有一灘積水）",
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          104
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "翅膀的聲音",
+      "kind": "event",
+      "intro": "頭頂上，很多很多翅膀在拍。拍得很輕，很密。手上的光一晃，灰白色的影子就跟著晃。它們在找光。頭頂上，很多很多翅膀在拍，拍得很輕，很密。燈一關，翅膀的聲音亂了一下，然後慢慢散開了。在全黑裡站了好久，才敢再把燈打開。",
+      "actions": [
+        {
+          "text": "把所有的燈都關掉",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "（飢餓 3 ）",
+                "天花板上的燈管一根一根都在，可是一根都不亮。有幾根被扯了下來。"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": -2
+                },
+                {
+                  "kind": "理智",
+                  "amount": 2
+                },
+                {
+                  "kind": "饥饿",
+                  "amount": 3
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "硬闖過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "把所有的燈都關掉",
+      "results": [
+        "（飢餓 3 ）",
+        "天花板上的燈管一根一根都在，可是一根都不亮。有幾根被扯了下來。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": -2
+        },
+        {
+          "kind": "理智",
+          "amount": 2
+        },
+        {
+          "kind": "饥饿",
+          "amount": 3
+        }
+      ],
+      "progress": {
+        "current": 1,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frame": 2694,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "保險絲櫃",
+      "kind": "event",
+      "intro": "牆上釘著一個鐵櫃，櫃門上印著「備品」。掛著一個小小的鎖頭。搖一搖，裡面有東西喀啦喀啦地響。",
+      "actions": [
+        {
+          "text": "力氣很大的人，徒手把櫃門掰開",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "于上九一晃，從日巴影于派看晃。匕們仕慨九。",
+                "燈一關，翅膀的聲音亂了一下，然後慢慢散開了。",
+                "在全黑裡站了好久，才敢再把燈打開。",
+                "地上有一支手電筒，開關是開著的，可是燈泡是黑的。",
+                "又一盞逃生燈熄了。這一盞，近一點。",
+                "于上九一晃，從日巴影于珉看晃。匕們仕九。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": -1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "撬開鎖",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "力氣很大的人，徒手把櫃門掰開",
+      "results": [
+        "于上九一晃，從日巴影于派看晃。匕們仕慨九。",
+        "燈一關，翅膀的聲音亂了一下，然後慢慢散開了。",
+        "在全黑裡站了好久，才敢再把燈打開。",
+        "地上有一支手電筒，開關是開著的，可是燈泡是黑的。",
+        "又一盞逃生燈熄了。這一盞，近一點。",
+        "于上九一晃，從日巴影于珉看晃。匕們仕九。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": -1
+        }
+      ],
+      "progress": {
+        "current": 3,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frame": 2700,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "熄燈者",
+      "kind": "event",
+      "intro": "最後一盞逃生燈，就在你頭頂上’熄了。四周一下子冷了下來。手上的光還在，可是照出去，光好像被什麼拉住了，彎向同一個方向一那裡，有一團比黑暗更黑的東西，很高。它在吃光。",
+      "actions": [
+        {
+          "text": "關掉所有的燈，蹲下來，不要動",
+          "check": {
+            "attribute": "魅力",
+            "hasCheck": true,
+            "roll": null,
+            "difficulty": 16
+          },
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天享走了！獵犬的牙」",
+                "柱子上的區號被人用黑漆涂掉了，涂得很急，漆一直往下流。"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "體力",
+                  "amount": -4
+                },
+                {
+                  "kind": "理智",
+                  "amount": -2
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "跟它打",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "關掉所有的燈，蹲下來，不要動",
+      "results": [
+        "天享走了！獵犬的牙」",
+        "柱子上的區號被人用黑漆涂掉了，涂得很急，漆一直往下流。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "體力",
+          "amount": -4
+        },
+        {
+          "kind": "理智",
+          "amount": -2
+        }
+      ],
+      "progress": {
+        "current": 4,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frame": 2720,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "亮著的電梯",
+      "kind": "event",
+      "intro": "黑暗裡，一台電梯的門開著。電梯裡面的燈，亮著。亮得好溫暖。整層樓都沒有電。這台電梯，為什麼有？",
+      "actions": [
+        {
+          "text": "用輯滴楚再說",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你 Lv3* （你）",
+                "你關掉燈，蹲在兩台車中間，連呼吸都放得很慢很慢。",
+                "很冷的東西從頭頂上經過。經過了好久。然後，遠處，一盞逃生燈又亮了起來。",
+                "很遠的地方，有一點綠綠的光。逃生燈。只有它還亮著。",
+                "摸遍了牆，摸不到往下的樓梯。黑暗裡，連剛剛上來的那扇門都找不到了。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": -3
+                },
+                {
+                  "kind": "經驗",
+                  "amount": 2
+                },
+                {
+                  "kind": "體力",
+                  "amount": 3
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不進去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "用輯滴楚再說",
+      "results": [
+        "你 Lv3* （你）",
+        "你關掉燈，蹲在兩台車中間，連呼吸都放得很慢很慢。",
+        "很冷的東西從頭頂上經過。經過了好久。然後，遠處，一盞逃生燈又亮了起來。",
+        "很遠的地方，有一點綠綠的光。逃生燈。只有它還亮著。",
+        "摸遍了牆，摸不到往下的樓梯。黑暗裡，連剛剛上來的那扇門都找不到了。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": -3
+        },
+        {
+          "kind": "經驗",
+          "amount": 2
+        },
+        {
+          "kind": "體力",
+          "amount": 3
+        }
+      ],
+      "progress": {
+        "current": 6,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-125010",
+        "frame": 2733,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "哭著的小孩",
+      "kind": "event",
+      "intro": "一個殖民者的小孩蹲在木箱旁邊哭。「我的貓，…，它追著管子里的聲音，跑到下面去了。下面很熱，全都是到Level2的管線走廊找到一隻橘色的貓，帶回Level1給殖民者的小孩一個殖民者的小孩蹲在木箱旁邊哭。「我的貓，它追著管子里的聲音，跑到下面去了。下面很熱，全都是一道往上的樓梯間，牆上用噴漆寫著「別在停電時上樓」。",
+      "actions": [
+        {
+          "text": "答應他：我們會把貓帶回來",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "這裡感覺更像是能活下去的地方。前提是，燈不要熄。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "我們自已郁顧不了了",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "答應他：我們會把貓帶回來",
+      "results": [
+        "這裡感覺更像是能活下去的地方。前提是，燈不要熄。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 1,
+        "total": 14
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-212222",
+        "frame": 727,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      },
+      "updatedAt": "2026-10-29T13:39:55.578Z"
+    },
+    {
+      "name": "等信的人",
+      "kind": "event",
+      "intro": "一排木箱上畫著一隻眼晴——跟信封上的一模一樣，箱子後面坐著一個女人，一看到信封，整個人站了起來「是他寫的？他還活著？」",
+      "actions": [
+        {
+          "text": "先拆開來著看，再決定要不要給",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "把信交給她",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "最後，五台電話一起在響。",
+                "天狐用力一扯，電話線斷了，鈴聲停了——只有天狐面前那一台。其他的，還在響。",
+                "天狐的「感染」越來越糟了…，再不處理，會惡化。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "把值交蛤她",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "把信交給她",
+      "results": [
+        "最後，五台電話一起在響。",
+        "天狐用力一扯，電話線斷了，鈴聲停了——只有天狐面前那一台。其他的，還在響。",
+        "天狐的「感染」越來越糟了…，再不處理，會惡化。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 2,
+        "total": 14
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261029-212222",
+        "frame": 746,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      },
+      "updatedAt": "2026-10-29T13:39:55.578Z",
+      "outcomes": {
+        "success": {
+          "lines": [
+            "天狐用力一扯，电话线断了·铃声停了一一只有天狐面前那一台。其他的，还在响。",
+            "天狐的「感染」越来越糟了…·再不处理，会恶化。"
+          ]
+        }
+      }
+    },
+    {
+      "name": "維修走廊里的避難處",
+      "kind": "event",
+      "intro": "一條維修走廊的盡頭，有人用夾板和桌子圍出了一個小房間。這裡的電不受停電影響，燈一直亮著。牆上「停電時可以躲這裡。用完請補充物資。」天狐用避難處里留下的醫藥用品，替自己徹底處理了傷口，還清掉了感染。",
+      "actions": [
+        {
+          "text": "女替你處理傷口",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "這裡覺更像是能活下去的地方。前提是，燈不要熄。",
+                "天花板上吊著的日光燈一盞接一盞，延伸到霧裡，這裡很熱，汗水一直從額頭滴下來。",
+                "天狐一腳踩進積水——水面底下沒有地板，只有一圈一圈的牙齒。"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": -5
+                },
+                {
+                  "kind": "理智",
+                  "amount": -1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "用空瓶子裝一點",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "小心地繞過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "女替你處理傷口",
+      "results": [
+        "這裡覺更像是能活下去的地方。前提是，燈不要熄。",
+        "天花板上吊著的日光燈一盞接一盞，延伸到霧裡，這裡很熱，汗水一直從額頭滴下來。",
+        "天狐一腳踩進積水——水面底下沒有地板，只有一圈一圈的牙齒。"
+      ],
+      "check": {
+        "attribute": "敏捷",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 12,
+        "outcome": "failure"
+      },
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": -5
+        },
+        {
+          "kind": "理智",
+          "amount": -1
+        }
+      ],
+      "progress": {
+        "current": 1,
+        "total": 14
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 107,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

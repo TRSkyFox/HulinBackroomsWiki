@@ -1,0 +1,17 @@
+# 大型 runtime／產物，不進 git
+记录器/logs/
+记录器/player/
+记录器/structured/bin/
+记录器/structured/*.otf
+记录器/_test-font/
+客户端/app/
+客户端/dist/
+客户端/fonts/
+备份/
+wiki/_incoming/
+wiki/site/index.html
+wiki/site/index.backup-before-content.html
+
+# 暫存
+*.tmp
+*.log

@@ -1,0 +1,36 @@
+{
+  "key": "1|停車區",
+  "id": "1",
+  "name": "停車區",
+  "info": {
+    "id": "1",
+    "name": "停車區"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>腳下是冰冷的水泥地，一排排水泥柱撐著低矮的天花板，吊掛的日光燈嘯作響，每隔一段就有一座樓梯<br>地上畫著褪色的停車格，可是車很少——一百平方公里里大概只有五台，全都沒有車牌、沒有廠牌，而且全<br>發不動。<br>地上到處是一灘灘杏仁水，蒸發之後凝成濃霧，貼著地面流動。空氣很悶，至少有三十度。<br>這裡有穩定的電，有會出現又消失的物資箱，偶爾還能看到遠處的人影和燈光——比起剛才那片黃色的地方<br>這裡覺更像是能活下去的地方。前提是，燈不要熄。</blockquote>",
+  "palette": {
+    "bg": "#0F1619",
+    "background": "#0F1619"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-125010",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "停车区]"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "脚下是冰冷的水泥地，一排排水泥柱撑着低矮的天花板，吊挂的日光灯嘯作响，每隔一段就有一座楼梯\n地上画着褪色的停车格，可是车很少一一一百平方公里里大概只有五台，全都没有车牌、没有厂牌，而且全\n发不动。\n地上到处是一滩滩杏仁水，蒸发之后凝成浓雾，贴着地面流动。空气很闷，至少有三十度。\n这里有稳定的电，有会出现又消失的物资箱，偶尔还能看到远处的人影和灯光一一比起刚才那片黄色的地方\n这里觉更像是能活下去的地方。前提是，灯不要熄。"
+  },
+  "_docCandidate": {
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "length": 251,
+    "note": "新 OCR 介紹未自動覆蓋；要採用請人工比對 staging/floors/ 下的 floor.json"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:20:05.710Z"
+}

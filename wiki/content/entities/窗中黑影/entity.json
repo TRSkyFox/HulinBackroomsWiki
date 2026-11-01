@@ -1,0 +1,38 @@
+{
+  "n": "窗中黑影",
+  "skills": [
+    {
+      "n": "抓",
+      "eff": "把手臂從玻璃裡伸出來，抓向離窗最近的人。\n無需檢定，揮砍傷害，流血"
+    },
+    {
+      "n": "攻擊",
+      "eff": ""
+    }
+  ],
+  "desc": "牆上有一扇窗——在一個不應該有窗的地方。窗戶後面不是虛空，而是一段被挖空的隧道，裡面站著一個黑影。那個黑影是立體的、有重量的，它慢慢把手臂從玻璃裡伸了出來，手臂長得不可思議。",
+  "resist": {
+    "res": "穿刺、揮砍",
+    "weak": "鈍擊"
+  },
+  "drops": [
+    "「電工工具腰帶」，先留在地上。",
+    "電工工具腰帶",
+    "2 硬幣。"
+  ],
+  "nonEnt": true,
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-121017",
+    "rawName": "窗中黑影",
+    "evidence": {
+      "skills": {
+        "攻擊": 2
+      },
+      "drops": {},
+      "resist": {},
+      "descVariants": 2
+    },
+    "resistNotes": []
+  }
+}

@@ -1,0 +1,457 @@
+{
+  "floorId": "37.6",
+  "floorName": "真正的永恆",
+  "junctions": [
+    {
+      "text": "一道往下的樓梯，泡在紅色的水裡，看不到底。 紅色的蒸氣燙得眼睛刺痛，每吸一口氣，肺就像被針扎了一下。",
+      "paths": [
+        {
+          "text": "往那首歌傳來的地方走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往那個穿著白色衣服的人影走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "往那首歌傳來的地方走",
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          567
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "沒有蒸氣的小房間",
+      "kind": "event",
+      "intro": "一間很小的房間，門關得緊緊的，門縫用毛巾塞住了。裡面的蒸氣淡了很多。",
+      "actions": [
+        {
+          "text": "關好門，休息一下",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐的喉嚨干到發燙，再不喝點東西就撐不住了。",
+                "天狐陷入「時間變慢」",
+                "（口渴 0 ）",
+                "水浪的聲音很大，大得聽不清楚旁邊的人在說什麼。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": -4
+                },
+                {
+                  "kind": "口渴",
+                  "amount": 2
+                },
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "口渴",
+                  "amount": 0
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "翻 0 他們留下的東西",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "關好門，休息一下",
+      "results": [
+        "天狐的喉嚨干到發燙，再不喝點東西就撐不住了。",
+        "天狐陷入「時間變慢」",
+        "（口渴 0 ）",
+        "水浪的聲音很大，大得聽不清楚旁邊的人在說什麼。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": -4
+        },
+        {
+          "kind": "口渴",
+          "amount": 2
+        },
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "口渴",
+          "amount": 0
+        }
+      ],
+      "progress": {
+        "current": 2,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 590,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "越來越紅的走廊",
+      "kind": "event",
+      "intro": "一條很窄的走廊，磁磚一格一格往前延伸，走著走著，天狐發現——磁磚的顏色變了。一開始是淡淡的粉紅越往前越紅。空氣也越來越熱，有一股鐵鏽的味道。說出（《說出永恆」。走廊越來越紅、越來越熱，最後一段，紅色的蒸氣從前面涌了過來。走出走廊的時候，四周的一切，都是 £",
+      "actions": [
+        {
+          "text": "感知很好的人覺得不對勁",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "女知 5 +",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "閃一閃的，像金屬。",
+                "你看了那座池子一眼，轉身離開。反光在深處，還在一閃一閃。",
+                "磁磚的顏色在這裡變成了暗暗的紫色，形狀也歪了，像是被壓扁過。",
+                "設定〈靜音）"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "理智",
+                  "amount": -1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "退回去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "續往前走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "女知 5 +",
+      "results": [
+        "閃一閃的，像金屬。",
+        "你看了那座池子一眼，轉身離開。反光在深處，還在一閃一閃。",
+        "磁磚的顏色在這裡變成了暗暗的紫色，形狀也歪了，像是被壓扁過。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "理智",
+          "amount": -1
+        }
+      ],
+      "progress": {
+        "current": 2,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 559,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "時鐘",
+      "kind": "event",
+      "intro": "牆上掛著一個很大的鐘，玻璃上全是水氣。秒針停在 12 的地方。你盯著它看——過了好久、好久，秒針才「喀」地動了一格。你別過頭去，背後一直傳來很慢丶很慢的「喀」。",
+      "actions": [
+        {
+          "text": "數一數它多久動一次",
+          "check": {
+            "attribute": "智力",
+            "hasCheck": true,
+            "roll": null,
+            "difficulty": 20
+          },
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你在小房間里深呼吸。蒸氣淡了，時間好像也快了一點點。",
+                "一條磁磚走廊，牆、地板、天花板全都是暗紅色的菱形磁磚，一格一格。"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": 2
+                },
+                {
+                  "kind": "理智",
+                  "amount": 2
+                },
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "理智",
+                  "amount": -1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不，綏走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "數一數它多久動一次",
+      "results": [
+        "你在小房間里深呼吸。蒸氣淡了，時間好像也快了一點點。",
+        "一條磁磚走廊，牆、地板、天花板全都是暗紅色的菱形磁磚，一格一格。"
+      ],
+      "check": {
+        "attribute": "智力",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 20
+      },
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": 2
+        },
+        {
+          "kind": "理智",
+          "amount": 2
+        },
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "理智",
+          "amount": -1
+        }
+      ],
+      "progress": {
+        "current": 3,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 597,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "歌聲",
+      "kind": "event",
+      "intro": "霧的另一頭有人在唱歌。好多人，用一種聽不懂的語言，一句一句很慢地唱，像在數著什麼。歌聲越來越近。",
+      "actions": [
+        {
+          "text": "躲進的陰影里",
+          "check": {
+            "attribute": "敏捷",
+            "hasCheck": true,
+            "roll": null,
+            "difficulty": 20
+          },
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "池邊的磁磚縫里，結著一層深紅色、黏黏的東西，聞起來像鐵。",
+                "時間黏稠得讓人受不了——有人開始跑了起來，越跑越快，腳底在濕滑的磁磚上一直打滑。"
+              ],
+              "effects": [
+                {
+                  "kind": "理智",
+                  "amount": -2
+                },
+                {
+                  "kind": "體力",
+                  "amount": -1
+                },
+                {
+                  "kind": "理智",
+                  "amount": -1
+                },
+                {
+                  "kind": "體力",
+                  "amount": -2
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "仔細聽他們在唱什麼",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "躲進的陰影里",
+      "results": [
+        "池邊的磁磚縫里，結著一層深紅色、黏黏的東西，聞起來像鐵。",
+        "時間黏稠得讓人受不了——有人開始跑了起來，越跑越快，腳底在濕滑的磁磚上一直打滑。"
+      ],
+      "check": {
+        "attribute": "敏捷",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 21,
+        "outcome": "failure"
+      },
+      "effects": [
+        {
+          "kind": "理智",
+          "amount": -2
+        },
+        {
+          "kind": "體力",
+          "amount": -1
+        },
+        {
+          "kind": "理智",
+          "amount": -1
+        },
+        {
+          "kind": "體力",
+          "amount": -2
+        }
+      ],
+      "progress": {
+        "current": 4,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 605,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "坐著的人",
+      "kind": "event",
+      "intro": "樓梯底下坐著一個人，抱著膝蓋，眼睛睜得大大的。他還活著——胸口還在起伏。很慢，很慢。一次起伏，要好久好久。他的嘴脣在動，好像在說一個很長很長的字。",
+      "actions": [
+        {
+          "text": "0 他的背包",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "色的蒸氣，濃得看不清楚對面的牆。",
+                "空氣里有一股很重的鐵鏽味。吸一口，喉嚨就刺一下。",
+                "水浪拍著池邊，啪、啪、啪，聲音大得蓋過了一切。",
+                "一道往下的樓梯，泡在紅色的水裡，看不到底。",
+                "紅色的蒸氣燙得眼睛刺痛，每吸一口氣，肺就像被針扎了一下。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不要輯，快走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "0 他的背包",
+      "results": [
+        "色的蒸氣，濃得看不清楚對面的牆。",
+        "空氣里有一股很重的鐵鏽味。吸一口，喉嚨就刺一下。",
+        "水浪拍著池邊，啪、啪、啪，聲音大得蓋過了一切。",
+        "一道往下的樓梯，泡在紅色的水裡，看不到底。",
+        "紅色的蒸氣燙得眼睛刺痛，每吸一口氣，肺就像被針扎了一下。"
+      ],
+      "check": {
+        "attribute": "體質",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 20,
+        "outcome": "success"
+      },
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 570,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

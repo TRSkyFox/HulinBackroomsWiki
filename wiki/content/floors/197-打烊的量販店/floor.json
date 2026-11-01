@@ -1,0 +1,37 @@
+{
+  "key": "197|打烊的量販店",
+  "id": "197",
+  "name": "打烊的量販店",
+  "info": {
+    "id": "197",
+    "name": "打烊的量販店"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>你站在一座大得看不到牆的賣場里。一排一排的貨架，高到天花板，每一格都塞得滿滿的——零食、罐頭、<br>發精、玩具、電視。<br>燈大多是熄的，隔好幾盞才有一盞亮著，照出一條一條白白的走道。遠處的天花板喇叭傳來一段很輕的音牙<br>一直放、一直放，像是要打烊了。<br>空氣里有剛出爐的麵包味。一個人都沒有。</blockquote>",
+  "palette": {
+    "bg": "#202C30",
+    "background": "#202C30",
+    "card": "#28343C",
+    "line": "#24343C",
+    "acc": "#E8C85C",
+    "tx": "#787854",
+    "panel": "#28343C",
+    "accent": "#E8C85C",
+    "text": "#787854"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "打烊的量販店"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-003838",
+    "confidence": 0.85,
+    "intro": "你站在一座大得看不到墙的卖场里。一排一排的货架，高到天花板，每一格都塞得满满的一一零食、罐头、\n发精、玩具、电视。\n灯大多是熄的，隔好几盏才有一盏亮着，照出一条一条白白的走道。远处的天花板喇叭传来一段很轻的音牙\n一直放、一直放，像是要打烊了。\n空气里有刚出炉的面包味。一个人都没有。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:20:05.738Z"
+}

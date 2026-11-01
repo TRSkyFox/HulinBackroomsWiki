@@ -1,0 +1,41 @@
+{
+  "n": "活的畫",
+  "skills": [
+    {
+      "n": "攻擊",
+      "eff": ""
+    },
+    {
+      "n": "抓",
+      "eff": ""
+    }
+  ],
+  "desc": "",
+  "resist": {
+    "res": "穿刺",
+    "weak": "揮砍、火焰"
+  },
+  "drops": [
+    "破布",
+    "3硬幣。",
+    "粉筆"
+  ],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-125010",
+    "rawName": "活的画",
+    "evidence": {
+      "skills": {
+        "攻擊": 1,
+        "抓": 1
+      },
+      "drops": {
+        "3硬幣。": 1,
+        "粉筆": 1
+      },
+      "resist": {},
+      "descVariants": 1
+    },
+    "resistNotes": []
+  }
+}

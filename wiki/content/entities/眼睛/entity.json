@@ -1,0 +1,10 @@
+{
+  "n": "眼睛",
+  "skills": [],
+  "desc": "",
+  "resist": {
+    "res": "鈍擊",
+    "weak": "電擊、穿刺"
+  },
+  "boss": true
+}

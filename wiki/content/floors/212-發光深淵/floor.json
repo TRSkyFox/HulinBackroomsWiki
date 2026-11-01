@@ -1,0 +1,39 @@
+{
+  "key": "212|發光深淵",
+  "id": "212",
+  "name": "發光深淵",
+  "info": {
+    "id": "212",
+    "name": "發光深淵"
+  },
+  "doc": "",
+  "palette": {
+    "bg": "#789098",
+    "background": "#789098",
+    "card": "#4CC0D0",
+    "line": "#34545C",
+    "acc": "#94E8E4",
+    "tx": "#D0E0E4",
+    "panel": "#4CC0D0",
+    "accent": "#94E8E4",
+    "text": "#D0E0E4"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "发光深渊"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "鱼太快\n诺亚|熬夜的高中生\n远处的\n右边分配）\n一池接"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:32:07.457Z",
+  "_introMissing": true,
+  "_introNote": "沒有錄到完整的樓層介紹（原始資料只有碎片），先用名字佔位。"
+}

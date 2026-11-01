@@ -1,0 +1,25 @@
+{
+  "key": "64|生態氣",
+  "id": "64",
+  "name": "生態氣",
+  "info": {
+    "id": "64",
+    "name": "生態氣"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>腳底下踩到的是濕濕的石頭。<br>四周是一片很大、很大的洞穴，天花板高得看不見。整個空間都泛著紫色的光——不是燈，是石頭、水、自己在發光。<br>有人咳了一聲。<br>咳聲傳了出去，撞到很遠很遠的地方，又傳了回來——一聲、兩聲、三聲，疊在一起，久久不散。</blockquote>",
+  "palette": null,
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-145410",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "生态气"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-145410",
+    "confidence": 0.85,
+    "intro": "脚底下踩到的是湿湿的石头。\n四周是一片很大、很大的洞穴，天花板高得看不见。整个空间都泛着紫色的光一一不是灯，是石头、水、\n自己在发光。\n有人咳了一声。\n咳声传了出去，撞到很远很远的地方，又传了回来一一一声、两声、三声，叠在一起，久久不散。"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "key": "411|公車總站",
+  "id": "411",
+  "name": "公車總站",
+  "info": {
+    "id": "411",
+    "name": "公車總站"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>你站在一片很大很大的柏油地上，腳底下是黃色的車位線。四周停滿了公車——一排接一排，紅的、藍的、<br>的、雙層的，一直排到熱氣扭曲的地平線。<br>頭頂的太陽一動也不動，天空白得發亮。遠處有幾台公車在發動，突突突地響，空氣里都是柴油的味道。<br>很遠很遠的地方，有一棟很大的倉庫。</blockquote>",
+  "palette": {
+    "bg": "#2C281C",
+    "background": "#2C281C",
+    "card": "#302C20",
+    "line": "#ECE8C8",
+    "acc": "#F0A838",
+    "tx": "#ECE8C8",
+    "panel": "#302C20",
+    "accent": "#F0A838",
+    "text": "#ECE8C8"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "公车总站"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "你站在一片很大很大的柏油地上，脚底下是黄色的车位线。四周停满了公车一一一排接一排，红的、蓝的、\n的、双层的，一直排到热气扭曲的地平线。\n头顶的太阳一动也不动，天空白得发亮。远处有几台公车在发动，突突突地响，空气里都是柴油的味道。\n很远很远的地方，有一栋很大的仓库。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:20:05.753Z"
+}

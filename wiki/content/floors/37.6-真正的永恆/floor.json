@@ -1,0 +1,37 @@
+{
+  "key": "37.6|真正的永恆",
+  "id": "37.6",
+  "name": "真正的永恆",
+  "info": {
+    "id": "37.6",
+    "name": "真正的永恆"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>熱。又濕又熱，像走進一個很大很大的蒸籠。<br>四周是泳池——跟那片藍色的泳池一模一樣的格局，可是所有的東西都是紅的。暗紅色的磁磚，紅色的水，<br>色的蒸氣，濃得看不清楚對面的牆。<br>空氣里有一股很重的鐵鏽味。吸一口，喉嚨就刺一下。<br>水浪拍著池邊，啪、啪、啪，聲音大得蓋過了一切。</blockquote>",
+  "palette": {
+    "bg": "#300C0C",
+    "background": "#300C0C",
+    "card": "#4C1818",
+    "line": "#481818",
+    "acc": "#CC584C",
+    "tx": "#AC443C",
+    "panel": "#4C1818",
+    "accent": "#CC584C",
+    "text": "#AC443C"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "真正的永恒]"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "热。又湿又热，像走进一个很大很大的蒸笼。\n四周是泳池一一跟那片蓝色的泳池一模一样的格局，可是所有的东西都是红的。暗红色的磁砖，红色的水，\n色的蒸气，浓得看不清楚对面的墙。\n空气里有一股很重的铁锈味。吸一口，喉咙就刺一下。\n水浪拍着池边，啪、啪、啪，声音大得盖过了一切。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:20:05.749Z"
+}

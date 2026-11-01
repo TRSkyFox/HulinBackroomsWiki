@@ -1,0 +1,38 @@
+{
+  "key": "37|崇高",
+  "id": "37",
+  "name": "崇高",
+  "info": {
+    "id": "37",
+    "name": "崇高"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>白色的磁磚。到處都是白色的磁磚——牆壁、天花板、地板，完美無瑕，沒有一點刮痕。溫溫的水淹到腰，<br>綠色的，微微起伏著，永遠有細小的漣漪。<br>這裡很安靜，安靜得奇怪：你說話的聲音一出口就被吸走了，像隔著一層棉花。光從奇怪的角度照進來，<br>角落亮得刺眼，有些角落一片漆黑。<br>泡在水裡，全身的酸痛好像都在融化。你看呆了：「.好美。」可是美到這種程度，又讓人有點不寒<br>一出口就不見了，</blockquote>",
+  "palette": {
+    "bg": "#204040",
+    "background": "#204040",
+    "card": "#244040",
+    "line": "#ECE8C8",
+    "acc": "#90E0E0",
+    "tx": "#549090",
+    "panel": "#244040",
+    "accent": "#90E0E0",
+    "text": "#549090",
+    "_derivedFrom": "wall-sample"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "崇高"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "白色的磁砖。到处都是白色的磁砖一一墙壁、天花板、地板，完美无瑕，没有一点刮痕。温温的水淹到腰，\n绿色的，微微起伏着，永远有细小的涟漪。\n这里很安静，安静得奇怪：你说话的声音一出口就被吸走了，像隔着一层棉花。光从奇怪的角度照进来，\n角落亮得刺眼，有些角落一片漆黑。\n泡在水裡，全身的酸痛好像都在融化。天狐看呆了：「.好美。」可是美到这种程度，又让人有点不寒\n一出口就不见了·\n一座巨大的室内泳池，对岸远到看不清楚。池子里竖着几十根柱子，多到毫无道理。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:32:07.460Z"
+}

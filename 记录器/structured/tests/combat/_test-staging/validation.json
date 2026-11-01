@@ -1,0 +1,36 @@
+{
+  "staging": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging",
+  "checkedAt": "2026-10-29T15:55:11.650Z",
+  "errors": [],
+  "warnings": [
+    "大廳: palette 缺 card",
+    "大廳: palette 缺 acc",
+    "大廳: palette 缺 tx",
+    "流浪者的幻影: 實體已存在，合併前要確認"
+  ],
+  "ok": true,
+  "floors": [
+    {
+      "id": "0",
+      "name": "大廳",
+      "file": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging\\floors\\0-大廳\\floor.json",
+      "errors": [],
+      "warnings": [
+        "palette 缺 card",
+        "palette 缺 acc",
+        "palette 缺 tx"
+      ],
+      "existing": true
+    }
+  ],
+  "entities": [
+    {
+      "name": "流浪者的幻影",
+      "file": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging\\entities\\流浪者的幻影\\entity.json",
+      "errors": [],
+      "warnings": [
+        "實體已存在，合併前要確認"
+      ]
+    }
+  ]
+}

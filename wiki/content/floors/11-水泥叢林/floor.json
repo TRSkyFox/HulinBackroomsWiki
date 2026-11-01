@@ -1,0 +1,37 @@
+{
+  "key": "11|水泥叢林",
+  "id": "11",
+  "name": "水泥叢林",
+  "info": {
+    "id": "11",
+    "name": "水泥叢林"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>大樓。一棟接一棟，高得看不見頂，灰撲撲的水泥牆面上，窗戶一格一格地排下去，每一格都是黑的。<br>空氣很髒。一股汽油、廢氣和灰塵的味道，吸一口喉嚨就發癢，霧霾把整座城市罩成一片黃灰色，遠處的大<br>只剩下模糊的輪廓。<br>不通往本路」。<br>著的草都沒有。<br>你咳了一聲，回音在大樓之間彈了很久。<br>一棟大樓的外牆上，用紅色的噴漆寫著好大的字：「不要進去」。旁邊用藍色的噴漆寫著：</blockquote>",
+  "palette": {
+    "bg": "#1C2428",
+    "background": "#1C2428",
+    "card": "#282C2C",
+    "line": "#24282C",
+    "acc": "#7C7454",
+    "tx": "#ECE8C8",
+    "panel": "#282C2C",
+    "accent": "#7C7454",
+    "text": "#ECE8C8"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "水泥丛林"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "大楼。一栋接一栋，高得看不见顶，灰扑扑的水泥墙面上，窗户一格一格地排下去，每一格都是黑的。\n空气很脏。一股汽油、废气和灰尘的味道，吸一口喉咙就发痒·雾霾把整座城市罩成一片黄灰色，远处的大\n只剩下模糊的轮廓。\n不通往本路」。\n到处都是人留下的痕迹：涂鸦、轮胎痕、被风吹得满地跑的垃圾。可\n着的草都没有。\n天狐咳了一声，回音在大楼之间弹了很久。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:32:07.451Z"
+}

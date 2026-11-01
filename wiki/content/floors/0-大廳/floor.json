@@ -1,0 +1,43 @@
+{
+  "key": "0|大廳",
+  "id": "0",
+  "name": "大廳",
+  "info": {
+    "id": "0",
+    "name": "大廳"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>單調的黃色壁紙、潮濕的地毯、到處都是的電源插座，還有頭頂那永遠不會停的日光燈嗡嗡鳴聲，比一般的日光<br>燈吵得多，吵到太陽穴一跳一跳地痛。<br>這裡的每一個房間都長得差不多，卻沒有兩個完全一樣。你試著走直線，回頭時卻發現身後已經換成了另一組<br>房間。<br>一個人也沒有，除了嗡鳴聲，什麼都聽不到。待久了，連自己的腦袋都開始不太可靠。</blockquote>",
+  "palette": {
+    "bg": "#302C10",
+    "background": "#302C10",
+    "card": "#2C2410",
+    "line": "#2C280C",
+    "acc": "#E0CC58",
+    "tx": "#BCB084",
+    "panel": "#2C2410",
+    "accent": "#E0CC58",
+    "text": "#BCB084"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-125010",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "大厅"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-145410",
+    "confidence": 0.85,
+    "intro": "单调的黄色壁纸、潮湿的地毯、到处都是的电源插座，还有头顶那永远不会停的日光灯嗡声，比一般的日\n灯吵得多，吵到太阳穴一跳一跳地痛。\n这里的每一个房间都长得差不多，却没有两个完全一样。你试着走直线，回头时却发现身后已经换成了另一\n房间。\n一个人也没有，除了嗡嗡声，什么都听不到。待久了，连自己的脑袋都开始不太可靠。"
+  },
+  "_docCandidate": {
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-145410",
+    "confidence": 0.85,
+    "length": 198,
+    "note": "新 OCR 介紹未自動覆蓋；要採用請人工比對 staging/floors/ 下的 floor.json"
+  },
+  "_introSource": "backroom-20261029-031145",
+  "_introUpdated": "2026-11-01T03:20:05.705Z"
+}

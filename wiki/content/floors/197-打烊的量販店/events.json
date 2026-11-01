@@ -1,0 +1,149 @@
+{
+  "floorId": "197",
+  "floorName": "打烊的量販店",
+  "junctions": [
+    {
+      "text": "隔好幾盞燈才有一盞亮著。",
+      "paths": [
+        {
+          "text": "沿著零食的走道走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往露營用品區走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "繞過堆成金字塔的罐頭",
+          "perception": false,
+          "selected": true
+        }
+      ],
+      "selected": "繞過堆成金字塔的罐頭",
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          131
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一台購物車停在走道中間，裡面空空的。 （打烊的量販店）",
+      "paths": [
+        {
+          "text": "往那扇藍色的門走",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往那一區亮著牌走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "往那扇藍色的門走",
+      "_src": {
+        "session": "backroom-20261101-003838",
+        "frames": [
+          260
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "藥局",
+      "kind": "event",
+      "intro": "櫃台上有一個「請按鈴」的小鈴铛。",
+      "actions": [
+        {
+          "text": "拿一些止痛藥和繃帶",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "急救訓練的人，挑真正用得上的藥",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐：得到「罐頭」"
+              ],
+              "effects": [
+                {
+                  "kind": "饥饿",
+                  "amount": 5
+                },
+                {
+                  "kind": "理智",
+                  "amount": 3
+                },
+                {
+                  "kind": "口渴",
+                  "amount": 3
+                },
+                {
+                  "kind": "理智",
+                  "amount": 1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "把整個藥櫃掃空",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "急救訓練的人，挑真正用得上的藥",
+      "results": [
+        "天狐：得到「罐頭」"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "饥饿",
+          "amount": 5
+        },
+        {
+          "kind": "理智",
+          "amount": 3
+        },
+        {
+          "kind": "口渴",
+          "amount": 3
+        },
+        {
+          "kind": "理智",
+          "amount": 1
+        }
+      ],
+      "progress": {
+        "current": 1,
+        "total": 6
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frame": 151,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

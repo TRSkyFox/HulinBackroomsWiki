@@ -1,0 +1,34 @@
+{
+  "n": "無面者",
+  "skills": [
+    {
+      "n": "攻擊",
+      "eff": ""
+    }
+  ],
+  "desc": "穿著普通衣服的人形，臉上什麼都沒有。「大部分的無面者只想把你們趕走，但這一個身上沾著血。」",
+  "resist": {
+    "res": "",
+    "weak": "鈍擊"
+  },
+  "drops": [
+    "破布",
+    "繃帶",
+    "1 硬幣。"
+  ],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261027-003042",
+    "rawName": "无面者",
+    "evidence": {
+      "skills": {
+        "攻擊": 1
+      },
+      "drops": {
+        "1 硬幣。": 1
+      },
+      "resist": {},
+      "descVariants": 1
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "n": "呆滯者",
+  "skills": [
+    {
+      "n": "攻擊",
+      "eff": ""
+    },
+    {
+      "n": "射擊",
+      "eff": ""
+    },
+    {
+      "n": "揮砍",
+      "eff": ""
+    }
+  ],
+  "desc": "一開始你們以為那是一個人，坐在沙發上、面對封死的窗戶，一動也不動。然後它站了起來……四肢又長又尖，關節的方向不對。它的頭慢慢轉過來，然後它動了。快得不可思議。",
+  "resist": {
+    "res": "穿刺",
+    "weak": "鈍擊"
+  },
+  "drops": [
+    "守望者徽章",
+    "濃縮杏仁水"
+  ],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261029-212222",
+    "rawName": "呆滞者",
+    "evidence": {
+      "skills": {
+        "攻擊": 1,
+        "射擊": 1,
+        "揮砍": 1
+      },
+      "drops": {},
+      "resist": {},
+      "descVariants": 1
+    },
+    "resistNotes": []
+  }
+}

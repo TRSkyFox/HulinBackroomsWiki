@@ -1,0 +1,37 @@
+{
+  "key": "8|洞穴系統",
+  "id": "8",
+  "name": "洞穴系統",
+  "info": {
+    "id": "8",
+    "name": "洞穴系統"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>腳下是濕滑的岩石。空氣冷得刺骨，有一股泥土和腐爛的味道。<br>四周很暗，但不是完全的黑——岩壁上有些地方微微反著光，看得出輪廓：往上是高得看不見頂的岩壁，<br>是深不見底的裂縫，很遠很遠的底下，有水的聲音。<br>你輕輕咳了一聲，那聲咳嗽在岩壁之間彈來彈去，彈了好久好久才消失。</blockquote>",
+  "palette": {
+    "bg": "#1C1410",
+    "background": "#1C1410",
+    "card": "#281C18",
+    "line": "#241C14",
+    "acc": "#B08854",
+    "tx": "#C0B4A4",
+    "panel": "#281C18",
+    "accent": "#B08854",
+    "text": "#C0B4A4"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "洞穴系统"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "confidence": 0.85,
+    "intro": "脚下是湿滑的岩石。空气冷得刺骨，有一股泥土和腐烂的味道。\n四周很暗，但不是完全的黑一一岩壁上有些地方微微反着光，看得出轮廓：往上是高得看不见顶的岩壁，\n是深不见底的裂缝，很远很远的底下，有水的声音。\n天狐轻轻咳了一声·那声咳嗽在岩壁之间弹来弹去，弹了好久好久才消失。"
+  },
+  "_introSource": "backroom-20261030-123231",
+  "_introUpdated": "2026-11-01T03:32:07.469Z"
+}

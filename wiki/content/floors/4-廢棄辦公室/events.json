@@ -1,0 +1,504 @@
+{
+  "floorId": "4",
+  "floorName": "廢棄辦公室",
+  "junctions": [
+    {
+      "text": "走廊上有幾個人坐在地上聊天看到你揮了揮手。在這種地方被人揮手打招愛;覺很怪室）",
+      "paths": [
+        {
+          "text": "走進那排亮著燈的小隔間",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向那扇傳出古典音樂的門",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frames": [
+          11459
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "走廊上有幾個人坐在地上聊天，看到你，揮了揮手。在這種地方被人揮手打招呼，感覺很奇怪。",
+      "paths": [
+        {
+          "text": "那排亮著燈的小隔間",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "〈只有你察覺到）那邊有很多小隔間，燈是亮的。",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向那扇傳出古典音樂的門",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "那排亮著燈的小隔間",
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frames": [
+          11460
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "遠處有一片方格地板，一格粉紅、一格淡藍，一直延伸到地平線。",
+      "paths": [
+        {
+          "text": "往那座商場走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那個跳出來的視走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          163
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "要走哪條路",
+      "paths": [
+        {
+          "text": "走向一間有沙發的休息室",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那個貼著「失領」的櫃子走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "循著斷斷續續的廣播聲走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          207
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間大辦公室，空無一物，地毯上有一格一格的凹痕，像是桌子曾經排在這裡。窗外在下雨。",
+      "paths": [
+        {
+          "text": "走向一間有沙發的休息過",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那個貼著「失領」的櫃子走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "循著斷斷續續的廣播聲走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frames": [
+          208
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "一整排隔間",
+      "kind": "event",
+      "intro": "一整排小隔間，每一間都有一張辦公桌和一台老舊的桌上型電腦。有些桌上還擺著馬克杯、便利貼、家人片——不知道是誰的。這裡的小房間通常有家具，大房間通常空無一物。你挑一間翻翻看。得到了能量棒抽屜裡有些零碎但有用的東西。消耗品你：得到3硬幣、得到「能量棒」",
+      "actions": [
+        {
+          "text": "辦公桌抽屜",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "Level4廢棄辦公至」",
+                "看不見雨的後面有什麼。窗外的云一動也不動。",
+                "溫度大概十五度，涼涼的。遠處傳來說話聲、腳步聲——是人。很多很多人。",
+                "走廊上有幾個人坐在地上聊天，看到你，揮了揮手。在這種地方被人揮手打招呼，感覺很奇怪。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "翻辦公集抽雁",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "打開",
+          "check": {
+            "attribute": "智力",
+            "hasCheck": true,
+            "roll": null,
+            "difficulty": 13
+          },
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "著著集上那張象人的照片",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "辦公桌抽屜",
+      "results": [
+        "Level4廢棄辦公至」",
+        "看不見雨的後面有什麼。窗外的云一動也不動。",
+        "溫度大概十五度，涼涼的。遠處傳來說話聲、腳步聲——是人。很多很多人。",
+        "走廊上有幾個人坐在地上聊天，看到你，揮了揮手。在這種地方被人揮手打招呼，感覺很奇怪。"
+      ],
+      "check": {
+        "attribute": "感知",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 11,
+        "outcome": "success"
+      },
+      "effects": [],
+      "progress": {
+        "current": 1,
+        "total": 10
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frame": 11468,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "休息室",
+      "kind": "event",
+      "intro": "一間員工休息室，有沙發、有咖啡機〈壞的）、有一台一直在播雨聲的小收音機。門上貼著：「歡迎休息。保持安靜。」幾個流浪者已經在沙發上睡著了，打呼聲跟雨聲一樣規律。你睡了進來之後最安穩的一覺。沒有嗡嗡鳴聲，沒有低吼，只有雨聲和別人的打呼聲。",
+      "actions": [
+        {
+          "text": "找張空沙發好好 0 一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true
+        },
+        {
+          "text": "最醒著的人聊關",
+          "check": {
+            "attribute": "魅力",
+            "hasCheck": true,
+            "roll": null
+          },
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "只開一條縫看看",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "找張空沙發好好 0 一覺",
+      "results": [
+        "FI 一一個知迫走誰。",
+        "抽屜裡有些零碎但有用的東西。",
+        "你：得到3硬幣、得到「能量棒」",
+        "一間小辦公室的燈竟然是亮的——在這裡，燈亮著的都是小房間。桌上有一台老舊的桌上型電腦。",
+        "火光能讓某些東西退開，也能把水煮開。",
+        "感知+1。比別人更容易察覺前方的路通往哪裡。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "饥饿",
+          "amount": 10
+        },
+        {
+          "kind": "口渴",
+          "amount": 5
+        },
+        {
+          "kind": "理智",
+          "amount": 3
+        },
+        {
+          "kind": "口渴",
+          "amount": 3
+        },
+        {
+          "kind": "體力",
+          "amount": 3
+        },
+        {
+          "kind": "體力",
+          "amount": 6
+        },
+        {
+          "kind": "體力",
+          "amount": 1
+        },
+        {
+          "kind": "饥饿",
+          "amount": 3
+        },
+        {
+          "kind": "口渴",
+          "amount": 8
+        },
+        {
+          "kind": "體力",
+          "amount": 2
+        }
+      ],
+      "progress": {
+        "current": 3,
+        "total": 10
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frame": 11474,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      },
+      "updatedAt": "2026-11-01T07:05:23.778Z"
+    },
+    {
+      "name": "窗外的暴風雪",
+      "kind": "event",
+      "intro": "窗外一直下著的大雨，今天變成了雪——很大、很大的雪，一片一片打在玻璃上，堆在窗框上。整層樓的溫度掉了好幾度。人們從各個房間走出來，擠到窗邊，看著外面白茫茫的一片。有人在哭。有人說，這是他掉進來之後，第一次看到雪。你站在人群里，看著雪一片一片落下來。沒有人說話。站在你旁邊的陌生人，把他的毛毯分了一半給你。",
+      "actions": [
+        {
+          "text": "擠進窗邊的人群里看量",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "趁人 - 看，去販賣邊",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐花5硬幣買了「手電筒」。",
+                "天狐裝備了「手電筒」。",
+                "你離開了商店。",
+                "一間大辦公室，空無一物，地毯上有一格一格的凹痕，像是桌子曾經排在這裡。窗外在下雨。",
+                "你決定：「往那一整排落地窗走——窗外變白了」"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "《人在邊，到他身",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "蹲下來，慢慢跟他說話",
+          "check": {
+            "attribute": "魅力",
+            "hasCheck": true,
+            "roll": null
+          },
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "趁人 - 看，去販賣邊",
+      "results": [
+        "天狐花5硬幣買了「手電筒」。",
+        "天狐裝備了「手電筒」。",
+        "你離開了商店。",
+        "一間大辦公室，空無一物，地毯上有一格一格的凹痕，像是桌子曾經排在這裡。窗外在下雨。",
+        "你決定：「往那一整排落地窗走——窗外變白了」"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 3,
+        "total": 10
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 253,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "一塊雜訊",
+      "kind": "event",
+      "intro": "前面的空氣里，浮著一塊黑白的雜訊——像老電視收不到訊號的那種，沙沙沙地閃著，大概一扇門那麼大。靠近一點，聽得到另一邊有蟲在叫丶有風吹過草地的聲音。你繞了一大圈。回頭看的時候，那塊雜訊已經不見了。大概一扇門那麼大。",
+      "actions": [
+        {
+          "text": "仔細閱讀",
+          "check": {
+            "attribute": "智力",
+            "hasCheck": true,
+            "roll": null,
+            "difficulty": 13
+          },
+          "perception": false,
+          "hint": "",
+          "selected": true
+        },
+        {
+          "text": "留下一張自己的",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "仔細閱讀",
+      "results": [],
+      "check": null,
+      "effects": [],
+      "progress": {
+        "current": 6,
+        "total": 10
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 266,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "失物招領",
+      "kind": "event",
+      "intro": "一個辦公室的櫃台旁邊，放著一個大紙箱，上面用奇異筆寫著「失物招領」。裡面塞滿了東西：鑰匙、手表、雨傘、一隻小孩的鞋子、一本日記、一個縫線裂開的泰迪熊。有些東西的，看起來非常非常久遠。天狐翻了很久，挑出了幾樣還能用的東西。得到了你：得到「亂轉的指南針」",
+      "actions": [
+        {
+          "text": "0 看有沒有用得上的",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "一間員工休息至，有沙發丶有咖啡機（壞的）",
+                "保持安靜。」",
+                "幾個流浪者已經在沙發上睡著了，打呼聲跟雨聲一樣規律。",
+                "你決定：「找張空沙發好好睡一覺」",
+                "你睡了進來之後最安穩的一覺。沒有嗡嗡鳴聲，沒有低吼，只有雨聲和別人的打呼聲。",
+                "一間大辦公室，空無一物，地毯上有一格一格的凹痕，像是桌子曾經排在這裡。窗外在下雨。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "拿那只泰迪熊",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "讀那本日記",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "0 看有沒有用得上的",
+      "results": [
+        "一間員工休息至，有沙發丶有咖啡機（壞的）",
+        "保持安靜。」",
+        "幾個流浪者已經在沙發上睡著了，打呼聲跟雨聲一樣規律。",
+        "你決定：「找張空沙發好好睡一覺」",
+        "你睡了進來之後最安穩的一覺。沒有嗡嗡鳴聲，沒有低吼，只有雨聲和別人的打呼聲。",
+        "一間大辦公室，空無一物，地毯上有一格一格的凹痕，像是桌子曾經排在這裡。窗外在下雨。"
+      ],
+      "check": {
+        "attribute": "感知",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 11,
+        "outcome": "success"
+      },
+      "effects": [],
+      "progress": {
+        "current": 9,
+        "total": 10
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-145410",
+        "frame": 283,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

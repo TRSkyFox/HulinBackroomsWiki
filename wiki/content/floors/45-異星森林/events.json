@@ -1,0 +1,201 @@
+{
+  "floorId": "45",
+  "floorName": "異星森林",
+  "junctions": [
+    {
+      "text": "要走哪條路",
+      "paths": [
+        {
+          "text": "往那個長滿藍色蘑菇的洞口走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那個洞頂一閃一閃的小洞走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那叢發光的莓果走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frames": [
+          151
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "倒下的大樹底下",
+      "kind": "event",
+      "intro": "一棵很大的樹倒在地上，樹幹架在兩塊石頭上，底下剛好空出一個能躲人的地方。這裡的樹都倒過了，不會再有樹砸下來。藍色的霧在外面慢慢地飄。",
+      "actions": [
+        {
+          "text": "擠在樹幹底下 0 一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "撿些木頭生火",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "大烈轉身社拜，逃禺了斗！",
+                "你拐過好幾個轉角，躲進一個角落，屏住呼吸。腳步聲慢慢遠去了。",
+                "戰鬥結束了——你活了下來，但什麼也沒拿到。",
+                "夭狐回想剛才的情況，卻想不出個所以然。",
+                "木刺上掛著一片別人的衣服。",
+                "大烈轉身社卉，逃禺了斗！"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": 5
+                },
+                {
+                  "kind": "理智",
+                  "amount": 3
+                },
+                {
+                  "kind": "口渴",
+                  "amount": 3
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "往灰白色的那一片走進去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "撿些木頭生火",
+      "results": [
+        "大烈轉身社拜，逃禺了斗！",
+        "你拐過好幾個轉角，躲進一個角落，屏住呼吸。腳步聲慢慢遠去了。",
+        "戰鬥結束了——你活了下來，但什麼也沒拿到。",
+        "夭狐回想剛才的情況，卻想不出個所以然。",
+        "木刺上掛著一片別人的衣服。",
+        "大烈轉身社卉，逃禺了斗！"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": 5
+        },
+        {
+          "kind": "理智",
+          "amount": 3
+        },
+        {
+          "kind": "口渴",
+          "amount": 3
+        }
+      ],
+      "progress": {
+        "current": 2,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 170,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "灰白色的一片",
+      "kind": "event",
+      "intro": "林子里有一片樹不對勁。葉子掉光了，樹皮變成灰白色，地上鋪著一層很細的灰。越往那邊看，灰白色的樹越多。空氣里有一點焦木頭的味道。說出越走，樹越白、灰越厚。回頭看的時候，身後的樹也全都變成了灰白色。霧圍了上來，吸一口氣，喉嚨就刺一下。",
+      "actions": [
+        {
+          "text": "往灰白色的那一片走進去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "有樹砸下來。",
+                "藍色的霧在外面慢慢地飄。",
+                "你擠在樹幹底下睡著了，醒來的時候，好幾團藍霧絲圍在旁邊，好像在守夜。",
+                "樹幹很慢、很慢地在動。"
+              ],
+              "effects": [
+                {
+                  "kind": "體力",
+                  "amount": 4
+                },
+                {
+                  "kind": "理智",
+                  "amount": 1
+                }
+              ],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不要過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "往灰白色的那一片走進去",
+      "results": [
+        "有樹砸下來。",
+        "藍色的霧在外面慢慢地飄。",
+        "你擠在樹幹底下睡著了，醒來的時候，好幾團藍霧絲圍在旁邊，好像在守夜。",
+        "樹幹很慢、很慢地在動。"
+      ],
+      "check": null,
+      "effects": [
+        {
+          "kind": "體力",
+          "amount": 4
+        },
+        {
+          "kind": "理智",
+          "amount": 1
+        }
+      ],
+      "progress": {
+        "current": 3,
+        "total": 8
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261030-113538",
+        "frame": 173,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

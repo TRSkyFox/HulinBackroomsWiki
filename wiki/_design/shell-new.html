@@ -1,0 +1,68 @@
+<header id="top" class="top">
+  <div class="brand"><span class="dot"></span><b id="brandname">狐霖的後室RPG</b><span class="sub" id="brandsub">非官方資料站</span></div>
+  <div class="srch">
+    <svg class="mag" aria-hidden="true"><use href="#i-search"/></svg>
+    <input id="search" placeholder="搜尋全站…（/ 鍵）" autocomplete="off">
+    <span class="kbd">/</span>
+    <div id="hits"></div>
+  </div>
+  <div class="lang" id="langsw">
+    <button type="button" data-lang="zh-Hant">繁中</button>
+    <button type="button" data-lang="zh-Hans">简中</button>
+    <button type="button" data-lang="en">EN</button>
+  </div>
+</header>
+<div id="wrap">
+  <nav id="side">
+    <div id="navlist"></div>
+    <div id="flookup">
+      <div class="hd" id="flookup_hd">樓層快查</div>
+      <div class="qrow">
+        <input id="flq" type="text" list="fldl" placeholder="輸入樓層編號或名稱…（例：4 / hub）" autocomplete="off"
+               title="輸入樓層編號後按 Enter，直接跳到那一層">
+        <datalist id="fldl"></datalist>
+        <button id="flgo" type="button" title="跳到這一層">跳</button>
+      </div>
+      <div id="flhint"></div>
+    </div>
+    <div id="floorbox">
+      <div class="hd" id="floorboxhd">樓層（全部）</div>
+      <div id="floorlist"></div>
+    </div>
+    <div id="qbox">
+      <div class="hd" id="qboxhd">查詢</div>
+      <div id="qform">
+        <label for="qtype" id="ltype">類型</label>
+        <select id="qtype"></select>
+        <label for="qlevel" id="llevel">樓層</label>
+        <select id="qlevel"><option value="">（全部樓層）</option></select>
+        <label for="qcat" id="lcat">分類</label>
+        <select id="qcat"><option value="">（全部）</option></select>
+        <label for="qex" id="lex">性質</label>
+        <select id="qex">
+          <option value="">（全部）</option>
+          <option value="0">通用</option>
+          <option value="1">角色專屬</option>
+        </select>
+        <label for="qstatus" id="lstatus">狀態</label>
+        <select id="qstatus">
+          <option value="">（全部）</option>
+          <option value="complete">完整</option>
+          <option value="partial">未完全記錄</option>
+          <option value="stub">只有名字</option>
+        </select>
+        <label for="qkw" id="lkw">關鍵字</label>
+        <input id="qkw" type="text" placeholder="名稱／別名…" autocomplete="off">
+        <button id="qgo" type="button">查詢</button>
+      </div>
+      <div id="qcount"></div>
+      <div id="qres"></div>
+    </div>
+  </nav>
+  <main id="main"></main>
+  <aside id="toc">
+    <div id="dtools"><button id="expAll" type="button">全部展開</button><button id="colAll" type="button">全部收合</button></div>
+    <div class="hd" id="tochd">本頁大綱</div>
+    <div id="toclist"></div>
+  </aside>
+</div>

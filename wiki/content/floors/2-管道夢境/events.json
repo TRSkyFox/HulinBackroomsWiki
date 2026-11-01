@@ -1,0 +1,159 @@
+{
+  "floorId": "2",
+  "floorName": "管道夢境",
+  "junctions": [
+    {
+      "text": "敲擊聲停了，整條通道安靜得讓人耳鳴，然後，它從你正后方重新響起。",
+      "paths": [
+        {
+          "text": "走進空氣好像在發光的地方",
+          "perception": false,
+          "selected": true
+        }
+      ],
+      "selected": "走進空氣好像在發光的地方",
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frames": [
+          11437
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "記憶的殘響",
+      "kind": "event",
+      "intro": "空氣里飄著很細很細的光點，像灰塵，又像螢火蟲。天狐伸手去碰，一顆光點停在指尖上——腦海里突然一個畫面：一個不認識的人’在一條沒走過的走廊上，回頭笑了一下。有些記憶太沉重了——死亡、失去、絕望，你不得不把光點甩開。",
+      "actions": [
+        {
+          "text": "讓光點停在身上",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "Level2管殖夢境」",
+                "空氣又悶又濕，每吸一口氣都像在喝溫水。",
+                "這裡的空間不太會亂變，走過的路大多還在原地，但越往深處走，隧道就越複雜，上上下下丶忽寬忽窄。",
+                "定會加倍還回來。」",
+                "敲擊聲停了，整條通道安靜得讓人耳鳴，然後，它從你正后方重新響起。",
+                "敲擊聲停了。整條通道安靜得、人鳴。然後，它從你正后方重新響起。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不要碰那不是我們的東西",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "讓光點停在身上",
+      "results": [
+        "Level2管殖夢境」",
+        "空氣又悶又濕，每吸一口氣都像在喝溫水。",
+        "這裡的空間不太會亂變，走過的路大多還在原地，但越往深處走，隧道就越複雜，上上下下丶忽寬忽窄。",
+        "定會加倍還回來。」",
+        "敲擊聲停了，整條通道安靜得讓人耳鳴，然後，它從你正后方重新響起。",
+        "敲擊聲停了。整條通道安靜得、人鳴。然後，它從你正后方重新響起。"
+      ],
+      "check": {
+        "attribute": "魅力",
+        "hasCheck": true,
+        "roll": null,
+        "difficulty": 15,
+        "outcome": "failure"
+      },
+      "effects": [],
+      "progress": {
+        "current": 1,
+        "total": 14
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frame": 11439,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "假人",
+      "kind": "event",
+      "intro": "一間像是服飾店倉庫的房間，站著二三十個假人，每一個都穿著不一樣的衣服：西裝丶雨衣丶制服丶睡衣。們全都面向門口。得到了打火機大部分的口袋都是空的，但有幾件外套里還留著東西。天狐翻完最後一個，轉身的時候，覺得所有假人的偏了一點點。你：得到4硬幣、得到「打火機」、衣、制服、睡衣。",
+      "actions": [
+        {
+          "text": "檢查假人身上的口袋",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "面猛地一沈，接看升始劇烈地搖晃，管線！",
+                "傳來整段通道崩塌的轟隆聲。",
+                "這裡的地震跟火環帶一樣頻繁。大部分都不嚴重——大部分。",
+                "一條很老的通道，牆是木頭做的，沒有一絲蜘蛛網，這裡的環境連蟲子都活不下去。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "換上假人身上比較乾淨的衣服",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "倒退著走出去’一直看著它們",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "檢查假人身上的口袋",
+      "results": [
+        "面猛地一沈，接看升始劇烈地搖晃，管線！",
+        "傳來整段通道崩塌的轟隆聲。",
+        "這裡的地震跟火環帶一樣頻繁。大部分都不嚴重——大部分。",
+        "一條很老的通道，牆是木頭做的，沒有一絲蜘蛛網，這裡的環境連蟲子都活不下去。"
+      ],
+      "check": {
+        "attribute": "感知",
+        "difficulty": 14,
+        "hasCheck": true,
+        "roll": "17+5=22",
+        "outcome": "success"
+      },
+      "effects": [],
+      "progress": {
+        "current": 2,
+        "total": 14
+      },
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261101-121457",
+        "frame": 11449,
+        "ts": null,
+        "confidence": 0.9,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

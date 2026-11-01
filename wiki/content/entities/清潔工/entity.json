@@ -1,0 +1,32 @@
+{
+  "n": "清潔工",
+  "skills": [
+    {
+      "n": "攻擊",
+      "eff": ""
+    }
+  ],
+  "desc": "",
+  "resist": {
+    "res": "",
+    "weak": ""
+  },
+  "drops": [
+    "清潔藥劑",
+    "破布"
+  ],
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261101-145410",
+    "rawName": "清洁工",
+    "evidence": {
+      "skills": {
+        "攻擊": 1
+      },
+      "drops": {},
+      "resist": {},
+      "descVariants": 1
+    },
+    "resistNotes": []
+  }
+}

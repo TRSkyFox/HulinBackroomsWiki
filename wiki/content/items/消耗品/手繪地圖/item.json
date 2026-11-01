@@ -1,0 +1,12 @@
+{
+  "i": "item-手繪地圖",
+  "n": "手繪地圖",
+  "e": "Hand-drawn Map",
+  "c": "consumable",
+  "p": "8",
+  "sl": "",
+  "x": "false",
+  "eff": [
+    "出口進度 +2"
+  ]
+}

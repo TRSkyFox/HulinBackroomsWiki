@@ -1,0 +1,35 @@
+{
+  "floorId": "11",
+  "floorName": "水泥叢林",
+  "junctions": [
+    {
+      "text": "要走哪條路",
+      "paths": [
+        {
+          "text": "往那個干枯的公應走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進一間門還能鎖上的公寓",
+          "perception": false,
+          "selected": true
+        },
+        {
+          "text": "往那個打開的人孔蓋走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": "走進一間門還能鎖上的公寓",
+      "_src": {
+        "session": "backroom-20261030-123231",
+        "frames": [
+          330
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": []
+}

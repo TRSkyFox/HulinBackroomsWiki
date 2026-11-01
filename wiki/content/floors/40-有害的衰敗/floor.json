@@ -1,0 +1,25 @@
+{
+  "key": "40|有害的衰敗",
+  "id": "40",
+  "name": "有害的衰敗",
+  "info": {
+    "id": "40",
+    "name": "有害的衰敗"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>一大片地上鋪滿了余燼，紅紅的，一閃一閃，像有人把星星撒在地上。熱氣往上冒，霧在這裡散開了。<br>很暖。這是走進這片森林之後，第一次覺得暖。<br>你坐在余炽的邊上，伸出手烤火。沒有人說話，只聽得到余炽劈劈啪啪地響。<br>熱氣把四周的霧推開了一大圈。</blockquote>",
+  "palette": null,
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "有害的衰败"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-113538",
+    "confidence": 0.85,
+    "intro": "一大片地上铺满了余烬，红红的，一闪一闪，像有人把星星撒在地上。热气往上冒，雾在这里散开了。\n很暖。这是走进这片森林之后，第一次觉得暖。\n你坐在余炽的边上，伸出手烤火。没有人说话，只听得到余炽劈劈啪啪地响。\n热气把四周的雾推开了一大圈。"
+  }
+}
