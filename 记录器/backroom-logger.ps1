@@ -4987,7 +4987,8 @@ try {
         if ($ev) {
           Add-Recent -S $state -Text $l.Text
           Add-Recent -S $state -Text $ev.V
-          if ($optMode -and $ev.K -eq 'N' -and $ev.V.Length -le 24) { $ev.K = 'O' }
+          $fromOpts = ([string]$l.Region -eq 'opts')
+          if ($optMode -and $ev.K -eq 'N' -and ($fromOpts -or $ev.V.Length -le 24)) { $ev.K = 'O' }
           if ($ev.K -ne 'N' -and $ev.K -ne 'O') { $optMode = $false }
           $added++
         }
