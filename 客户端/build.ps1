@@ -18,7 +18,22 @@ $outExe = Join-Path $app 'FoyerPlayer.exe'
 & $csc /nologo /target:winexe /platform:x64 /out:$outExe `
   /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll `
   /r:$core /r:$wf $src
-if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗' }
+if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（FoyerPlayer）' }
+
+# 控制台/記錄器面板：獨立 exe，更新它不需要關遊戲客戶端。
+$panelSrc = Join-Path $root 'FoyerPanel.cs'
+$panelOut = Join-Path $app 'FoyerPanel.exe'
+& $csc /nologo /target:winexe /platform:x64 /out:$panelOut `
+  /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll $panelSrc
+if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（FoyerPanel）' }
+
+# 遊戲客戶端：client-only 模式；獨立檔名，才能在客戶端執行時更新面板。
+try {
+  Copy-Item $outExe (Join-Path $app 'FoyerClient.exe') -Force -ErrorAction Stop
+  Copy-Item (Join-Path $root 'FoyerPlayer.exe.config') (Join-Path $app 'FoyerClient.exe.config') -Force -ErrorAction Stop
+} catch {
+  Write-Warning 'FoyerClient.exe 正在執行，這次只更新面板；客戶端版本未覆蓋。'
+}
 
 Copy-Item $core (Join-Path $app 'Microsoft.Web.WebView2.Core.dll') -Force
 Copy-Item $wf (Join-Path $app 'Microsoft.Web.WebView2.WinForms.dll') -Force
@@ -31,4 +46,4 @@ Copy-Item (Join-Path $root '..\记录器\palette-from-shots.ps1') $app -Force
 New-Item -ItemType Directory -Force (Join-Path $app 'structured') | Out-Null
 Copy-Item (Join-Path $root '..\记录器\structured\*') (Join-Path $app 'structured') -Recurse -Force
 
-Write-Host '已編譯：' (Join-Path $app 'FoyerPlayer.exe')
+Write-Host '已編譯：FoyerPanel／FoyerPlayer／FoyerClient'

@@ -10,7 +10,7 @@
 
 ## 1. 現在是什麼狀態
 
-- 專案：非官方 Wiki ＋ OCR 記錄器 ＋ FoyerPlayer 客戶端。
+- 專案：非官方 Wiki ＋ OCR 記錄器 ＋ FoyerPanel／FoyerClient 客戶端。
 - 內容來源：`wiki/content/`；產物：`wiki/site/index.html`。
 - 管線來源：`记录器/structured/`；同步副本：`客户端/app/structured`、`客户端/dist/FoyerRecorder/structured`。
 - 版本控制：`git` 已初始化，`.gitignore` 已排除 logs／app／dist／字型／OCR binary／備份／staging。
@@ -51,9 +51,9 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
    - `event-import` 的繁簡比對改讀 `记录器/structured/i18n-table.txt`。
    - `build-char-freq` 只讀 `wiki/content`。
 7. **重寫 `AGENTS.md`**：只留現行規則、目錄、指令、狀態與禁區。
-8. **OCR 覆蓋層（除錯）**：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPlayer 讀它，畫透明區塊框（title／enemy／main／opts／char）＋右側 OCR 讀取面板；框線只畫邊、滑鼠穿透，`--no-overlay`／`啟動.bat -NoOverlay` 可關。
+8. **OCR 覆蓋層（除錯）**：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPanel 讀它，畫透明區塊框（title／enemy／main／opts／char）＋右側 OCR 讀取面板；框線只畫邊、滑鼠穿透，`--no-overlay`／`啟動.bat -NoOverlay` 可關。
 9. **建立 git 基線**：第一個 commit 是清理後的可運作狀態。
-10. **客戶端／記錄器生命週期解耦**：關閉客戶端只快速停記錄器、不跑整理；「停止記錄」只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；關控制台 X 只收進托盤、不關客戶端；「徹底退出（含客戶端）」才關程式與遊戲。開始記錄可在客戶端沒開時自動開啟客戶端。控制窗有「OCR 浮層」勾選框，可即時同時開關遊戲畫面的透明框線與右側讀取面板。
+10. **客戶端／記錄器生命週期解耦**：`FoyerPanel.exe` 是獨立控制台；`FoyerClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。停止記錄只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；更新 panel／記錄器 script 不用重開遊戲，只有更新 `FoyerClient.exe` 才要重開遊戲。控制窗有「OCR 浮層」勾選框，可即時同時開關遊戲畫面的透明框線與右側讀取面板。
 
 ---
 

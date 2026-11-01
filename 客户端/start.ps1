@@ -11,12 +11,22 @@ $src = Join-Path $PSScriptRoot 'app'
 $dst = Join-Path $env:LOCALAPPDATA 'FoyerLogger\app'
 
 New-Item -ItemType Directory -Force $dst | Out-Null
-try {
-  Copy-Item (Join-Path $src '*') $dst -Recurse -Force -ErrorAction Stop
-} catch {
-  Write-Host '客戶端檔案複製失敗：請先關閉正在執行的 FoyerPlayer（或舊的「狐霖記錄器控制」）再啟動。' -ForegroundColor Yellow
-  Write-Host ('原因：' + $_.Exception.Message) -ForegroundColor DarkGray
-  exit 1
+$copyFailed = @()
+$logsPrefix = (Join-Path $src 'logs') + [IO.Path]::DirectorySeparatorChar
+foreach ($f in Get-ChildItem $src -Recurse -File) {
+  if ($f.FullName.StartsWith($logsPrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  $rel = $f.FullName.Substring($src.Length + 1)
+  $to = Join-Path $dst $rel
+  New-Item -ItemType Directory -Force (Split-Path $to -Parent) | Out-Null
+  try {
+    Copy-Item -LiteralPath $f.FullName -Destination $to -Force -ErrorAction Stop
+  } catch {
+    # 客戶端/面板在執行時，DLL 或 exe 可能被鎖住；跳過該檔，不動正在跑的程式。
+    $copyFailed += $f.Name
+  }
+}
+if ($copyFailed.Count -gt 0) {
+  Write-Host ('客戶端檔案正在使用，這次跳過：' + ($copyFailed -join '、')) -ForegroundColor DarkGray
 }
 
 # logs 的實體位置：D:\BACKROOMS\记录器\logs
@@ -43,10 +53,10 @@ if (-not (Test-Path $appLogs)) {
   cmd /c mklink /J "$appLogs" "$logDir" | Out-Null
 }
 
-$exe = Join-Path $dst 'FoyerPlayer.exe'
-$argsList = @('--url', $Url, '--preset', $Preset, '--logdir', $logDir)
+$exe = Join-Path $dst 'FoyerPanel.exe'
+$argsList = @('--url', $Url, '--logdir', $logDir)
 if ($Profile) { $argsList += @('--profile', $Profile) }
-if ($NoRecord) { $argsList += '--no-record' } else { $argsList += '--record' }
+if ($NoRecord) { $argsList += '--no-record' }
 if ($NoOverlay) { $argsList += '--no-overlay' }
 
 # 只啟動剛複製到本機的這一份（D:\ 的 exe 會被 Windows 擋）

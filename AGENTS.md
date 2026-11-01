@@ -17,7 +17,7 @@
 - 三條產品線：
   1. `wiki/`：內容與離線單檔網站。
   2. `记录器/`：OCR 記錄器與 staging 管線。
-  3. `客户端/`：FoyerPlayer 客戶端，附帶 logs 記錄與可攜版。
+  3. `客户端/`：FoyerPanel 控制台＋FoyerClient 遊戲客戶端，附帶 logs 記錄與可攜版。
 - **不做自動玩**。遊戲作者不允許，任何 `auto/`、`quark/`、`sessions/`、自動玩入口都不要恢復。
 
 ---
@@ -34,12 +34,13 @@ D:\BACKROOMS\
     logs\                    各場次原始 logs（只讀）
     說明.md                  記錄器手冊
   客户端\
-    FoyerPlayer.cs           WebView2 客戶端原始碼
-    app\                     可直接啟動的成品（由 build.ps1 產生）
+    FoyerPlayer.cs           遊戲客戶端原始碼（client-only 由 FoyerClient 啟動）
+    FoyerPanel.cs            獨立控制台／記錄器面板原始碼
+    app\                     可直接啟動的成品（FoyerPanel + FoyerClient）
     dist\FoyerRecorder\      可攜版成品（sync 目標）
     dist\FoyerRecorder.zip   給別人的可攜版壓縮檔
-    start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動
-    build.ps1                重新編譯 app
+    start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 FoyerPanel
+    build.ps1                重新編譯 panel＋client
     postprocess.mjs          按「停止並整理」時執行
     volume-watch.ps1         音量記錄
     fonts\                   字型與字型圖集
@@ -69,7 +70,8 @@ D:\BACKROOMS\
 ## 3. 資料流
 
 ```text
-FoyerPlayer（客户端）
+FoyerPanel（控制台）
+  → FoyerClient（WebView 遊戲）
   → 记录器/backroom-logger.ps1
   → 记录器/logs/backroom-<時間>/structured.jsonl
   → 记录器/structured（font-correct → clean-levels → parse／event-parse／input-bind
@@ -85,7 +87,7 @@ FoyerPlayer（客户端）
   **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
 - `客户端/postprocess.mjs`、`volume-watch.ps1` 是管線的一部分，原始檔在 `客户端/`；
   `sync.mjs` 會把它們複製到 app／dist。
-- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPlayer 讀它，畫透明區塊框
+- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPanel 讀它，畫透明區塊框
   與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
 
 ---
@@ -175,8 +177,8 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - 移除 `记录器/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
-  - FoyerPlayer 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關。
-  - 客戶端／記錄器生命週期已解耦：關閉客戶端只快速停記錄器、不跑整理；「停止記錄」只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；關控制台 X 只收進托盤、不關客戶端；「徹底退出（含客戶端）」才關程式與遊戲。開始記錄可在客戶端沒開時自動開啟客戶端。控制窗有「OCR 浮層」勾選框，可即時同時開關遊戲畫面的透明框線與右側讀取面板。
+  - FoyerPanel／FoyerClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
+  - 客戶端／記錄器生命週期已解耦：`FoyerPanel.exe` 是獨立控制台；`FoyerClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。更新 `FoyerPanel.exe`／記錄器 script 不需要重開遊戲；只有更新 `FoyerClient.exe` 才要重開遊戲。
   - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
 
 ---
@@ -282,14 +284,14 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 ### 8.3 改客戶端／記錄器腳本
 
 ```text
-改 客户端/FoyerPlayer.cs 或 客户端/build.ps1
+改 客户端/FoyerPanel.cs（控制台／OCR 浮層）或 FoyerPlayer.cs（client-only 遊戲）
 → powershell -ExecutionPolicy Bypass -File 客户端/build.ps1
-→ sync.mjs（把 backroom-logger／postprocess／volume-watch 同步到 app／dist）
-→ 用獨立 profile 實測；不要動使用者正在玩的視窗
+→ 用 start.ps1 重開 FoyerPanel；FoyerClient 可保持開啟
 ```
 
-啟動前確認 `%LOCALAPPDATA%\FoyerLogger\app\FoyerPlayer.exe` 與 `客户端/app/FoyerPlayer.exe` 是同一版；
-舊客戶端在跑時 `start.ps1` 會複製失敗並提示先關閉，**不要用批次殺程序**。
+- 只改 `FoyerPanel.exe` 或 `backroom-logger.ps1`：關掉控制台、重新 `start.ps1` 即可，**不用關遊戲**。
+- 只有改到 `FoyerPlayer.cs` / `FoyerClient.exe`（WebView 遊戲本身）才需要關遊戲 client。
+- `start.ps1` 會跳過被 client 鎖住的 exe／DLL；更新面板不會強關客戶端。
 
 ---
 

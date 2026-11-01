@@ -25,6 +25,7 @@ namespace FoyerPlayer
         static string VolumeStopFile;
         static bool Record = true, RecorderStarted = false;
         static bool ShowOcrVisual = true;
+        static bool ClientOnly = false;
         static double CaptureInterval = 0.5;
         static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false;
         static bool ClientOpening = false, WebViewInitializing = false;
@@ -198,13 +199,14 @@ namespace FoyerPlayer
                         case "--no-record": Record = false; break;
                         case "--overlay": ShowOcrVisual = true; break;
                         case "--no-overlay": ShowOcrVisual = false; break;
+                        case "--client-only": ClientOnly = true; break;
                     }
                 }
                 bool createdNew = false;
-                SingleInstance = new Mutex(true, "Local\\FoyerRecorder-SingleInstance", out createdNew);
+                SingleInstance = new Mutex(true, ClientOnly ? "Local\\FoyerClient-SingleInstance" : "Local\\FoyerRecorder-SingleInstance", out createdNew);
                 if (!createdNew)
                 {
-                    MessageBox.Show("狐霖記錄器已經在執行中。\n一次只能開啟一個客戶端。", "狐霖記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(ClientOnly ? "遊戲客戶端已經在執行中。" : "狐霖記錄器已經在執行中。\n一次只能開啟一個控制台。", "狐霖記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return 0;
                 }
                 int pw, ph;
@@ -220,6 +222,17 @@ namespace FoyerPlayer
                 Application.ThreadException += delegate (object s, ThreadExceptionEventArgs e) { Log("THREAD: " + e.Exception); };
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+
+                if (ClientOnly)
+                {
+                    /* 只開遊戲，不建控制台、不啟動記錄器。
+                       控制台由另一個 FoyerPanel.exe 負責，關掉記錄器不會關到這裡。 */
+                    ShowOcrVisual = false;
+                    CreateGameWindow();
+                    Window.Show();
+                    Application.Run(new ApplicationContext(Window));
+                    return 0;
+                }
 
                 CreateControlWindow();
                 ControlWindow.Show();
@@ -661,6 +674,12 @@ namespace FoyerPlayer
                 {
                     Window.BeginInvoke((Action)delegate
                     {
+                        if (ClientOnly)
+                        {
+                            WriteHandshake();
+                            StartVolumeWatcher();
+                            return;
+                        }
                         if (Record) StartRecorder(Window.Handle);
                         StartVolumeWatcher();
                         WriteHandshake();
