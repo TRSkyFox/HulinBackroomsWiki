@@ -25,6 +25,7 @@ namespace FoyerPlayer
         static string VolumeStopFile;
         static bool Record = true, RecorderStarted = false;
         static bool ShowOverlay = true;
+        static bool ShowReadout = true;
         static double CaptureInterval = 0.5;
         static bool GameClosed = false, PipelineRunning = false, AllowAppExit = false;
         static bool ClientOpening = false, WebViewInitializing = false;
@@ -50,6 +51,7 @@ namespace FoyerPlayer
         static Button LangButton;
         static Button StartRecBtn;
         static Button PauseRecBtn;
+        static CheckBox OcrReadoutCheck;
         static System.Windows.Forms.Timer UiTimer;
 
         /* ── 介面語言（繁體／簡體）──
@@ -436,10 +438,25 @@ namespace FoyerPlayer
 
             SnapStatus = new Label();
             SnapStatus.AutoEllipsis = true;
-            SnapStatus.SetBounds(14, 104, 388, 18);
+            SnapStatus.SetBounds(14, 104, 248, 18);
             SnapStatus.ForeColor = Color.FromArgb(185, 185, 185);
             Ui(SnapStatus, "停止後再按「開始記錄」會續錄同一場；關閉客戶端不會跑整理", "停止后再按「开始记录」会续录同一场；关闭客户端不会跑整理", 8.5F, false);
             grpClient.Controls.Add(SnapStatus);
+
+            OcrReadoutCheck = new CheckBox();
+            OcrReadoutCheck.SetBounds(270, 103, 132, 22);
+            OcrReadoutCheck.Checked = ShowReadout;
+            OcrReadoutCheck.FlatStyle = FlatStyle.Flat;
+            OcrReadoutCheck.ForeColor = Color.FromArgb(214, 214, 220);
+            OcrReadoutCheck.BackColor = Color.FromArgb(44, 44, 47);
+            Ui(OcrReadoutCheck, "OCR 讀取", "OCR 读取", 8.5F, false);
+            OcrReadoutCheck.CheckedChanged += delegate
+            {
+                ShowReadout = OcrReadoutCheck.Checked;
+                if (ShowReadout) EnsureReadout();
+                else CloseReadoutOnly();
+            };
+            grpClient.Controls.Add(OcrReadoutCheck);
 
             /* ── 2. 整理 ── */
             var grpRun = NewGroup("整理", "整理", 12, 150, 416, 158);
@@ -1459,19 +1476,36 @@ namespace FoyerPlayer
                 if (Overlay != null && !Overlay.IsDisposed) return;
                 Overlay = new OcrOverlayForm(Window);
                 Overlay.Show();
-                Readout = new OcrReadoutForm(Window);
-                Readout.Show();
+                if (ShowReadout) EnsureReadout();
                 Log("OCR 覆蓋層已啟動");
             }
             catch (Exception ex) { Log("OCR 覆蓋層啟動失敗：" + ex.Message); }
         }
 
+        static void EnsureReadout()
+        {
+            try
+            {
+                if (Window == null || Window.IsDisposed) return;
+                if (Readout != null && !Readout.IsDisposed) return;
+                Readout = new OcrReadoutForm(Window);
+                Readout.Show();
+                Log("OCR 讀取面板已開啟");
+            }
+            catch (Exception ex) { Log("OCR 讀取面板開啟失敗：" + ex.Message); }
+        }
+
+        static void CloseReadoutOnly()
+        {
+            try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
+            Readout = null;
+        }
+
         static void CloseOverlay()
         {
             try { if (Overlay != null && !Overlay.IsDisposed) Overlay.Close(); } catch { }
-            try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
             Overlay = null;
-            Readout = null;
+            CloseReadoutOnly();
         }
 
         static void Log(string line)

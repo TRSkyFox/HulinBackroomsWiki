@@ -176,7 +176,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
   - FoyerPlayer 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關。
-  - 客戶端／記錄器生命週期已解耦：關閉客戶端只快速停記錄器、不跑整理；「停止記錄」只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；「結束程式」快速退出。開始記錄可在客戶端沒開時自動開啟客戶端。
+  - 客戶端／記錄器生命週期已解耦：關閉客戶端只快速停記錄器、不跑整理；「停止記錄」只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；「結束程式」快速退出。開始記錄可在客戶端沒開時自動開啟客戶端。控制窗有「OCR 讀取」勾選框，可即時開關右側讀取面板。
   - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
 
 ---
