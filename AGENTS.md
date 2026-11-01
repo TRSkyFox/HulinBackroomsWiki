@@ -89,6 +89,7 @@ FoyerPanel（控制台）
   `sync.mjs` 會把它們複製到 app／dist。
 - 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；FoyerPanel 讀它，畫透明區塊框
   與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
+- 事件分段：`event-parse.mjs` 會用「大空隙」（> max(2.5×行距, 50px)）切斷 intro／results；普通段落 35px 不會被切。沒有標題的事件不會自動生成。
 
 ---
 

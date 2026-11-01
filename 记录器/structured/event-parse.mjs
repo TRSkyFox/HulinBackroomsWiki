@@ -172,6 +172,14 @@ function isBigGap(prevBottom, y, pitch) {
   return gap > Math.max(pitch * 3, 30);
 }
 
+/* 事件邊界用的「空行」：比一般段落更大的空隙。
+   實測 1606x929：行距約 28px、段落約 35px、區塊約 84px。
+   2.5 倍行距（≈70px）只會命中真正的區塊空隙，不會切斷普通段落。 */
+function isEventGap(prevBottom, y, pitch) {
+  if (!pitch) return false;
+  return (Number(y) - Number(prevBottom)) > Math.max(pitch * 2.5, 50);
+}
+
 /* ── 版面切塊 ────────────────────────────────────────────────
    2026-10-31：使用者提出「事件之間有明顯空隙」。實測（1606x929）：
      同一段內行距 7~8px ／ 段落之間 35px ／ 區塊之間 84px
@@ -418,6 +426,12 @@ for (const f of frames) {
   if (f.layout && f.layout !== 'normal') continue;
   ensureFloor(f);
   const lines = f.layout === 'ending' ? (f.lines || []) : mainLines(f);
+  const _framePitch = linePitch(lines);
+  const _eventGapStarts = new Set();
+  for (let _gi = 1; _gi < lines.length; _gi++) {
+    const _prev = lines[_gi - 1], _cur = lines[_gi];
+    if (isEventGap((_prev.y || 0) + (_prev.h || 0), _cur.y || 0, _framePitch)) _eventGapStarts.add(_cur);
+  }
   const story = lines.filter(l => !isCheck(l.t) && !isDialogue(l.t) && !isAbility(l.t) && !isDecision(l.t) && !isPromptPath(l.t) && !isPromptEvent(l.t) && !isComplete(l.t) && !isProgress(l.t) && !isNoise(l.t));
 
   // progress / 完成
@@ -479,8 +493,10 @@ for (const f of frames) {
     let _from = _blocks.findIndex(b => b.lines.some(l => l === eventLine));
     if (_from < 0) _from = _blocks.findIndex(b => b.lines.some(l => Math.abs((l.y || 0) - eventLine.y) <= 8));
     if (_from < 0) _from = 0;
+    let _prevBlock = null;
     for (let bi = _from; bi < _blocks.length; bi++) {
       const b = _blocks[bi];
+      if (bi > _from && _prevBlock && isEventGap(_prevBlock.y1, b.y0, _pitch)) break;
       const first = clean(b.lines[0] && b.lines[0].t);
       if (bi > _from && isSectionBlock(b)) break;
       if (bi > _from && isDecision(first)) break;
@@ -496,6 +512,7 @@ for (const f of frames) {
         if (isDialogue(l.t) || isAbility(l.t)) continue;
         addText(ev, 'intro', l.t);
       }
+      _prevBlock = b;
     }
 
   }
@@ -594,6 +611,8 @@ for (const f of frames) {
 
   // checks / effects / results
   for (const l of lines) {
+    /* 空行／大空隙 → 這裡已是下一段或下一個事件，不再收進本事件結果。 */
+    if (_eventGapStarts.has(l)) break;
     /* 碰到下一個事件的標題就收手：同一個畫面上面是「上一個事件的結果」，
        下面已經是「下一個事件的標題＋介紹」，不收手會把整段新事件塞進舊事件的結果裡。 */
     if (/^【/.test(clean(l.t))) break;

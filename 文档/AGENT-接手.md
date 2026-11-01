@@ -85,6 +85,7 @@ wiki 仍有 61 條事件是單段格式。`steps.mjs` 與 `event-parse` 已經�
 ### 3.5 管線可攜性
 
 路徑已集中到 `记录器/structured/paths.mjs`：從 `import.meta.url` 往上找含 `wiki/content` 的根目錄，統一匯出 `ROOT`／`WIKI`／`CONTENT`／`FLOORS`／`INCOMING`／`LOGS`。`event-import`、`parse`、`event-parse`、`validate`、`apply-wiki`、`run`、`merge-final` 都已改用；`postprocess` 也改成往上找 repo。新腳本不要再寫死 `D:/BACKROOMS`。
+- `event-parse.mjs` 現在用「大空隙」（> max(2.5×行距, 50px)）切斷 intro／results；普通段落約 35px 不會被切。沒有標題的事件不會自動生成。
 
 ### 3.6 前端與工程衛生
 
