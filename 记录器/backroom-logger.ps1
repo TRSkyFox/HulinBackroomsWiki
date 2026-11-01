@@ -413,33 +413,6 @@ function Test-NeedsRapid([string]$Text) {
   return $false
 }
 
-function Get-OcrSuspectCount([string]$Text) {
-  if (-not $Text) { return 0 }
-  $n = 0
-  if ($Text -match '[冂綫迄寰蟋堡刂丶丿丨乀灬]') { $n += 2 }
-  if ($Text -match '[\u3400-\u9fff][A-Za-z][\u3400-\u9fff]') { $n += 2 }
-  if ($Text -match '[-—–]\s*$') { $n += 2 }
-  Initialize-KnownChars
-  if ($script:KnownChars -and $script:KnownChars.Count -gt 500) {
-    foreach ($ch in $Text.ToCharArray()) {
-      $cp = [int]$ch
-      if ($cp -lt 0x3400 -or $cp -gt 0x9FFF) { continue }
-      if (-not $script:KnownChars.Contains($ch)) { $n++ }
-    }
-  }
-  return $n
-}
-
-# 被 UI 蓋住／只讀到半截的長行：寬度不到主面板 35%，而且含 2 個以上可疑字。
-# 門檻不能太高：事件正文常是 800~960px 的長段落，0.62／0.45 都會把正常段落一起砍掉。
-function Test-ClippedLine([string]$Text, [int]$W, [string]$Region, [int]$ImgW) {
-  if ($Region -ne 'main' -and $Region -ne 'full') { return $false }
-  if ($ImgW -le 0 -or $W -le 0) { return $false }
-  if ($RxCjkChar.Matches($Text).Count -lt 8) { return $false }
-  if ($W -ge [int]($ImgW * 0.35)) { return $false }
-  return ((Get-OcrSuspectCount $Text) -ge 2)
-}
-
 # ============================ 事件分類 ============================
 # K 的代號：
 #   H  樓層 / 場景標題      N  旁白        D  決定       O  選項（可含檢定）
@@ -4943,15 +4916,8 @@ try {
       $state.Frames++
       $lines = $rawFrame
 
-      # ---- 被 UI 擋住／只讀到半截的長行：先過濾，再寫 overlay／raw／structured／wiki ----
+      # 不做長度／寬度裁切判斷：主文段落長短差很多，任何長度門檻都會誤刪正文。
       $imgW = $origW
-      $cleanFrame = New-Object System.Collections.Generic.List[object]
-      foreach ($l in $rawFrame) {
-        if (-not (Test-ClippedLine -Text ([string]$l.Text) -W ([int]$l.W) -Region ([string]$l.Region) -ImgW $imgW)) {
-          $cleanFrame.Add($l)
-        }
-      }
-      $rawFrame = $cleanFrame
       $state.LastRawFrame = @($rawFrame | ForEach-Object {
           [pscustomobject]@{ Text = $_.Text; Region = $_.Region; X = $_.X; Y = $_.Y; W = $_.W; H = $_.H; Crop = $_.Crop }
         })
