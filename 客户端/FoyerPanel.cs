@@ -85,7 +85,7 @@ namespace FoyerPanel
         {
             ControlWindow = new Form();
             ControlWindow.Text = "狐霖記錄器控制";
-            ControlWindow.ClientSize = new Size(430, 340);
+            ControlWindow.ClientSize = new Size(430, 270);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -119,7 +119,7 @@ namespace FoyerPanel
             logs.Click += delegate { OpenFolder(RecordOut); };
             clientGroup.Controls.Add(logs);
 
-            var recGroup = Group("記錄", 12, 110, 406, 100);
+            var recGroup = Group("記錄", 12, 110, 406, 66);
             StartRecBtn = Btn("開始記錄", 14, 24, 120, 32);
             StartRecBtn.Click += delegate { StartRecording(); };
             recGroup.Controls.Add(StartRecBtn);
@@ -129,37 +129,25 @@ namespace FoyerPanel
             var proc = Btn("停止並整理", 270, 24, 120, 32);
             proc.Click += delegate { StopAndProcess(); };
             recGroup.Controls.Add(proc);
-            var hint = new Label();
-            hint.AutoEllipsis = true;
-            hint.SetBounds(14, 66, 378, 18);
-            hint.ForeColor = Color.FromArgb(175, 175, 182);
-            hint.Text = "關閉控制台不會關客戶端；OCR 浮層可即時開關";
-            recGroup.Controls.Add(hint);
 
             StateLabel = new Label();
-            StateLabel.SetBounds(14, 224, 402, 24);
+            StateLabel.SetBounds(14, 184, 402, 24);
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
             StateLabel.Text = "狀態：等待客戶端";
             ControlWindow.Controls.Add(StateLabel);
 
             StageLabel = new Label();
-            StageLabel.SetBounds(14, 250, 402, 18);
+            StageLabel.SetBounds(14, 210, 402, 18);
             StageLabel.ForeColor = Color.FromArgb(205, 205, 210);
             StageLabel.Text = "目前整理：—";
             ControlWindow.Controls.Add(StageLabel);
 
             StageBar = new ProgressBar();
-            StageBar.SetBounds(14, 272, 402, 14);
+            StageBar.SetBounds(14, 232, 402, 14);
             StageBar.Minimum = 0;
             StageBar.Maximum = 100;
             StageBar.Value = 0;
             ControlWindow.Controls.Add(StageBar);
-
-            var output = new Label();
-            output.SetBounds(14, 294, 402, 30);
-            output.ForeColor = Color.FromArgb(170, 170, 176);
-            output.Text = "記錄器在另一個程序；只要重開控制台，不會重開遊戲。";
-            ControlWindow.Controls.Add(output);
 
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
             {
