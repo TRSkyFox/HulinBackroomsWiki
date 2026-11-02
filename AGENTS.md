@@ -73,7 +73,7 @@ ExpeditionRecorder（控制台）
   → ExpeditionClient（WebView 遊戲）
   → 记录器/backroom-logger.ps1
   → 记录器/logs/backroom-<時間>/structured.jsonl
-  → 记录器/structured（font-correct → clean-levels → parse／event-parse／input-bind
+  → 客户端/Recorder/structured（font-correct → clean-levels → parse／event-parse／input-bind
                        → event-import → import-wiki → validate → merge-final）
   → wiki/_incoming/<session>/            staging（預設不寫正式庫）
   → wiki/content/                       正式內容
@@ -81,9 +81,9 @@ ExpeditionRecorder（控制台）
   → wiki/site/index.html
 ```
 
-- `记录器/structured/` 是**管線唯一來源**。
+- `客户端/Recorder/structured/` 是**管線唯一來源**。
 - `客户端/structured/` 與 `客户端/dist/Expedition/structured/` 是同步副本；
-  **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
+  **不要手改副本**，改來源後跑 `node 客户端/Recorder/structured/sync.mjs`。
 - 客户端/volume-watch.ps1 是音量記錄；
   `sync.mjs` 會把它們複製到 app／dist。
 - 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框
@@ -133,20 +133,20 @@ enhancements/enhancements.json      強化表
 node D:\BACKROOMS\wiki\content\build.mjs
 
 # 管線同步／檢查
-node D:\BACKROOMS\记录器\structured\sync.mjs
-node D:\BACKROOMS\记录器\structured\sync.mjs --check
+node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs
+node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs --check
 
 # 完整驗收（目前 870 項；項數會變，以輸出 summary 為準）
-node D:\BACKROOMS\记录器\structured\tests\verify-final.mjs
+node D:\BACKROOMS\客户端\Recorder\structured\tests\verify-final.mjs
 
 # 內容引用完整性（verify-final 也會跑；可單獨執行）
-node D:\BACKROOMS\记录器\structured\validate-content.mjs
+node D:\BACKROOMS\客户端\Recorder\structured\validate-content.mjs
 
 # 前端冒煙（改 template／前端必跑）
 node D:\BACKROOMS\wiki\smoke.mjs
 
 # 端到端 fixture
-node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
+node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 ```
 
 - `verify-final` 的 `root` 由腳本位置推算，不再寫死 `D:/BACKROOMS`。
@@ -172,7 +172,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - `212-發光深淵` 缺完整介紹；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
   - `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。
   - 1600×900 normal 已加專用分區：`title 9,0,656,66`、`main 20,80,1005,529`、`opts 20,609,1005,278`、`enemy 9,42,121,48`、`char 1030,66,565,84`。戰鬥時先 OCR 選項區判斷 `攻擊／技能／防禦／逃跑／右手…`，改用 `enemy 15,70,175,125`、`main 20,200,1005,409`（主區從敵人卡下方開始）。此尺寸不要開 AutoRegion：measured main 會量到 x≈990（實際面板右緣 1025）。
-  - 管線路徑已集中到 `记录器/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
+  - 管線路徑已集中到 `客户端/Recorder/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
 - 已做的清理：
   - 移除 `记录器/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
@@ -228,7 +228,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
    - 重建一律跑 `node wiki/content/build.mjs`。
 
 10. **管線只有一份來源。**
-    - 只改 `记录器/structured/`；改完跑 `sync.mjs`。
+    - 只改 `客户端/Recorder/structured/`；改完跑 `sync.mjs`。
     - 不要手改 `客户端/structured` 或 `客户端/dist/Expedition/structured`。
     - `sync.mjs --check` 有漂移就 exit 1；漂移沒修好之前不要說「驗收全過」。
 
@@ -267,17 +267,17 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 改 wiki/content/**/*.json
 → node wiki/content/build.mjs
 → node wiki/smoke.mjs
-→ node 记录器/structured/tests/verify-final.mjs
+→ node 客户端/Recorder/structured/tests/verify-final.mjs
 → git diff／commit
 ```
 
 ### 8.2 改管線
 
 ```text
-改 记录器/structured/*.mjs
-→ node 记录器/structured/sync.mjs
-→ node 记录器/structured/sync.mjs --check
-→ node 记录器/structured/tests/verify-final.mjs
+改 客户端/Recorder/structured/*.mjs
+→ node 客户端/Recorder/structured/sync.mjs
+→ node 客户端/Recorder/structured/sync.mjs --check
+→ node 客户端/Recorder/structured/tests/verify-final.mjs
 → git diff／commit
 ```
 
@@ -298,7 +298,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 ## 9. 清理、備份、版本控制
 
 - `git` 已初始化（2026-11-01）。`.gitignore` 排除：
-  `记录器/logs/`、`记录器/player/`、`记录器/structured/bin/`、`记录器/structured/*.otf`、
+  `记录器/logs/`、`记录器/player/`、`客户端/Recorder/structured/bin/`、`客户端/Recorder/structured/*.otf`、
   `客户端/app/`、`客户端/dist/`、`客户端/fonts/`、`备份/`、`wiki/_incoming/`、
   `wiki/site/index.html`、`wiki/site/index.backup-before-content.html`。
 - 內容變更用 commit 記錄；不要用「複製整個資料夾」當版本控制。

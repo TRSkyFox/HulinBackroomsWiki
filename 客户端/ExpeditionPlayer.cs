@@ -800,7 +800,7 @@ namespace ExpeditionPlayer
                 string[] cs = {
                     Path.Combine(exeDir, "backroom-logger.ps1"),
                     Path.GetFullPath(Path.Combine(exeDir, @"..\backroom-logger.ps1")),
-                    Path.GetFullPath(Path.Combine(exeDir, @"记录器\backroom-logger.ps1"))
+                    Path.GetFullPath(Path.Combine(exeDir, @"Recorder\backroom-logger.ps1"))
                 };
                 foreach (var c in cs) if (File.Exists(c)) { RecorderScript = c; break; }
                 if (RecorderScript == null) { Log("找不到 backroom-logger.ps1，這次不錄 logs。"); return; }

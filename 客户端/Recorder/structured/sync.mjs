@@ -16,7 +16,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-if (!/(logger|记录器)[\\\\/]structured$/.test(HERE)) {
+if (!/(logger|记录器|Recorder)[\\\\/]structured$/.test(HERE)) {
   console.error('sync.mjs 只能從 logger/structured 執行（目前：' + HERE + '）');
   process.exit(2);
 }
@@ -51,8 +51,8 @@ const rapidExe = path.join(HERE, 'bin', 'rapid-ocr.exe');
 if (fs.existsSync(rapidExe)) PAIRS.push({ rel: 'structured/bin/rapid-ocr.exe', src: rapidExe });
 /* 記錄器本體與後處理：來源各自只有一份，同步到 app／dist 避免再次分叉。 */
 PAIRS.push(
-  { rel: 'backroom-logger.ps1', src: path.join(CLIENT, '记录器/backroom-logger.ps1') },
-  { rel: 'palette-from-shots.ps1', src: path.join(CLIENT, '记录器/palette-from-shots.ps1') },
+  { rel: 'backroom-logger.ps1', src: path.join(CLIENT, 'Recorder/backroom-logger.ps1') },
+  { rel: 'palette-from-shots.ps1', src: path.join(CLIENT, 'Recorder/palette-from-shots.ps1') },
   { rel: 'volume-watch.ps1', src: path.join(CLIENT, 'volume-watch.ps1') },
   { rel: 'ExpeditionClient.exe.config', src: path.join(CLIENT, 'ExpeditionClient.exe.config') }
 );

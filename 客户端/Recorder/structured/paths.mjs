@@ -24,6 +24,6 @@ export const WIKI = path.join(ROOT, 'wiki');
 export const CONTENT = path.join(WIKI, 'content');
 export const FLOORS = path.join(CONTENT, 'floors');
 export const INCOMING = path.join(WIKI, '_incoming');
-const RECORDER = fs.existsSync(path.join(ROOT, '客户端', '记录器')) ? path.join(ROOT, '客户端', '记录器') : path.join(ROOT, '记录器');
+const RECORDER = fs.existsSync(path.join(ROOT, '客户端', 'Recorder')) ? path.join(ROOT, '客户端', 'Recorder') : path.join(ROOT, 'Recorder');
 export const LOGS = path.join(RECORDER, 'logs');
 export const STRUCTURED = HERE;

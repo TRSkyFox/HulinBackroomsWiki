@@ -18,7 +18,7 @@
 它會：
 
 1. 把 `app\` 複製到 `%LOCALAPPDATA%\Expedition\app\`
-2. 把 `app\logs` 接成 `D:\BACKROOMS\记录器\logs` 的 junction
+2. 把 `app\logs` 接成 `D:\BACKROOMS\客户端\Recorder\logs` 的 junction
 3. 從本機那份啟動 `ExpeditionRecorder.exe`
 4. 控制台再啟動 `ExpeditionClient.exe`，遊戲載入後自動開始記錄
 
@@ -61,7 +61,7 @@
   顯示目前 frame、區塊座標、OCR 行、`measured` 自動校正邊界。
 - 虛線橘框 = 自動校正量到的邊界；實線 = 這一幀真正送進 OCR 的邊界。
 
-記錄器每幀會寫 `记录器\logs\overlay.json`；這是除錯資料，不進正式 Wiki。
+記錄器每幀會寫 `客户端\Recorder\logs\overlay.json`；這是除錯資料，不進正式 Wiki。
 不要看覆蓋層時，啟動時加 `-NoOverlay`：
 
 ```text
@@ -96,7 +96,7 @@ clean\run-02\13-玻璃之狂.md
 按「停止並整理」後，若該場有 `structured.jsonl`，`postprocess.mjs` 會再執行：
 
 ```text
-记录器\structured\run.mjs --auto
+客户端\Recorder\structured\run.mjs --auto
   → parse／event-parse／input-bind
   → event-import（乾淨事件可自動寫正式 events.json；其餘留 staging）
   → import-wiki.mjs → D:\BACKROOMS\wiki\_incoming\<session>\
@@ -117,12 +117,12 @@ wiki\_incoming\<session>\auto-import.json
 事件要人工確認後才寫入：
 
 ```powershell
-node D:\BACKROOMS\记录器\structured\event-import.mjs <session> --apply
+node D:\BACKROOMS\客户端\Recorder\structured\event-import.mjs <session> --apply
 node D:\BACKROOMS\wiki\content\build.mjs
 ```
 
-> `记录器\structured` 是管線唯一來源；`app\structured` 是同步副本。
-> 改程式請改 `记录器\structured`，再跑 `node 记录器\structured\sync.mjs`。
+> `客户端\Recorder\structured` 是管線唯一來源；`app\structured` 是同步副本。
+> 改程式請改 `客户端\Recorder\structured`，再跑 `node 客户端\Recorder\structured\sync.mjs`。
 
 ## 給別人的可攜版
 
@@ -166,7 +166,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File D:\BACKROOMS\wiki\import-pac
 ## Logs 位置
 
 ```text
-D:\BACKROOMS\记录器\logs\backroom-YYYYMMDD-HHMMSS\
+D:\BACKROOMS\客户端\Recorder\logs\backroom-YYYYMMDD-HHMMSS\
 ```
 
 `%LOCALAPPDATA%\Expedition\app\logs` 是指向這裡的 junction，所以從哪邊開都看到同一批 logs。

@@ -16,7 +16,7 @@ $logsPrefix = (Join-Path $src 'logs') + [IO.Path]::DirectorySeparatorChar
 foreach ($f in Get-ChildItem $src -Recurse -File) {
   if ($f.FullName.StartsWith($logsPrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
   if ($f.FullName.StartsWith((Join-Path $src 'dist') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
-  if ($f.FullName.StartsWith((Join-Path $src '记录器') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  if ($f.FullName.StartsWith((Join-Path $src 'Recorder') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
   if ($f.Name -match '\.cs$' -or $f.Name -in @('build.ps1','README.md','start.ps1','啟動.bat','啟動記錄器.bat')) { continue }
   if ($f.FullName -match '\\fonts\\') { continue }
   $rel = $f.FullName.Substring($src.Length + 1)
@@ -33,8 +33,8 @@ if ($copyFailed.Count -gt 0) {
   Write-Host ('客戶端檔案正在使用，這次跳過：' + ($copyFailed -join '、')) -ForegroundColor DarkGray
 }
 
-# logs 的實體位置：D:\BACKROOMS\记录器\logs
-$loggerRoot = Join-Path $PSScriptRoot '记录器'
+# logs 的實體位置：D:\BACKROOMS\客户端\Recorder\logs
+$loggerRoot = Join-Path $PSScriptRoot 'Recorder'
 $logDir = Join-Path $loggerRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 

@@ -40,3 +40,7 @@ tools/*.exe
 客户端/记录器/structured/rapid-primary-service/
 
 客户端/记录器/structured/*.otf
+
+客户端/Recorder/structured/rapid-primary-service/
+客户端/Recorder/structured/bin/
+客户端/Recorder/structured/*.otf

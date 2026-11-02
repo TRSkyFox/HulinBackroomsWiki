@@ -68,11 +68,11 @@ if ($Staging) {
 }
 
 Write-Host '驗證 staging...'
-& $node (Join-Path $root '客户端\记录器\structured\validate.mjs') $staging
+& $node (Join-Path $root '客户端\Recorder\structured\validate.mjs') $staging
 if ($LASTEXITCODE -ne 0) { throw 'staging 驗證失敗' }
 
 Write-Host '產生審查報告（不寫入正式 Wiki）...'
-& $node (Join-Path $root '客户端\记录器\structured\merge-final.mjs') $staging
+& $node (Join-Path $root '客户端\Recorder\structured\merge-final.mjs') $staging
 if ($LASTEXITCODE -ne 0) { throw '審查報告產生失敗' }
 
 if (-not $Apply) {
@@ -96,7 +96,7 @@ if ($applyHash) {
   }
 }
 Write-Host '合併正式 Wiki...'
-& $node (Join-Path $root '客户端\记录器\structured\merge-final.mjs') $staging --confirm
+& $node (Join-Path $root '客户端\Recorder\structured\merge-final.mjs') $staging --confirm
 if ($LASTEXITCODE -ne 0) { throw '合併失敗' }
 Write-Host '重建 Wiki...'
 & $node (Join-Path $wiki 'content\build.mjs')

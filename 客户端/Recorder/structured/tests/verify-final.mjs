@@ -34,7 +34,7 @@ for (let i = 0; i < 8 && !fs.existsSync(path.join(root, 'wiki', 'content')); i++
 const wiki = path.join(root, 'wiki');
 const content = path.join(wiki, 'content');
 const floorsRoot = path.join(content, 'floors');
-const logger = path.join(root, '客户端/记录器/structured');
+const logger = path.join(root, '客户端/Recorder/structured');
 const app = path.join(root, '客户端/structured');
 const dist = path.join(root, '客户端/dist/Expedition/structured');
 
@@ -214,11 +214,11 @@ check('pipeline_in_sync', drift.length === 0, drift.slice(0, 6).join(', '));
 
 /* ── 必要檔案 ── */
 for (const p of [
-  '记录器/structured/text.mjs',
-  '记录器/structured/event-clean.mjs',
-  '记录器/structured/sync.mjs',
-  '记录器/structured/i18n.mjs',
-  '记录器/structured/char-freq.json',
+  '客户端/Recorder/structured/text.mjs',
+  '客户端/Recorder/structured/event-clean.mjs',
+  '客户端/Recorder/structured/sync.mjs',
+  '客户端/Recorder/structured/i18n.mjs',
+  '客户端/Recorder/structured/char-freq.json',
   'wiki/content/build.mjs',
   'wiki/content/template.html',
   '客户端/volume-watch.ps1'

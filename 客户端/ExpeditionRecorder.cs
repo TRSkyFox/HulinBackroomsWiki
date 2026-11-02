@@ -424,7 +424,7 @@ namespace ExpeditionRecorder
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
             string run = Path.Combine(exeDir, "structured", "run.mjs");
-            if (!File.Exists(run)) run = Path.Combine(RepoRoot(), "客户端", "记录器", "structured", "run.mjs");
+            if (!File.Exists(run)) run = Path.Combine(RepoRoot(), "客户端", "Recorder", "structured", "run.mjs");
             if (!File.Exists(run)) throw new Exception("找不到 run.mjs");
             string node = Path.Combine(exeDir, "node.exe");
             if (!File.Exists(node)) node = "node.exe";

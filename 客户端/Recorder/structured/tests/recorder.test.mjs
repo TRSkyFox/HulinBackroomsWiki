@@ -6,15 +6,15 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..', '..', '..');
-const logger = fs.readFileSync(path.join(ROOT, '客户端/记录器/backroom-logger.ps1'), 'utf8');
-const parsejs = fs.readFileSync(path.join(ROOT, '客户端/记录器/structured/parse.mjs'), 'utf8');
-const palette = fs.readFileSync(path.join(ROOT, '客户端/记录器/palette-from-shots.ps1'), 'utf8');
-const runjs = fs.readFileSync(path.join(ROOT, '客户端/记录器/structured/run.mjs'), 'utf8');
-const mergejs = fs.readFileSync(path.join(ROOT, '客户端/记录器/structured/merge-final.mjs'), 'utf8');
-const workerjs = fs.readFileSync(path.join(ROOT, '客户端/记录器/structured/ocr-worker.mjs'), 'utf8');
-const eventjs = fs.readFileSync(path.join(ROOT, '客户端/记录器/structured/event-import.mjs'), 'utf8');
-const fontjs = fs.readFileSync(path.join(ROOT, '记录器/structured/font-correct.mjs'), 'utf8');
-const cleanjs = fs.readFileSync(path.join(ROOT, '记录器/structured/event-clean.mjs'), 'utf8');
+const logger = fs.readFileSync(path.join(ROOT, '客户端/Recorder/backroom-logger.ps1'), 'utf8');
+const parsejs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/parse.mjs'), 'utf8');
+const palette = fs.readFileSync(path.join(ROOT, '客户端/Recorder/palette-from-shots.ps1'), 'utf8');
+const runjs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/run.mjs'), 'utf8');
+const mergejs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/merge-final.mjs'), 'utf8');
+const workerjs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/ocr-worker.mjs'), 'utf8');
+const eventjs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/event-import.mjs'), 'utf8');
+const fontjs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/font-correct.mjs'), 'utf8');
+const cleanjs = fs.readFileSync(path.join(ROOT, '客户端/Recorder/structured/event-clean.mjs'), 'utf8');
 
 export function run() {
   const checks = [];
@@ -51,7 +51,7 @@ export function run() {
   add('palette:keep-existing', /kept = \$true/.test(palette), 'do not overwrite with []');
   add('palette:edge-bg', /EdgeMode/.test(palette), 'bg from corners');
 
-  add('pipeline:clean-levels', fs.existsSync(path.join(ROOT, '记录器/structured/clean-levels.mjs')), 'clean-levels.mjs');
+  add('pipeline:clean-levels', fs.existsSync(path.join(ROOT, '客户端/Recorder/structured/clean-levels.mjs')), 'clean-levels.mjs');
   return { ok: checks.every(c => c.ok), checks };
 }
 
