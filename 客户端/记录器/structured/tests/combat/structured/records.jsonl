@@ -1,0 +1,2 @@
+{"type":"floor","id":"floor-0","floorId":"0","name":"大廳","rawName":"大厅","title":"Level 0 「大厅」","palette":{"bg":"#2C2611"},"intro":"一个衣衫褴褛的人挡在走廊中间，嘴里不停念着数字，手上握着一片削尖的铁片。","introFrame":1,"introScore":66,"confidence":0.85,"source":{"frame":1,"ts":"2026-10-26 23:30:00"},"_prevIntroLines":{}}
+{"type":"combat","id":"combat-1","floor":"0","enemy":{"name":"流浪者的幻影","intro":"一个衣衫褴褛的人挡在走廊中间，嘴里不停念着数字，手上握着一片削尖的铁片。","skills":["挥砍"],"drops":["5 硬币、得到「打火机」"],"resistances":["钝击对它没什么用，看来它抵抗钝击、弱点是火焰。"]},"confidence":0.78,"source":{"frame":2,"ts":"2026-10-26 23:30:01"}}

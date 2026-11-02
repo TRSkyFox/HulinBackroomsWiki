@@ -1,0 +1,1 @@
+{"type":"choice","id":"choice-1","floor":"0","prompt":"要走哪條路？","options":[{"id":"opt-1","text":"往左邊走","difficulty":"智力难度 12"},{"id":"opt-2","text":"往右邊走","difficulty":"智力难度 12"}],"selected":{"id":"opt-1","text":"往左邊走","matched":true},"result":["你走進左邊的走廊，燈管閃了一下。"],"confidence":0.85,"source":{"frame":1,"ts":"2026-10-27 01:21:00"}}

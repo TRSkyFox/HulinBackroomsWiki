@@ -382,8 +382,14 @@ namespace ExpeditionRecorder
         {
             try
             {
-                string p = Path.GetFullPath(Path.Combine(RecordOut, "..", ".."));
-                if (Directory.Exists(Path.Combine(p, "wiki", "content"))) return p;
+                string p = Path.GetFullPath(RecordOut);
+                for (int i = 0; i < 6; i++)
+                {
+                    if (Directory.Exists(Path.Combine(p, "wiki", "content"))) return p;
+                    var up = Path.GetDirectoryName(p);
+                    if (string.IsNullOrEmpty(up) || up == p) break;
+                    p = up;
+                }
             }
             catch { }
             return Path.GetFullPath(RecordOut);
@@ -418,7 +424,7 @@ namespace ExpeditionRecorder
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
             string run = Path.Combine(exeDir, "structured", "run.mjs");
-            if (!File.Exists(run)) run = Path.Combine(RepoRoot(), "记录器", "structured", "run.mjs");
+            if (!File.Exists(run)) run = Path.Combine(RepoRoot(), "客户端", "记录器", "structured", "run.mjs");
             if (!File.Exists(run)) throw new Exception("找不到 run.mjs");
             string node = Path.Combine(exeDir, "node.exe");
             if (!File.Exists(node)) node = "node.exe";

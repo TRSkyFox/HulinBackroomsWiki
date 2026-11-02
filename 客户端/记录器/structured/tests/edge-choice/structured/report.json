@@ -1,0 +1,64 @@
+{
+  "session": "edge-choice",
+  "generatedAt": "2026-10-29T15:55:11.972Z",
+  "counts": {
+    "floors": 1,
+    "choices": 1,
+    "combats": 0
+  },
+  "lowConfidence": 0,
+  "records": [
+    {
+      "type": "floor",
+      "id": "floor-0",
+      "floorId": "0",
+      "name": "大廳",
+      "rawName": "大厅",
+      "title": "Level 0 「大厅」",
+      "palette": {
+        "bg": "#302810"
+      },
+      "intro": "",
+      "introFrame": 0,
+      "introScore": 0,
+      "confidence": 0.85,
+      "source": {
+        "frame": 1,
+        "ts": "2026-10-27 01:21:00"
+      },
+      "_prevIntroLines": {}
+    },
+    {
+      "type": "choice",
+      "id": "choice-1",
+      "floor": "0",
+      "prompt": "要走哪条路？",
+      "options": [
+        {
+          "id": "opt-1",
+          "text": "往左边走",
+          "difficulty": "智力难度 12"
+        },
+        {
+          "id": "opt-2",
+          "text": "往右边走",
+          "difficulty": "智力难度 12"
+        }
+      ],
+      "selected": {
+        "id": "opt-1",
+        "text": "往左边走",
+        "matched": true
+      },
+      "result": [
+        "第 1 层 | 岔路",
+        "你走进左边的走廊，灯管闪了一下。"
+      ],
+      "confidence": 0.85,
+      "source": {
+        "frame": 1,
+        "ts": "2026-10-27 01:21:00"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "staging": "D:\\BACKROOMS\\logger\\structured\\tests\\edge-choice\\_test-staging",
+  "checkedAt": "2026-10-29T15:55:12.133Z",
+  "errors": [],
+  "warnings": [
+    "大廳: palette 缺 card",
+    "大廳: palette 缺 acc",
+    "大廳: palette 缺 tx",
+    "大廳: 介紹太短或空"
+  ],
+  "ok": true,
+  "floors": [
+    {
+      "id": "0",
+      "name": "大廳",
+      "file": "D:\\BACKROOMS\\logger\\structured\\tests\\edge-choice\\_test-staging\\floors\\0-大廳\\floor.json",
+      "errors": [],
+      "warnings": [
+        "palette 缺 card",
+        "palette 缺 acc",
+        "palette 缺 tx",
+        "介紹太短或空"
+      ],
+      "existing": true
+    }
+  ],
+  "entities": []
+}

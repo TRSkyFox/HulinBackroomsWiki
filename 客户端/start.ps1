@@ -16,6 +16,7 @@ $logsPrefix = (Join-Path $src 'logs') + [IO.Path]::DirectorySeparatorChar
 foreach ($f in Get-ChildItem $src -Recurse -File) {
   if ($f.FullName.StartsWith($logsPrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
   if ($f.FullName.StartsWith((Join-Path $src 'dist') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  if ($f.FullName.StartsWith((Join-Path $src '记录器') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
   if ($f.Name -match '\.cs$' -or $f.Name -in @('build.ps1','README.md','start.ps1','啟動.bat','啟動記錄器.bat')) { continue }
   if ($f.FullName -match '\\fonts\\') { continue }
   $rel = $f.FullName.Substring($src.Length + 1)
@@ -33,7 +34,7 @@ if ($copyFailed.Count -gt 0) {
 }
 
 # logs 的實體位置：D:\BACKROOMS\记录器\logs
-$loggerRoot = Join-Path (Split-Path $PSScriptRoot -Parent) '记录器'
+$loggerRoot = Join-Path $PSScriptRoot '记录器'
 $logDir = Join-Path $loggerRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 
@@ -64,3 +65,4 @@ if ($NoOverlay) { $argsList += '--no-overlay' }
 
 # 只啟動剛複製到本機的這一份（D:\ 的 exe 會被 Windows 擋）
 Start-Process -FilePath $exe -ArgumentList $argsList -WorkingDirectory $dst
+

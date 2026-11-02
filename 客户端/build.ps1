@@ -40,9 +40,9 @@ Remove-Item (Join-Path $app 'ExpeditionPlayer.exe') -Force -ErrorAction Silently
 Copy-Item $core (Join-Path $app 'Microsoft.Web.WebView2.Core.dll') -Force
 Copy-Item $wf (Join-Path $app 'Microsoft.Web.WebView2.WinForms.dll') -Force
 Copy-Item (Join-Path $expeditionWebDllPath 'WebView2Loader.dll') $app -Force
-Copy-Item (Join-Path $root '..\记录器\backroom-logger.ps1') $app -Force
-Copy-Item (Join-Path $root '..\记录器\palette-from-shots.ps1') $app -Force
+Copy-Item (Join-Path $root '记录器\backroom-logger.ps1') $app -Force
+Copy-Item (Join-Path $root '记录器\palette-from-shots.ps1') $app -Force
 New-Item -ItemType Directory -Force (Join-Path $app 'structured') | Out-Null
-Copy-Item (Join-Path $root '..\记录器\structured\*') (Join-Path $app 'structured') -Recurse -Force
+Copy-Item (Join-Path $root '记录器\structured\*') (Join-Path $app 'structured') -Recurse -Force
 
 Write-Host '已編譯：ExpeditionRecorder／ExpeditionPlayer／ExpeditionClient'
