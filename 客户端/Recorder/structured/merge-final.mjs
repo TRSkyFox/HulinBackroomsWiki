@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { CONTENT } from './paths.mjs';
+import { CONTENT, WIKI } from './paths.mjs';
 import { floorName, safePath } from './text.mjs';
 
 /*
@@ -52,7 +52,7 @@ function usablePalette(p) {
 }
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-const backup = path.join(root, '_backup', 'final-' + stamp);
+const backup = path.join(WIKI, '_backup', 'final-' + stamp);
 const report = { staging, stamp, entities: [], floors: [], skipped: [], backup };
 
 // index formal
