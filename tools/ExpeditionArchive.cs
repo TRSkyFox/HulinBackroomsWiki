@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-namespace HulinArchive
+namespace ExpeditionArchive
 {
     static class Program
     {
@@ -40,7 +40,7 @@ namespace HulinArchive
 
             public ImportForm()
             {
-                Text = "狐霖勘探檔案庫";
+                Text = "Expedition Archive";
                 ClientSize = new Size(720, 460);
                 StartPosition = FormStartPosition.CenterScreen;
                 FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -204,4 +204,5 @@ namespace HulinArchive
         }
     }
 }
+
 

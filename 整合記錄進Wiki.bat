@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0tools\HulinArchive.exe" --repo "%~dp0"
+start "" "%~dp0tools\ExpeditionArchive.exe" --repo "%~dp0"
