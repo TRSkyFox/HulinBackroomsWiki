@@ -88,7 +88,7 @@ namespace FoyerPanel
         {
             ControlWindow = new Form();
             ControlWindow.Text = "狐霖記錄器控制";
-            ControlWindow.ClientSize = new Size(430, 300);
+            ControlWindow.ClientSize = new Size(430, 340);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -146,9 +146,6 @@ namespace FoyerPanel
             StopRecBtn = Btn("停止記錄", 142, 24, 120, 32);
             StopRecBtn.Click += delegate { StopRecording(); };
             recGroup.Controls.Add(StopRecBtn);
-            var proc = Btn("停止並整理", 270, 24, 120, 32);
-            proc.Click += delegate { StopAndProcess(); };
-            recGroup.Controls.Add(proc);
 
             StateLabel = new Label();
             StateLabel.SetBounds(14, 218, 402, 24);
@@ -168,6 +165,18 @@ namespace FoyerPanel
             StageBar.Maximum = 100;
             StageBar.Value = 0;
             ControlWindow.Controls.Add(StageBar);
+
+            var exportBtn = new Button();
+            exportBtn.Text = "停止並匯出";
+            exportBtn.SetBounds(14, 292, 195, 30);
+            exportBtn.Click += delegate { StopAndExport(); };
+            ControlWindow.Controls.Add(exportBtn);
+
+            var importBtn = new Button();
+            importBtn.Text = "整合 Wiki（獨立程式）";
+            importBtn.SetBounds(217, 292, 195, 30);
+            importBtn.Click += delegate { LaunchTool("FoyerImport.exe", "--repo \"" + RepoRoot() + "\""); };
+            ControlWindow.Controls.Add(importBtn);
 
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
             {
@@ -396,6 +405,72 @@ namespace FoyerPanel
             if (PipelineRunning) return;
             StopRecorder(true);
             SetState(GameHwnd != IntPtr.Zero ? "狀態：已停止記錄（客戶端仍開）" : "狀態：已停止記錄", Color.FromArgb(255, 190, 100));
+        }
+
+        static string RepoRoot()
+        {
+            try
+            {
+                string p = Path.GetFullPath(Path.Combine(RecordOut, "..", ".."));
+                if (Directory.Exists(Path.Combine(p, "wiki", "content"))) return p;
+            }
+            catch { }
+            return Path.GetFullPath(RecordOut);
+        }
+
+        static void LaunchTool(string name, string args)
+        {
+            try
+            {
+                string exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name);
+                if (!File.Exists(exe)) { SetState("找不到 " + name, Color.FromArgb(255, 120, 110)); return; }
+                var psi = new ProcessStartInfo(exe, args);
+                psi.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                psi.UseShellExecute = true;
+                Process.Start(psi);
+            }
+            catch (Exception ex) { Log("launch: " + ex); SetState("開啟工具失敗", Color.FromArgb(255, 120, 110)); }
+        }
+
+        static void StopAndExport()
+        {
+            if (PipelineRunning) return;
+            string session = LatestSession();
+            if (session == null) { SetState("沒有可匯出的場次", Color.FromArgb(255, 150, 120)); return; }
+            PipelineRunning = true;
+            SetState("狀態：停止記錄並匯出…", Color.FromArgb(255, 190, 100));
+            var t = new Thread(delegate ()
+            {
+                try
+                {
+                    StopRecorder(false);
+                    RunExport(session);
+                    SetState("狀態：匯出完成（尚未進 Wiki）", Color.FromArgb(130, 220, 140));
+                }
+                catch (Exception ex) { Log("export: " + ex); SetState("匯出失敗（看 panel.log）", Color.FromArgb(255, 120, 110)); }
+                finally { PipelineRunning = false; }
+            });
+            t.IsBackground = true;
+            t.Start();
+        }
+
+        static void RunExport(string session)
+        {
+            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string run = Path.Combine(exeDir, "structured", "run.mjs");
+            if (!File.Exists(run)) run = Path.Combine(RepoRoot(), "记录器", "structured", "run.mjs");
+            if (!File.Exists(run)) throw new Exception("找不到 run.mjs");
+            string node = Path.Combine(exeDir, "node.exe");
+            if (!File.Exists(node)) node = "node.exe";
+            string staging = Path.Combine(session, "staging");
+            var psi = new ProcessStartInfo(node, "\"" + run + "\" \"" + session + "\" --portable --staging \"" + staging + "\"");
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = true;
+            psi.WindowStyle = ProcessWindowStyle.Hidden;
+            psi.WorkingDirectory = exeDir;
+            var p = Process.Start(psi);
+            if (p != null) p.WaitForExit();
+            if (p != null && p.ExitCode != 0) throw new Exception("run.mjs exit " + p.ExitCode);
         }
 
         static void StopAndProcess()
