@@ -128,6 +128,14 @@ foreach ($f in Get-ChildItem -LiteralPath $shotDir -File -Filter '*.png' | Sort-
     if (-not $acc) { $acc = $tx }
     if (-not $card) { $card = $bg }
     if (-not $line) { $line = $card }
+    # 取樣常把亮邊框和正文顏色抓反（例如上白下灰）；正文比邊框暗很多時對調。
+    try {
+      $txL = Lum ([System.Drawing.ColorTranslator]::FromHtml($tx))
+      $lnL = Lum ([System.Drawing.ColorTranslator]::FromHtml($line))
+      if ($lnL -gt ($txL + 38)) {
+        $tmp = $tx; $tx = $line; $line = $tmp
+      }
+    } catch { }
     $items += [pscustomobject]@{
       id = $id; name = $nm; source = 'auto-floor-shot'; shot = $f.Name
       palette = [pscustomobject]@{ bg = $bg; background = $bg; card = $card; line = $line; acc = $acc; tx = $tx }

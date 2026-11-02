@@ -5584,7 +5584,7 @@ try {
       $newLayerNo = ($layerNo -and $layerNo -ne [string]$state.LastLayerNo)
       # 同一層連續 3 幀再截，避開換層黑屏／載入畫面
       $shotMainLines = @($rawFrame | Where-Object { $_.Region -eq 'main' }).Count
-      if ($state.FloorShotDir -and $crop -and $state.LevelFromHeader -and ($layout -eq 'normal') -and ($shotMainLines -ge 4) -and ($state.CurrentLevel -or $layerNo)) {
+      if ($state.FloorShotDir -and $crop -and $state.LevelFromHeader -and ($layout -eq 'normal') -and (-not $state.ShopMode) -and (-not $state.CombatMode) -and ($shotMainLines -ge 4) -and ($state.CurrentLevel -or $layerNo)) {
         try {
           $shotKey = if ($state.CurrentLevel) { [string]$state.CurrentLevel } else { 'unknown-' + $layerNo }
           if (-not $state.FloorShotSeen.ContainsKey($shotKey)) {

@@ -126,14 +126,16 @@ function paletteFor(r, sessionDir, hName) {
   const shot = (p && (!palName || palName === want)) ? normalizePalette(p) : null;
 
   const wall = wallBg(sessionDir, want || r.rawName || '');
-  if (wall && saneBg(wall)) {
-    if (shot && shot.bg && saneBg(shot.bg) && rgbDist(shot.bg, wall) <= 40) {
+  /* 截圖配色優先。牆色只是面板外側的一小塊取樣，遇到商店／事件／多人戰鬥
+     常常量到卡片或文字；以前牆色跟截圖差超過 40 就把整份截圖配色丟掉，
+     才會出現 bg 正確但 card/line/tx 全歪的樓層。 */
+  if (shot && shot.bg && saneBg(shot.bg)) {
+    if (wall && saneBg(wall) && rgbDist(shot.bg, wall) <= 40) {
       return { ...shot, bg: wall, background: wall, _derivedFrom: 'wall-sample' };
     }
-    return normalizePalette({ bg: wall, _derivedFrom: 'wall-sample' });
+    return shot;
   }
-
-  if (shot && shot.bg && saneBg(shot.bg)) return shot;
+  if (wall && saneBg(wall)) return normalizePalette({ bg: wall, _derivedFrom: 'wall-sample' });
 
   const bg = observedBg(sessionDir, want || r.rawName || '');
   if (bg && saneBg(bg)) return normalizePalette({ bg, _derivedFrom: 'floor-colors.log' });
