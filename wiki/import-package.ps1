@@ -18,7 +18,7 @@ if ($Staging) {
   $staging = Join-Path $dest 'staging'
   if (-not (Test-Path -LiteralPath $staging)) { throw "找不到 staging：$staging" }
 } else {
-  if (-not $Package) { $Package = Read-Host '請把 .hulinlog.zip 拖進來，或貼上路徑' }
+  if (-not $Package) { $Package = Read-Host '請把 .expedition.zip 拖進來，或貼上路徑' }
   $Package = $Package.Trim().Trim('"')
   if (-not (Test-Path -LiteralPath $Package)) { throw "找不到檔案：$Package" }
   $name = 'import-' + [IO.Path]::GetFileNameWithoutExtension($Package) + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss')

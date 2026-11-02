@@ -48,7 +48,7 @@ D:\BACKROOMS\
     site\index.html          建置產物（雙擊即開；不要手改）
     _incoming\               每次收工的 staging（不進正式庫）
     smoke.mjs                前端冒煙測試
-    import-package.ps1       匯入別人的 .hulinlog.zip（預設只 staging）
+    import-package.ps1       匯入別人的 .expedition.zip（預設只 staging）
     匯入紀錄.bat             拖 zip 的入口
   文档\                      AGENT-接手、要求文档、事件规范、背景设定、报告
   备份\                      legacy 壓縮檔與站點備份

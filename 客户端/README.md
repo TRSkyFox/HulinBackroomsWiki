@@ -144,10 +144,10 @@ D:\BACKROOMS\客户端\dist\HulinExpedition.zip
 - 關閉遊戲後，紀錄包會出現在：
 
 ```text
-%LOCALAPPDATA%\HulinExpedition\exports\HulinLog-<session>.hulinlog.zip
+%LOCALAPPDATA%\HulinExpedition\exports\Expedition-<session>.expedition.zip
 ```
 
-對方把 `.hulinlog.zip` 傳回來即可。
+對方把 `.expedition.zip` 傳回來即可。
 
 Wiki 主人收到後，把 zip 拖到：
 

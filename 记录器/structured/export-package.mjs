@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 /*
- * 把一場 session 打包成可傳給 Wiki 主人的 .hulinlog.zip。
+ * 把一場 session 打包成可傳給 Wiki 主人的 .expedition.zip。
  * 不含手動截圖；Wiki content 不會被打包。
  *
  * node export-package.mjs <sessionDir> <stagingDir> [--out <dir>] [--include-raw]
@@ -54,7 +54,7 @@ const fileInfo = files.map(p => ({
 let report = {};
 try { report = JSON.parse(fs.readFileSync(path.join(staging, 'report.json'), 'utf8')); } catch { }
 const manifest = {
-  format: 'hulinlog-staging',
+  format: 'expedition-staging',
   version: 1,
   session: name,
   created: new Date().toISOString(),
@@ -76,7 +76,7 @@ fs.writeFileSync(path.join(work, 'README.txt'), [
 ].join('\r\n'), 'utf8');
 
 fs.mkdirSync(outDir, { recursive: true });
-const zip = path.join(outDir, 'HulinLog-' + name + '.hulinlog.zip');
+const zip = path.join(outDir, 'Expedition-' + name + '.expedition.zip');
 try { if (fs.existsSync(zip)) fs.rmSync(zip, { force: true }); } catch { }
 const ps = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
   'Compress-Archive -Path "' + work.replace(/"/g, '""') + '\\*" -DestinationPath "' + zip.replace(/"/g, '""') + '" -Force'], { encoding: 'utf8' });

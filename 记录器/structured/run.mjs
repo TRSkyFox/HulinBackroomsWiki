@@ -65,7 +65,7 @@ const val = spawnSync(process.execPath, [path.join(here, 'validate.mjs'), stagin
 if (val.status !== 0) console.error('staging 驗證有問題（見 validation.json）');
 
 if (portable) {
-  // 給別人的版本：不碰 Wiki；只打包成可傳回的 .hulinlog.zip。
+  // 給別人的版本：不碰 Wiki；只打包成可傳回的 .expedition.zip。
   const out = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(path.dirname(here), 'exports');
   writeProgress('export', 78, '打包紀錄');
   const exp = spawnSync(process.execPath, [path.join(here, 'export-package.mjs'), session, staging, '--out', out], { stdio: 'inherit' });

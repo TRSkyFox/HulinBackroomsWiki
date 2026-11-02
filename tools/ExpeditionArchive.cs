@@ -54,13 +54,13 @@ namespace ExpeditionArchive
                 Package.SetBounds(64, 12, 500, 24);
                 Controls.Add(Package);
                 var browse = new Button();
-                browse.Text = "選擇 .hulinlog.zip";
+                browse.Text = "選擇 .expedition.zip";
                 browse.SetBounds(574, 11, 132, 26);
                 browse.Click += delegate
                 {
                     using (var d = new OpenFileDialog())
                     {
-                        d.Filter = "紀錄包 (*.hulinlog.zip)|*.hulinlog.zip|Zip (*.zip)|*.zip|所有檔案 (*.*)|*.*";
+                        d.Filter = "紀錄包 (*.expedition.zip)|*.expedition.zip|Zip (*.zip)|*.zip|所有檔案 (*.*)|*.*";
                         if (d.ShowDialog() == DialogResult.OK) Package.Text = d.FileName;
                     }
                 };
