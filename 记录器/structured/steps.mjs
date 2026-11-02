@@ -8,7 +8,7 @@
    規則很簡單：一行是「→ 你決定：…」就是新階段的起點。
 */
 
-const DECIDE = /^[→>\-–—\s]*(?:你)?[決决]\s*[定定]\s*[：:]/;
+const DECIDE = /^[→>\-–—\s]*(?:(?:你)?[決决]\s*[定定]\s*[：:]|[^\s：:]{1,12}\s*[：:]\s*[「『])/;
 
 export function splitSteps(textOrLines) {
   const lines = Array.isArray(textOrLines)
@@ -51,7 +51,7 @@ export function eventToSteps(ev) {
     steps.push({
       intro: '',
       actions: [],
-      selected: String(parts[i].decide || '').replace(DECIDE, '').replace(/[「」]/g, ''),
+      selected: String(parts[i].decide || '').replace(DECIDE, '').replace(/^[^：:]*[：:]\s*/, '').replace(/[「」]/g, '').trim(),
       results: parts[i].lines
     });
   }
@@ -59,5 +59,5 @@ export function eventToSteps(ev) {
 }
 
 export function hasMultipleSteps(ev) {
-  return /→\s*你?[決决]\s*[定定]/.test([].concat(ev.results || []).join('\n'));
+  return /(?:→\s*你?[決决]\s*[定定]|→\s*[^\s：:]{1,12}[：:]\s*[「『])/.test([].concat(ev.results || []).join('\n'));
 }

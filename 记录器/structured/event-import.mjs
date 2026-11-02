@@ -367,6 +367,13 @@ for (const [fid, f] of Object.entries(staging.floors)) {
         old.name = e.name || old.name;
         old.actions = e.actions;
         old.selected = e.selected;
+        old.steps = e.steps || old.steps;
+        if (e.steps && e.steps.length) {
+          for (const st of e.steps) {
+            const sel = (e.actions || []).find(a => norm(a.text) === norm(st.selected));
+            if (sel && Array.isArray(st.results) && st.results.length) addSample(sel, st.results, []);
+          }
+        }
         old.intro = e.intro;
         /* 分支內容也要合併，不能因為覆蓋而丟掉另一支 */
         if (e.outcomes) {
@@ -396,9 +403,16 @@ for (const [fid, f] of Object.entries(staging.floors)) {
     if (hasMultipleSteps(event)) event.steps = eventToSteps(event);
     /* 第一次看到這一則：把這次的結果存成第一個樣本（之後每再遇到一次就 +1） */
     {
-      const obs = observedLines(event);
-      const sel = (event.actions || []).find(a => a.selected) || null;
-      if (obs && sel) { addSample(sel, obs.lines, obs.effects); if (obs.branch) addOutcomeSample(sel, obs.branch); }
+      if (event.steps && event.steps.length) {
+        for (const st of event.steps) {
+          const sel = (event.actions || []).find(a => norm(a.text) === norm(st.selected));
+          if (sel && Array.isArray(st.results) && st.results.length) addSample(sel, st.results, []);
+        }
+      } else {
+        const obs = observedLines(event);
+        const sel = (event.actions || []).find(a => a.selected) || null;
+        if (obs && sel) { addSample(sel, obs.lines, obs.effects); if (obs.branch) addOutcomeSample(sel, obs.branch); }
+      }
     }
     target.events.push(event);
     added++; addedHere++;

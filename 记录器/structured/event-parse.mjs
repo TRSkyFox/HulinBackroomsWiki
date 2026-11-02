@@ -100,7 +100,8 @@ const isDialogue = s => /^[^：:]{1,18}[：:]\s*[「『]/.test(clean(s)) || /^[^
 const isCheck = s => parseCheck(s) !== null || /擲出|掷出|檢定|检定/.test(s);
 const isAbility = s => /認出來了|认出来了|翻到這一頁|翻到这一页|讀過的資料|读过的资料|圖鑑|图鉴/.test(s);
 /* 2026-10-30：OCR 常把「你」吃掉，只剩「決定：…」或「：！坐下采…」，一樣要擋 */
-const isDecision = s => /你決定|你决定/.test(s) || /^[：:！!\s]*決[定定]\s*[：:]/.test(String(s || ''));
+const ACTOR_DECISION = /^[→>\-–—\s]*[^\s：:]{1,12}[：:]\s*[「『]/;
+const isDecision = s => ACTOR_DECISION.test(String(s || '')) || /你決定|你决定/.test(s) || /^[：:！!\s]*決[定定]\s*[：:]/.test(String(s || ''));
 /* 檢定判定行：屬性＋難度＋擲骰＋成功／失敗 */
 /* QTE（快速反應）：燈管掉下來、地板塌了這類「閃！」的即時反應。
    使用者：QTE 成功與失敗結果不同，要一起記。
@@ -587,6 +588,14 @@ for (const f of frames) {
   const dec = lines.find(l => isDecision(l.t));
   if (dec) {
     const txt = clean(dec.t).replace(/^.*?[：:]\s*[「『]?/, '').replace(/[」』]?$/, '').trim();
+    /* 兩名玩家各自選一次時，畫面會連續出現「→ 角色：「選項」」。
+       這些不是同一顆選項，而是同一個事件的多個 selected；先保留成 actions，
+       後面的 results 再由 steps.mjs 切成多個階段。 */
+    if (event && ACTOR_DECISION.test(dec.t)) {
+      if (!event.actions.some(a => norm(a.text) === norm(txt))) {
+        event.actions.push({ text: txt, selected: false });
+      }
+    }
     if (event && event.actions.length && !event.selected) {
       const hit = event.actions.find(a => norm(a.text) === norm(txt)) || event.actions.find(a => norm(a.text).includes(norm(txt)) || norm(txt).includes(norm(a.text)));
       if (hit) {
@@ -600,6 +609,9 @@ for (const f of frames) {
         event.selected = { text: txt, matched: false };
         event.selectedFrame = f.frame;
       }
+    } else if (event && event.selected && ACTOR_DECISION.test(dec.t)) {
+      const hit2 = event.actions.find(a => norm(a.text) === norm(txt));
+      if (hit2) hit2.selected = true;
     } else if (junction && !junction.selected) {
       const hit = junction.paths.find(p => norm(p.text) === norm(txt)) || junction.paths.find(p => norm(p.text).includes(norm(txt)) || norm(txt).includes(norm(p.text)));
       junction.selected = { text: txt, matched: !!hit };
@@ -785,7 +797,7 @@ for (const rec of [...mergedE2, ...mergedJ.values()]) {
   for (const f of frames) {
     if (!f || f.frame < from || f.frame > to) continue;
     for (const l of (f.lines || [])) {
-      if (!isDecision(l.t) && !/^[→\s]*狐天[：:]\s*[「『]/.test(l.t)) continue;
+      if (!isDecision(l.t) && !/^[→>\s]*[^\s：:]{1,12}[：:]\s*[「『]/.test(l.t)) continue;
       const txt = clean(l.t).replace(/^.*?[：:]\s*[「『]?/, '').replace(/[」』]?$/, '').trim();
       const hit = list.find(a => norm(a.text) === norm(txt)) || list.find(a => norm(a.text).includes(norm(txt)) || norm(txt).includes(norm(a.text)));
       if (hit && (!found || f.frame >= found.frame)) found = { text: txt, matched: true, frame: f.frame, hit };
