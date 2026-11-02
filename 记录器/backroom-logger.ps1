@@ -4619,12 +4619,22 @@ function Start-RapidPrimaryService {
     try { if (-not $p.HasExited) { $p.Kill() } } catch { }
     return $null
   }
-  return [pscustomobject]@{ Proc = $p; Work = $WorkDir; Exe = $exe }
+  $portFile = Join-Path $WorkDir 'port'
+  $deadline = (Get-Date).AddSeconds(5)
+  while ((Get-Date) -lt $deadline -and -not (Test-Path -LiteralPath $portFile)) { Start-Sleep -Milliseconds 50 }
+  if (-not (Test-Path -LiteralPath $portFile)) { try { $p.Kill() } catch { }; return $null }
+  $port = [int](Get-Content -LiteralPath $portFile -Raw -Encoding UTF8)
+  $client = New-Object System.Net.Sockets.TcpClient
+  $client.Connect('127.0.0.1', $port)
+  $stream = $client.GetStream()
+  return [pscustomobject]@{ Proc = $p; Work = $WorkDir; Exe = $exe; Port = $port; Client = $client; Stream = $stream }
 }
 
 function Stop-RapidPrimaryService {
   param($Svc)
   if (-not $Svc) { return }
+  try { if ($Svc.Stream) { $Svc.Stream.Close() } } catch { }
+  try { if ($Svc.Client) { $Svc.Client.Close() } } catch { }
   try { New-Item -ItemType File -Force -Path (Join-Path $Svc.Work 'stop') | Out-Null } catch { }
   try {
     if (-not $Svc.Proc.HasExited) { [void]$Svc.Proc.WaitForExit(2000) }
@@ -4632,45 +4642,93 @@ function Stop-RapidPrimaryService {
   } catch { }
 }
 
+function Read-ExactBytes {
+  param($Stream, [int]$Count)
+  $buf = New-Object byte[] $Count
+  $off = 0
+  while ($off -lt $Count) {
+    $n = $Stream.Read($buf, $off, $Count - $off)
+    if ($n -le 0) { throw 'RapidOCR 連線中斷' }
+    $off += $n
+  }
+  return $buf
+}
+
 function Invoke-RapidPrimaryFrame {
-  param($Crop, $Svc, [int]$TargetW = 960)
+  param($Crop, $Svc, $Rects, [switch]$Full, [int]$TargetW = 1000)
   if (-not $Crop -or -not $Svc) { return $null }
-  $scale = $TargetW / [double]$Crop.Width
-  $small = $null
+  $items = New-Object System.Collections.Generic.List[object]
+  $canvas = $null
+  $ms = $null
   try {
-    $small = Scale-Image $Crop.Clone() $scale
-    $id = [guid]::NewGuid().ToString('N')
-    $img = Join-Path $Svc.Work ('frame-' + $id + '.png')
-    $small.Save($img, [System.Drawing.Imaging.ImageFormat]::Png)
-    $req = Join-Path $Svc.Work ('req-' + $id + '.json')
-    $resp = Join-Path $Svc.Work ('resp-' + $id + '.json')
-    $job = @{ id = $id; image = $img } | ConvertTo-Json -Compress
-    [System.IO.File]::WriteAllText($req, $job, (New-Object System.Text.UTF8Encoding($false)))
-    $deadline = (Get-Date).AddSeconds(5)
-    while ((Get-Date) -lt $deadline -and -not (Test-Path -LiteralPath $resp)) { Start-Sleep -Milliseconds 15 }
-    if (-not (Test-Path -LiteralPath $resp)) { return $null }
-    $data = Get-Content -LiteralPath $resp -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($Full -or -not $Rects -or $Rects.Count -eq 0) {
+      $r = New-Object System.Drawing.Rectangle(0, 0, $Crop.Width, $Crop.Height)
+      $items.Add([pscustomobject]@{ Name = 'full'; Rect = $r; Bmp = $Crop.Clone($r, $Crop.PixelFormat) })
+    } else {
+      foreach ($r in $Rects) {
+        $rc = ConvertTo-RegionRect -Spec $r.Spec -CropW $Crop.Width -CropH $Crop.Height -Name ([string]$r.Name)
+        if (-not $rc -or $rc.Width -lt 12 -or $rc.Height -lt 12) { continue }
+        $items.Add([pscustomobject]@{ Name = [string]$r.Name; Rect = $rc; Bmp = $Crop.Clone($rc, $Crop.PixelFormat) })
+      }
+    }
+    if ($items.Count -eq 0) { return $null }
+    $maxW = 1.0
+    foreach ($it in $items) { if ($it.Rect.Width -gt $maxW) { $maxW = $it.Rect.Width } }
+    $scale = $TargetW / $maxW
+    if ($scale -gt 1.0) { $scale = 1.0 }
+    $totalH = 0
+    foreach ($it in $items) { $it | Add-Member -NotePropertyName ScaledH -NotePropertyValue ([int][Math]::Ceiling($it.Rect.Height * $scale)) -Force; $totalH += $it.ScaledH + 4 }
+    $canvas = New-Object System.Drawing.Bitmap($TargetW, [Math]::Max(8, $totalH))
+    $g = [System.Drawing.Graphics]::FromImage($canvas)
+    $dy = 0
+    try {
+      $g.Clear([System.Drawing.Color]::Black)
+      $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+      foreach ($it in $items) {
+        $w = [int][Math]::Ceiling($it.Rect.Width * $scale)
+        $g.DrawImage($it.Bmp, 0, $dy, $w, $it.ScaledH)
+        $it | Add-Member -NotePropertyName DestY -NotePropertyValue $dy -Force
+        $dy += $it.ScaledH + 4
+      }
+    } finally { $g.Dispose() }
+    $ms = New-Object System.IO.MemoryStream
+    $canvas.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bytes = $ms.ToArray()
+    $stream = $Svc.Stream
+    $len = [BitConverter]::GetBytes([int32]$bytes.Length)
+    $stream.Write($len, 0, 4)
+    $stream.Write($bytes, 0, $bytes.Length)
+    $stream.Flush()
+    $hdr = Read-ExactBytes -Stream $stream -Count 4
+    $n = [BitConverter]::ToInt32($hdr, 0)
+    if ($n -le 0 -or $n -gt 16MB) { return $null }
+    $payload = Read-ExactBytes -Stream $stream -Count $n
+    $data = [System.Text.Encoding]::UTF8.GetString($payload) | ConvertFrom-Json
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($row in @($data.rows)) {
       $xs = @($row.box | ForEach-Object { [double]$_[0] })
       $ys = @($row.box | ForEach-Object { [double]$_[1] })
-      $x0 = ($xs | Measure-Object -Minimum).Minimum / $scale
-      $x1 = ($xs | Measure-Object -Maximum).Maximum / $scale
-      $y0 = ($ys | Measure-Object -Minimum).Minimum / $scale
-      $y1 = ($ys | Measure-Object -Maximum).Maximum / $scale
+      $cx = (($xs | Measure-Object -Minimum).Minimum + ($xs | Measure-Object -Maximum).Maximum) / 2.0
+      $cy = (($ys | Measure-Object -Minimum).Minimum + ($ys | Measure-Object -Maximum).Maximum) / 2.0
+      $it = $items | Where-Object { $cy -ge $_.DestY -and $cy -lt ($_.DestY + $_.ScaledH) } | Select-Object -First 1
+      if (-not $it) { continue }
+      $x0 = $it.Rect.Left + (($xs | Measure-Object -Minimum).Minimum / $scale)
+      $x1 = $it.Rect.Left + (($xs | Measure-Object -Maximum).Maximum / $scale)
+      $y0 = $it.Rect.Top + ((($ys | Measure-Object -Minimum).Minimum - $it.DestY) / $scale)
+      $y1 = $it.Rect.Top + ((($ys | Measure-Object -Maximum).Maximum - $it.DestY) / $scale)
       $rows.Add([pscustomobject]@{
           Text = (Repair-OcrText (Convert-OcrText ([string]$row.text)))
-          X = [int]$x0; Y = [int]$y0; W = [int]($x1 - $x0); H = [int]($y1 - $y0)
+          Region = [string]$it.Name
+          X = [int]$x0; Y = [int]$y0; W = [int]($x1 - $x0); H = [int]($y1 - $y0); Crop = ''
         })
     }
-    return [pscustomobject]@{ Rows = $rows; W = $small.Width; H = $small.Height }
+    return $rows
   } catch {
     return $null
   } finally {
-    if ($small) { $small.Dispose() }
-    if ($img) { Remove-Item -LiteralPath $img -Force -ErrorAction SilentlyContinue }
-    if ($req) { Remove-Item -LiteralPath $req -Force -ErrorAction SilentlyContinue }
-    if ($resp) { Remove-Item -LiteralPath $resp -Force -ErrorAction SilentlyContinue }
+    if ($ms) { $ms.Dispose() }
+    if ($canvas) { $canvas.Dispose() }
+    foreach ($it in $items) { if ($it.Bmp) { $it.Bmp.Dispose() } }
   }
 }
 
@@ -5072,13 +5130,19 @@ try {
       }
       # ---- DirectML RapidOCR 主識別：整張圖一次辨識，再依座標分區 ----
       elseif ($rapidSvc) {
-        $rapid = Invoke-RapidPrimaryFrame -Crop $crop -Svc $rapidSvc -TargetW 1200
-        if ($rapid -and $rapid.Rows.Count -gt 0) {
-          foreach ($r in $rapid.Rows) {
-            $reg = Get-RapidPrimaryRegion -X $r.X -Y $r.Y -W $r.W -H $r.H -Layout $layout -OrigW $origW -OrigH $origH
-            $rawFrame.Add([pscustomobject]@{ Text = $r.Text; Region = $reg; X = $r.X; Y = $r.Y; W = $r.W; H = $r.H; Crop = '' })
+        $rapidRects = @()
+        if ($layout -eq 'normal') {
+          foreach ($nm in @('title', 'main', 'opts', 'char')) {
+            $sp = $frameSpecs | Where-Object { $_.Name -eq $nm } | Select-Object -First 1
+            if ($sp) { $rapidRects += [pscustomobject]@{ Name = $nm; Spec = [string]$sp.Spec } }
           }
-          $ocrW = $rapid.W; $ocrH = $rapid.H
+        }
+        $rapidRows = Invoke-RapidPrimaryFrame -Crop $crop -Svc $rapidSvc -Rects $rapidRects -Full:($layout -ne 'normal')
+        if ($rapidRows -and $rapidRows.Count -gt 0) {
+          foreach ($r in $rapidRows) {
+            $rawFrame.Add([pscustomobject]@{ Text = $r.Text; Region = $r.Region; X = $r.X; Y = $r.Y; W = $r.W; H = $r.H; Crop = '' })
+          }
+          $ocrW = 1000; $ocrH = 0
           [void](Test-RegionTextLayout -Lines ([object[]]$rawFrame) -Layout ([ref]$layout))
         } else {
           Write-Log $state 'DirectML RapidOCR 這一幀沒有回傳文字'
