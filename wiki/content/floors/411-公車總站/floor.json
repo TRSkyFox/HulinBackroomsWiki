@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "公车总站"
+    "rawName": "公车总站",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

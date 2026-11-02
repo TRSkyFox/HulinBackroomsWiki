@@ -1,0 +1,93 @@
+{
+  "floorId": "4",
+  "floorName": "廢棄辦公室",
+  "junctions": [],
+  "events": [
+    {
+      "name": "天花板的水",
+      "kind": "event",
+      "intro": "這間辦公室的天花板一整片都是水漬，中間往下凸，凸得像一個快裝不住的水袋。 「啪滋」一一天花板裂開了。一整片濕透的天花板板子，帶著一大桶髒水，朝著你們蓋下來。",
+      "actions": [
+        {
+          "text": "往門口衝！",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "躲到辦公桌底下",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true
+        }
+      ],
+      "selected": "躲到辦公桌底下",
+      "results": [],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 387,
+        "ts": "2026-11-03 01:00:36",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "休息室",
+      "kind": "event",
+      "intro": "一間員工休息室，有沙發丶有咖啡機（壞的）丶有一台一直在播雨聲的小收音機。門上貼著：「歡迎休息。請保持安靜°」 幾個流浪者已經在沙發上睡著了，打呼聲跟雨聲一樣規律。 。請保持安靜。」",
+      "actions": [
+        {
+          "text": "找張空沙發好好睡一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你們睡了進來之後最安穩的一覺。沒有嗡嗡鳴聲，沒有低吼，只有雨聲和別人的打呼聲。",
+                "好好休息了一陣子，你的「失溫」好多了。",
+                "你盯著火候，把罐頭和罐頭一起翻炒，最後撒了一點不知道從哪裡來的鹽：「這樣應該算一道菜吧。」",
+                "（野炊：用掉自己的「罐頭」丶你的「罐頭」；得到「葛雷特制罐頭煨罐頭」，味道吃了才知道）"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "跟醒著的人聊天",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "找張空沙發好好睡一覺",
+      "results": [
+        "你們睡了進來之後最安穩的一覺。沒有嗡嗡鳴聲，沒有低吼，只有雨聲和別人的打呼聲。",
+        "好好休息了一陣子，你的「失溫」好多了。",
+        "你盯著火候，把罐頭和罐頭一起翻炒，最後撒了一點不知道從哪裡來的鹽：「這樣應該算一道菜吧。」",
+        "（野炊：用掉自己的「罐頭」丶你的「罐頭」；得到「葛雷特制罐頭煨罐頭」，味道吃了才知道）"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 288,
+        "ts": "2026-11-03 00:59:15",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

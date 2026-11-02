@@ -1,0 +1,46 @@
+{
+  "floorId": "1.5",
+  "floorName": "潛伏的危機",
+  "junctions": [],
+  "events": [
+    {
+      "name": "三道樓梯",
+      "kind": "event",
+      "intro": "你們走到一個樓梯間，這裡有三道樓梯：一道鏽得發紅，只往下，底下傳來熱風和機器聲。 一道漆成綠色，很長很長，但看起來很牢。 還有一道濕答答的，越往下越潮濕，底下好像在下雨。",
+      "actions": [
+        {
+          "text": "走那道生鏽的樓梯",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你踩著每一階的邊緣，一步一步往下。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "走那道生鏽的樓梯",
+      "results": [
+        "你踩著每一階的邊緣，一步一步往下。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 891,
+        "ts": "2026-11-03 01:07:06",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

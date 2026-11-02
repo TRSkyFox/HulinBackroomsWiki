@@ -1,0 +1,55 @@
+{
+  "floorId": "37",
+  "floorName": "崇高",
+  "junctions": [],
+  "events": [
+    {
+      "name": "陽光房",
+      "kind": "event",
+      "intro": "一間玻璃屋頂的小房間，光線溫暖，地板是干的。玻璃外面是藍天——怎麼看都像畫上去的，但很美。",
+      "actions": [
+        {
+          "text": "好好休息",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "替大家處理傷口",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "在乾淨的環境里，你把每個人的傷都處理得很好。",
+                "你把營火包又捆了回去。這一次先不煮。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "替大家處理傷口",
+      "results": [
+        "在乾淨的環境里，你把每個人的傷都處理得很好。",
+        "你把營火包又捆了回去。這一次先不煮。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1767,
+        "ts": "2026-11-03 01:22:59",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

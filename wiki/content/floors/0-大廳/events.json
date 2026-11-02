@@ -1,0 +1,128 @@
+{
+  "floorId": "0",
+  "floorName": "大廳",
+  "junctions": [],
+  "events": [
+    {
+      "name": "同路的流浪者",
+      "kind": "event",
+      "intro": "他說：「我在這裡走了很久了，學了一點東西，要是你們願意陪我走一段、聽我啰嗦，我可以教你們一兩招°」 他身上的東西都磨損得很厲害，但保養得很好。 招」",
+      "actions": [
+        {
+          "text": "跟他學怎麼找東西",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "他教你怎麼看出哪些地方藏著東西：天花板松掉的板子丶地毯上不自然的凸起、牆角的記號，你學得很快。",
+                "你：領悟了「拾荒者」"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "跟他學怎麼跑",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "跟他學怎麼用奇怪的東西煮飯",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "跟他學怎麼找東西",
+      "results": [
+        "他教你怎麼看出哪些地方藏著東西：天花板松掉的板子丶地毯上不自然的凸起、牆角的記號，你學得很快。",
+        "你：領悟了「拾荒者」"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1568,
+        "ts": "2026-11-03 01:18:07",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "求生者的便利貼",
+      "kind": "event",
+      "intro": "一整面牆貼滿了便利貼，是之前的求生者留下的。有些字跡很工整，有些已經歪得看不懂了。有的寫著方向，有的寫著名字，有的只寫了一句「我不想死」。",
+      "actions": [
+        {
+          "text": "仔細閱讀",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "其中一張畫了簡單的地圖。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "仔細閱讀",
+      "results": [
+        "其中一張畫了簡單的地圖。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1847,
+        "ts": "2026-11-03 01:25:15",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "走得太遠",
+      "kind": "event",
+      "intro": "你們已經走了很久很久——久到忘記了走了多久。黃色的走廊一模一樣，可是燈管越來越吵，吵得頭開始痛。 前面的走廊，有一截錯開了半公尺，像壞掉的畫面。",
+      "actions": [
+        {
+          "text": "方向感說：不能再往前了",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true
+        }
+      ],
+      "selected": "方向感說：不能再往前了",
+      "results": [],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1880,
+        "ts": "2026-11-03 01:26:27",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

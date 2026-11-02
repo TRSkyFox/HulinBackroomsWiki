@@ -1,0 +1,50 @@
+{
+  "floorId": "197",
+  "floorName": "打烊的量販店",
+  "junctions": [],
+  "events": [
+    {
+      "name": "空的購物車",
+      "kind": "event",
+      "intro": "一台購物車停在走道正中間，車籃空空的，輪子還在輕輕地轉，像剛被人推過來。 把手上貼著一張貼紙：「本車為賣場所有」°",
+      "actions": [
+        {
+          "text": "讓最小的那個坐進去，大家推",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你被硬塞進車籃里，腳懸在外面。大家推著車在走道上衝，衝過轉角的時候差點翻車。整座賣場都是大家的笑聲。",
+                "你：「喉嚨好干，像在吃沙子。)",
+                "你：「好想喝飲料……冰的。）"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "讓最小的那個坐進去，大家推",
+      "results": [
+        "你被硬塞進車籃里，腳懸在外面。大家推著車在走道上衝，衝過轉角的時候差點翻車。整座賣場都是大家的笑聲。",
+        "你：「喉嚨好干，像在吃沙子。)",
+        "你：「好想喝飲料……冰的。）"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 140,
+        "ts": "2026-11-03 00:57:27",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

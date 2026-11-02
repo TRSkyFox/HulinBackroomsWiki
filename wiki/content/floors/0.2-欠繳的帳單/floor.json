@@ -6,10 +6,27 @@
     "id": "0.2",
     "name": "欠繳的帳單"
   },
-  "doc": "",
-  "palette": null,
-  "_status": "name-only",
+  "doc": "<h4>環境</h4>\n<blockquote>地毯，空氣里有油漆稀釋劑的味道。<br>牆角堆著裝修用的木板和油漆桶，一塊告示牌寫著「華特家具城——整修中，敬請見諒」。<br>這裡看起來比外面那片黃色舒服太多了，舒服得不太對勁。<br>你們踩上柔軟的紅地毯，頭頂的燈是暖白色的，牆上甚至有能用的插座和Wi-Fi訊號，然後，某個地方傳來一聲木頭斷裂的聲音一一</blockquote>",
+  "palette": {
+    "bg": "#441C1C",
+    "background": "#441C1C",
+    "card": "#381814",
+    "line": "#682C28",
+    "acc": "#E07060",
+    "tx": "#F4E4E0",
+    "panel": "#381814",
+    "accent": "#E07060",
+    "text": "#F4E4E0"
+  },
   "_note": "只有名字：來自舊紀錄／明信片，遊戲內沒有進入過（顯示為亂碼、無法進入），正文與事件待補。",
-  "_observations": 1572,
-  "_created": "2026-10-31T02:04:18.973Z"
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\import-Expedition-backroom-20261102-151028.expedition-20261102-182709\\staging",
+    "confidence": 0.85,
+    "intro": "地毯，空气里有油漆稀释剂的味道。\n墙角堆着装修用的木板和油漆桶，一块告示牌写着「华特家具城一一整修中，敬请见谅」。\n这里看起来比外面那片黄色舒服太多了·舒服得不太对劲。\n你们踩上柔软的红地毯·头顶的灯是暖白色的，墙上甚至有能用的插座和Wi-Fi讯号·然后，某个地方传\n来一声木头断裂的声音一一"
+  },
+  "_created": "2026-10-31T02:04:18.973Z",
+  "_staging": {
+    "paletteSource": "auto+contrast"
+  }
 }

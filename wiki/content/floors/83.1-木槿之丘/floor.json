@@ -13,10 +13,10 @@
     "card": "#683C44",
     "line": "#74444C",
     "acc": "#FCB070",
-    "tx": "#E890A0",
+    "tx": "#FCB070",
     "panel": "#683C44",
     "accent": "#FCB070",
-    "text": "#E890A0"
+    "text": "#FCB070"
   },
   "_staging": {
     "source": "structured-staging",
@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "木槿之丘"
+    "rawName": "木槿之丘",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

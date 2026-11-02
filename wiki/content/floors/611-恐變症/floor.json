@@ -1,0 +1,36 @@
+{
+  "key": "611|恐變症",
+  "id": "611",
+  "name": "恐變症",
+  "info": {
+    "id": "611",
+    "name": "恐變症"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>一間客廳。<br>沙發、電視、地毯、牆上的全家福——跟你小時候家裡的客廳很像，像到有點不舒服。<br>燈一下暗、一下亮，像在呼吸。窗外是一個下雪的社區，雪大概有小腿那麼深。<br>往北看，走廊盡頭的燈白得刺眼。往南看，走廊盡頭一片漆黑。</blockquote>",
+  "palette": {
+    "bg": "#5C5C60",
+    "background": "#5C5C60",
+    "card": "#74747C",
+    "line": "#3C3C40",
+    "acc": "#ECE8C8",
+    "tx": "#ECE8C8",
+    "panel": "#74747C",
+    "accent": "#ECE8C8",
+    "text": "#ECE8C8"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\import-Expedition-backroom-20261103-005544.expedition-20261103-013709\\staging",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "恐变症",
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "一间客厅。\n沙发、电视、地毯、墙上的全家福一一跟你小时候家里的客厅很像，像到有点不舒服。\n灯一下暗、一下亮，像在呼吸。窗外是一个下雪的社区，雪大概有小腿那么深。\n往北看，走廊尽头的灯白得刺眼。往南看，走廊尽头一片漆黑。"
+  }
+}

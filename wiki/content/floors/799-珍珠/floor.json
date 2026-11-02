@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "珍珠"
+    "rawName": "珍珠",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

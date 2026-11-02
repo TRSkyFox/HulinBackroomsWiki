@@ -6,10 +6,27 @@
     "id": "92",
     "name": "長不大的孩子"
   },
-  "doc": "",
-  "palette": null,
-  "_status": "name-only",
+  "doc": "<h4>環境</h4>\n<blockquote>到處都是毯子。<br>毯子搭成的牆、毯子搭成的天花板，一條一條地道往四面八方延伸，像小時候在客廳用椅子和棉被搭的堡壘——只是大得看不到盡頭。<br>很暖。地板軟軟的、熱熱的，像剛有人睡過的床。牆邊掛著一串一串暖黃色的小燈，空氣里有肉桂和香草的味道。</blockquote>",
+  "palette": {
+    "bg": "#604424",
+    "background": "#604424",
+    "card": "#644428",
+    "line": "#6C4C2C",
+    "acc": "#FCC070",
+    "tx": "#FCC070",
+    "panel": "#644428",
+    "accent": "#FCC070",
+    "text": "#FCC070"
+  },
   "_note": "只有名字：來自舊紀錄，遊戲內沒有進入過（顯示為亂碼、無法進入），正文與事件待補。",
-  "_observations": 9,
-  "_created": "2026-10-31T02:24:41.860Z"
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "到处都是毯子。\n毯子搭成的墙、毯子搭成的天花板，一条一条地道往四面八方延伸，像小时候在客厅用椅子和棉被搭的堡垒一一只是大得看不到尽头。\n很暖。地板软软的、热热的，像刚有人睡过的床。墙边挂着一串一串暖黄色的小灯，空气里有肉桂和香草的味道。"
+  },
+  "_created": "2026-10-31T02:24:41.860Z",
+  "_staging": {
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  }
 }

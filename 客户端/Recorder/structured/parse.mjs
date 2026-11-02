@@ -117,7 +117,7 @@ function linesOf(f) {
   return f.lines || [];
 }
 function storyOf(f) {
-  return linesOf(f).filter(l => l.r !== 'enemy' && l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.63 && !ui(l.t));
+  return linesOf(f).filter(l => l.r !== 'enemy' && l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.90 && !ui(l.t));
 }
 function titleOf(f) {
   return linesOf(f).find(l => /Level\s*[\dOoIl]+(?:\.[\dOoIl]+)?/i.test(l.t) && l.y < H * 0.08) || null;
@@ -314,7 +314,7 @@ function parse(sessionDir) {
         const noise = /背包|裝備|装备|硬幣|硬币|經驗|经验|升級|升级|升級點|升级点|出口進度|出口进度|工作台|配方|空的|右手|左手|耐久|物品|商店|攤|摊|價格|价格|設定|设定|取消|選單|菜单|戰鬥|战斗|攻擊|攻击|檢定|检定|體力|体力|理智|掉落|戰利品|战利品|已選|已选|想要|等趿|等趺|選|按|玩家|^Level|^【|^〖|^〔|^（|^\(|[\[\]［］【】]|\\|^第\s*\d+\s*[層层]|^出[口囗]|^EXIT|^\(EXIT\)|難度|难度|檢定|检定|失敗|失败|成功|杂讯|雜訊|^\s*[0-9]+\s*\/\s*[0-9]+|[0-9]|杲|剮|殳|蔔|浈|躉|罴|彳|亍|灬|刂|丶|丿|丨|乀|重新连线|重新連線|冒险继续|冒險繼續|上次说到|上次說到|已经走过|已經走過|廢卉|废卉|一地萬|一地万|煦心|大烈仕|长杲|長杲|骨頭在抗議|骨头在抗议|一放更可怕|一地方|甩線|甩线|了萬|了万|樣的遊樂場|样的游乐场/;
         const clean = src.filter(l => {
           const t = String(l.t).trim();
-          return l.y >= H * 0.24 && l.y < H * 0.66 && t.length >= 2 && !noise.test(t) && !(curFloor._prevIntroLines && curFloor._prevIntroLines.has(t.replace(/\s+/g, '')))
+          return l.y >= H * 0.24 && l.y < H * 0.90 && t.length >= 2 && !noise.test(t) && !(curFloor._prevIntroLines && curFloor._prevIntroLines.has(t.replace(/\s+/g, '')))
             && !/(力|敏|體|体|感|智|魅)\s*\d/.test(t)
             && !/一个人冒险|背包里多|自订|自訂|【戰鬥】|【战斗】|获得|獲得|抵抗|抗性/.test(t)
             && !/^(潦浪者|流浪者|浪者)/.test(t)
@@ -347,6 +347,8 @@ function parse(sessionDir) {
           const l = ordered[i];
           if (bannerY >= 0 && l.y <= bannerY) continue;                 /* 3. 橫幅以上不算 */
           if (block.length && (l.y - ordered[i - 1].y) > gapLimit) break; /* 2. 大空行 = 結束 */
+          /* 玩家角色的台詞是介紹結尾，不是下一段介紹；尤其多人模式會接在段落後面。 */
+          if (block.length && /^(天狐|狐天|狐夭|你|你們|你们)\s*[：:]\s*[「『]/.test(String(l.t).trim())) break;
           block.push(l);
         }
         /* 4. 角色台詞：只有「結尾」連續的那幾行（名字 + 一句引號台詞）不要。

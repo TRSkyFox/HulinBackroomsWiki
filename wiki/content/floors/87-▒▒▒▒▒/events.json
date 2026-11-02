@@ -1,0 +1,64 @@
+{
+  "floorId": "87",
+  "floorName": "▒▒▒▒▒",
+  "junctions": [],
+  "events": [
+    {
+      "name": "曬衣繩",
+      "kind": "event",
+      "intro": "一間房子的后陽台上掛著一條曬衣繩，繩上晾著好幾條毛巾。毛巾是濕的——在這麼熱丶這麼干的地方，還是濕的。 毛巾底下的沙地上，一滴水都沒有。 一間房子的后陽台上掛著一條曬衣繩，繩上晾著好幾條毛巾。毛巾是濕的——在這麼熱、這麼干的",
+      "actions": [
+        {
+          "text": "把毛巾收下來，當敷布用",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你把毛巾一條一條收下來，擰了擰——擰不出水，可是摸起來是濕的丶涼的。敷在脖子上，舒服得讓人想睡。",
+                "縫里卡著幾枚硬幣，摳一摳就出來了。",
+                "所有人：各得到5硬幣你：得到「濕敷布」丶得到「濕敷布」"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "把臉埋進毛巾里",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "不要碰，這太奇怪了",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "把毛巾收下來，當敷布用",
+      "results": [
+        "你把毛巾一條一條收下來，擰了擰——擰不出水，可是摸起來是濕的丶涼的。敷在脖子上，舒服得讓人想睡。",
+        "縫里卡著幾枚硬幣，摳一摳就出來了。",
+        "所有人：各得到5硬幣你：得到「濕敷布」丶得到「濕敷布」"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1894,
+        "ts": "2026-11-03 01:26:53",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

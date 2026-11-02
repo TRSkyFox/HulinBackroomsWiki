@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "水泥丛林"
+    "rawName": "水泥丛林",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

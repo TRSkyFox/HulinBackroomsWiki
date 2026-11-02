@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "洞穴系统"
+    "rawName": "洞穴系统",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

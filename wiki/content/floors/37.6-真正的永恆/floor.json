@@ -13,10 +13,10 @@
     "card": "#4C1818",
     "line": "#481818",
     "acc": "#CC584C",
-    "tx": "#AC443C",
+    "tx": "#ECE8C8",
     "panel": "#4C1818",
     "accent": "#CC584C",
-    "text": "#AC443C"
+    "text": "#ECE8C8"
   },
   "_staging": {
     "source": "structured-staging",
@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "真正的永恒]"
+    "rawName": "真正的永恒]",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

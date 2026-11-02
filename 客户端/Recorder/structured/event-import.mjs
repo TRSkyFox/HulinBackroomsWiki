@@ -266,7 +266,7 @@ function eligible(e) {
     return !!e.intro && e.intro.length >= 8;
   }
   const acts = e.actions || [];
-  if (acts.length < 2 || acts.length > 4) return false;
+  if (acts.length < 1 || acts.length > 4) return false;
   if (!acts.every(a => a.text && !dirty.test(a.text))) return false;
   /* 一般事件沒有 selected 就不自動寫入：寧可留 staging，也不要猜錯選項。 */
   if (!e.selected) return false;

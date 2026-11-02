@@ -1,0 +1,147 @@
+{
+  "floorId": "2",
+  "floorName": "管道夢境",
+  "junctions": [],
+  "events": [
+    {
+      "name": "一頁列印的文章",
+      "kind": "event",
+      "intro": "地上有一張皺巴巴的列印紙，印著密密麻麻的字，標題寫著「Level」和一串數字，旁邊還有一張模糊的照片。 是某個人從外面帶進來的——或是某個人在這裡寫的。紙的背面用原子筆寫著：「這些文章是真的。」",
+      "actions": [
+        {
+          "text": "從頭讀到尾",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "文章寫得很亂，好多字都看不清楚，你只記住了幾個出口的方向。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "折起來收好",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "從頭讀到尾",
+      "results": [
+        "文章寫得很亂，好多字都看不清楚，你只記住了幾個出口的方向。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 910,
+        "ts": "2026-11-03 01:07:23",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "生物管線",
+      "kind": "event",
+      "intro": "一根特別粗的管子藏在其他管線後面，管口大得能讓人爬進去。管子的表面很光滑，摸起來溫溫的——而且在很輕微地蠕動。 你把手貼上去，臉色變了：「..…它是活的，這根管子，是某種很長很長的生物。」它吃掉落的食物和垃圾，只要東西幾個小時內還會動，它就不會消化。 怪東西都不敢靠近它，有些人把它當成逃生通道。",
+      "actions": [
+        {
+          "text": "爬進去，一直往前爬，不要停",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "丟點吃的進去餵它",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你把罐頭丟進管口。管子蠕動了一下，像是很滿足。過了一會兒，管口吐出了一個亮晶晶的東西——大概是它消化不了的。",
+                "你：得到「特里普斯合金」"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "千萬不要",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "丟點吃的進去餵它",
+      "results": [
+        "你把罐頭丟進管口。管子蠕動了一下，像是很滿足。過了一會兒，管口吐出了一個亮晶晶的東西——大概是它消化不了的。",
+        "你：得到「特里普斯合金」"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1603,
+        "ts": "2026-11-03 01:18:47",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "蒸氣迷宮",
+      "kind": "event",
+      "intro": "前面的通道被蒸氣填滿了，白茫茫一片。管子一根一根從牆上穿出來，每一根都燙得不能碰——摸上去大概有一百度。 蒸氣里有路，可是要一路側著身子丶低著頭，才不會碰到管子。",
+      "actions": [
+        {
+          "text": "小心地鑽過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "滿頭大汗，可是沒有燙到。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "小心地鑽過去",
+      "results": [
+        "滿頭大汗，可是沒有燙到。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 8,
+        "ts": "2026-11-03 00:55:53",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "floorId": "499",
+  "floorName": "無盡的保齡球館",
+  "junctions": [],
+  "events": [
+    {
+      "name": "下一站",
+      "kind": "event",
+      "intro": "你們在球館里待了很久。角落的電梯亮著燈；巨大的計分板閃著數字；那個無面者小孩跑過來，拉著你們的衣角：「要走了嗎？」",
+      "actions": [
+        {
+          "text": "先不走，再多探索幾步",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你們決定先不走。出口就在旁邊，晚點再回來就好，這一層還有些地方沒看過，先去繞繞吧。",
+                "你：「好想)"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "先不走，再多探索幾步",
+      "results": [
+        "你們決定先不走。出口就在旁邊，晚點再回來就好，這一層還有些地方沒看過，先去繞繞吧。",
+        "你：「好想)"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1750,
+        "ts": "2026-11-03 01:22:32",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

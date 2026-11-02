@@ -6,10 +6,27 @@
     "id": "87",
     "name": "▒▒▒▒▒"
   },
-  "doc": "",
-  "palette": null,
-  "_status": "id-only",
+  "doc": "<h4>環境</h4>\n<blockquote>腳底下是沙。<br>不是沙灘那種沙——它在動。慢慢地、一波一波地起伏，像退潮的海，從房間的這一頭流到那一頭，直接穿過牆壁，牆上一點痕跡都沒有。<br>這是一間海邊小屋的客廳：木頭地板、褪色的窗簾、歪掉的門。窗外是一片干巴巴的山，太陽很大。<br>嘴巴好干。</blockquote>",
+  "palette": {
+    "bg": "#584424",
+    "background": "#584424",
+    "card": "#5C4828",
+    "line": "#68502C",
+    "acc": "#FCC870",
+    "tx": "#FCC870",
+    "panel": "#5C4828",
+    "accent": "#FCC870",
+    "text": "#FCC870"
+  },
   "_note": "只有編號：舊紀錄裡出現過 Level 這個號碼，但沒有任何名字。遊戲內顯示為亂碼、無法進入。",
-  "_observations": 5,
-  "_created": "2026-10-31T02:32:13.102Z"
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "脚底下是沙。\n不是沙滩那种沙一一它在动。慢慢地、一波一波地起伏，像退潮的海，从房间的这一头流到那一头，直接穿过墙壁，墙上一点痕迹都没有。\n这是一间海边小屋的客厅：木头地板、褪色的窗帘、歪掉的门。窗外是一片干巴巴的山，太阳很大。\n嘴巴好干。"
+  },
+  "_created": "2026-10-31T02:32:13.102Z",
+  "_staging": {
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  }
 }

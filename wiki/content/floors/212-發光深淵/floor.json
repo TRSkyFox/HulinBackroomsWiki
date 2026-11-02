@@ -13,10 +13,10 @@
     "card": "#4CC0D0",
     "line": "#34545C",
     "acc": "#94E8E4",
-    "tx": "#D0E0E4",
+    "tx": "#94E8E4",
     "panel": "#4CC0D0",
     "accent": "#94E8E4",
-    "text": "#D0E0E4"
+    "text": "#94E8E4"
   },
   "_staging": {
     "source": "structured-staging",
@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "发光深渊"
+    "rawName": "发光深渊",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

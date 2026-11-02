@@ -1,0 +1,46 @@
+{
+  "floorId": "666",
+  "floorName": "不全是血紅",
+  "junctions": [],
+  "events": [
+    {
+      "name": "沒有人的茶幾",
+      "kind": "event",
+      "intro": "一張空的茶幾，兩把椅子，茶具收得整整齊齊，茶壺是冷的——這一張，已經很久沒有人碰過了。 坐下來的時候，椅子很穩。",
+      "actions": [
+        {
+          "text": "坐在椅子上休息",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你們輪流坐在椅子上，把腳抬起來，這是進來之後第一次，腳離開了地面。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "坐在椅子上休息",
+      "results": [
+        "你們輪流坐在椅子上，把腳抬起來，這是進來之後第一次，腳離開了地面。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1086,
+        "ts": "2026-11-03 01:10:09",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

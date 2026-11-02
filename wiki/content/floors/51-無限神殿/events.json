@@ -1,0 +1,53 @@
+{
+  "floorId": "51",
+  "floorName": "無限神殿",
+  "junctions": [],
+  "events": [
+    {
+      "name": "大廳的角落",
+      "kind": "event",
+      "intro": "大廳的一個角落，光很柔，雨聲很輕，離紙門和那些字都很遠。窗玻璃上的水珠一顆一顆往下滑。",
+      "actions": [
+        {
+          "text": "靠著窗睡一覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你們靠著窗睡了一覺。雨聲一直陪著。醒來的時候，身體好多了。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "接窗上的水，順便休息",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "靠著窗睡一覺",
+      "results": [
+        "你們靠著窗睡了一覺。雨聲一直陪著。醒來的時候，身體好多了。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1009,
+        "ts": "2026-11-03 01:08:59",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "key": "400|星際邊疆與復古未來",
+  "id": "400",
+  "name": "星際邊疆與復古未來",
+  "info": {
+    "id": "400",
+    "name": "星際邊疆與復古未來"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>你們站在一條街上。<br>路燈是那種圓圓的、很老派的路燈；街邊的店有霓虹招牌，櫥窗里擺著很大台邊的車，車頭都是方方正正的。<br>然後你們抬頭——天上不是天空。是宇宙。一顆一顆巨大的星球懸在頭頂，近得看得見上面的云，還有一條公路，從街的盡頭一路往上伸，伸進星星裡面。</blockquote>",
+  "palette": {
+    "bg": "#2C2060",
+    "background": "#2C2060",
+    "card": "#2C205C",
+    "line": "#34206C",
+    "acc": "#FC60C0",
+    "tx": "#ECE8C8",
+    "panel": "#2C205C",
+    "accent": "#FC60C0",
+    "text": "#ECE8C8"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\import-Expedition-backroom-20261103-005544.expedition-20261103-013709\\staging",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "星际边疆与复古未来",
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "你们站在一条街上。\n路灯是那种圆圆的、很老派的路灯；街边的店有霓虹招牌，橱窗里摆着很大台边的车，车头都是方方正正的。\n然后你们抬头一一天上不是天空。是宇宙。一颗一颗巨大的星球悬在头顶，近得看得见上面的云，还有一条公路，从街的尽头一路往上伸，伸进星星里面。"
+  }
+}

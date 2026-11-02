@@ -4,6 +4,7 @@ import { FLOORS } from './paths.mjs';
 import { report } from './progress.mjs';
 import { collapseRepeats } from './text.mjs';
 import { classifyFrame, headerScore } from './ink.mjs';
+import { extractEvents } from './event-extract.mjs';
 
 /*
  * event-parse.mjs — 由 structured.jsonl 重建路口／事件／戰鬥事件
@@ -813,10 +814,11 @@ for (const r of records.filter(x => x.type === 'floor')) {
   const k = String(r.floorId) + '|' + norm(r.name);
   if (!floorMap.has(k)) floorMap.set(k, r);
 }
+const cleanEvents = extractEvents(frames);
 const out = [
   ...floorMap.values(),
   ...mergedJ.values(),
-  ...mergedE2
+  ...cleanEvents
 ].map(r => {
   if (r.type === 'floor') return { ...r, intro: [], events: undefined };
   if (r.type === 'junction') {
@@ -829,7 +831,7 @@ const out = [
     if (r.selected && r.actions.length && !r.actions.some(a => norm(a.text) === norm(r.selected.text) || norm(a.text).includes(norm(r.selected.text)) || norm(r.selected.text).includes(norm(a.text)))) r.selected = null;
     const act = new Set((r.actions || []).map(a => norm(a.text)));
     const res = new Set((r.results || []).map(a => norm(a)));
-    const intro = (r.intro || []).filter(x => {
+    const intro = (typeof r.intro === 'string' ? [r.intro] : (r.intro || [])).filter(x => {
       const n = norm(x);
       return n && !act.has(n) && !res.has(n) && !/妻怎么做|怎么做|按右键|可以取消|选一个去做|跟隨多數|跟随多数/.test(n);
     });

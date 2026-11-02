@@ -1,0 +1,36 @@
+{
+  "key": "666|不全是血紅",
+  "id": "666",
+  "name": "不全是血紅",
+  "info": {
+    "id": "666",
+    "name": "不全是血紅"
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>朱紅色。到處都是朱紅色。<br>一座鳥居接著一座鳥居，一根柱子接著一根柱子，排成一條長長的走道，一直漆成黑色，柱子上寫著一行一行的漢字。每隔幾座鳥居，就掛著一盞紙燈籠，燈籠里的蠟燭在晃。<br>柱子和柱子之間的縫，看得到外面：一大片櫻花，遠方是積雪的山，天空陰陰的。<br>你伸手想從縫里摸摸看外面——手在半空中停住了，像是碰到了一面看不見的牆。</blockquote>",
+  "palette": {
+    "bg": "#380400",
+    "background": "#380400",
+    "card": "#340404",
+    "line": "#380404",
+    "acc": "#B8402C",
+    "tx": "#ECE8C8",
+    "panel": "#340404",
+    "accent": "#B8402C",
+    "text": "#ECE8C8"
+  },
+  "_staging": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\import-Expedition-backroom-20261103-005544.expedition-20261103-013709\\staging",
+    "confidence": 0.85,
+    "needsReview": false,
+    "created": true,
+    "rawName": "不全是血红",
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  },
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "朱红色。到处都是朱红色。\n一座鸟居接着一座鸟居，一根柱子接着一根柱子，排成一条长长的走道，一直漆成黑色，柱子上写着一行一行的汉字。每隔几座鸟居，就挂着一盏纸灯笼，灯笼里的蜡烛在晃。\n柱子和柱子之间的缝，看得到外面：一大片樱花，远方是积雪的山，天空阴阴的。\n你伸手想从缝里摸摸看外面一一手在半空中停住了·像是碰到了一面看不见的墙。"
+  }
+}

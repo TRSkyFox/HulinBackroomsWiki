@@ -6,10 +6,27 @@
     "id": "0.5",
     "name": "混沌結構"
   },
-  "doc": "",
-  "palette": null,
-  "_status": "name-only",
+  "doc": "<h4>環境</h4>\n<blockquote>你們站在一塊巨大的方塊上，方塊的每一面都鋪著藍色的地毯，地毯上有粗細不一的黑色直線。四周漂浮著無數這樣的方塊，大大小小一直延伸進淡藍色的霧裡。</blockquote>",
+  "palette": {
+    "bg": "#182448",
+    "background": "#182448",
+    "card": "#1C284C",
+    "line": "#1C2448",
+    "acc": "#88B0FC",
+    "tx": "#E0E8FC",
+    "panel": "#1C284C",
+    "accent": "#88B0FC",
+    "text": "#E0E8FC"
+  },
   "_note": "只有名字：來自舊紀錄／明信片，遊戲內沒有進入過（顯示為亂碼、無法進入），正文與事件待補。",
-  "_observations": 69,
-  "_created": "2026-10-31T02:04:18.973Z"
+  "_observations": {
+    "source": "structured-staging",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
+    "confidence": 0.85,
+    "intro": "你们站在一块巨大的方块上，方块的每一面都铺着蓝色的地毯，地毯上有粗细不一的黑色直线。四周漂浮着无数这样的方块，大大小小一直延伸进淡蓝色的雾里。"
+  },
+  "_created": "2026-10-31T02:04:18.973Z",
+  "_staging": {
+    "paletteSource": "auto-floor-shot@2026-11-03-fix+contrast"
+  }
 }

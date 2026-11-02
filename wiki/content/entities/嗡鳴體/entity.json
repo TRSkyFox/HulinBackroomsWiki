@@ -34,15 +34,13 @@
   ],
   "_observations": {
     "source": "structured-staging",
-    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\import-Expedition-backroom-20261103-005544.expedition-20261103-013709\\staging",
     "rawName": "嗡鸣体",
     "evidence": {
-      "skills": {
-        "攻擊": 2
-      },
+      "skills": {},
       "drops": {},
       "resist": {},
-      "descVariants": 2
+      "descVariants": 1
     },
     "resistNotes": []
   }

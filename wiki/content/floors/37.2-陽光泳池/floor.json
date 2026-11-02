@@ -6,17 +6,17 @@
     "id": "37.2",
     "name": "陽光泳池"
   },
-  "doc": "<h4>環境</h4>\n<blockquote>你跨過那道發著光的開口。光慢慢淡掉的時候，四周變成了一片純白。<br>白色的磁磚，乾淨得像剛剛才鋪好。清澈的水淹到膝蓋，水底的每一條磁磚縫都看得清清楚楚。牆上和天花<br>上有幾個長方形的開口，透進暖暖的、帶一點粉紅的光——像是傍晚的陽光。<br>光照在水面上，水變成了淡淡的紫色。<br>好安靜，好溫暖。你小聲地說：「我從來沒有看過這麼美的地方。」</blockquote>",
+  "doc": "<h4>環境</h4>\n<blockquote>你們跨過開口。光慢慢淡掉的時候，四周變成了一片純白，清澈下來。</blockquote>",
   "palette": {
-    "bg": "#442838",
-    "background": "#442838",
-    "card": "#482C3C",
-    "line": "#503444",
-    "acc": "#FCB0D8",
-    "tx": "#A4708C",
-    "panel": "#482C3C",
-    "accent": "#FCB0D8",
-    "text": "#A4708C"
+    "bg": "#20141C",
+    "background": "#20141C",
+    "card": "#2C280C",
+    "line": "#1C1C04",
+    "acc": "#906078",
+    "tx": "#E0CC58",
+    "panel": "#2C280C",
+    "accent": "#906078",
+    "text": "#E0CC58"
   },
   "_staging": {
     "source": "structured-staging",
@@ -24,13 +24,14 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "阳光泳池"
+    "rawName": "阳光泳池",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",
-    "staging": "D:\\BACKROOMS\\wiki\\_incoming\\backroom-20261030-123231",
+    "staging": "D:\\BACKROOMS\\客户端\\Recorder\\logs\\backroom-20261103-005544\\staging",
     "confidence": 0.85,
-    "intro": "你跨过那道发着光的开口。光慢慢淡掉的时候，四周变成了一片纯白。\n白色的磁砖，干净得像刚刚才铺好。清澈的水淹到膝盖，水底的每一条磁砖缝都看得清清楚楚。墙上和天花\n上有几个长方形的开口，透进暖暖的、带一点粉红的光一一像是傍晚的阳光。\n光照在水面上，水变成了淡淡的紫色。\n好安静·好温暖。天狐小声地说：「我从来没有看过这么美的地方。」"
+    "intro": "你们跨过开口。光慢慢淡掉的时候，四周变成了一片纯白，清澈下来。"
   },
   "_introSource": "backroom-20261030-123231",
   "_introUpdated": "2026-11-01T03:32:07.462Z"

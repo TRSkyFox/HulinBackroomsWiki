@@ -13,10 +13,10 @@
     "card": "#18301C",
     "line": "#182C1C",
     "acc": "#9CE0A0",
-    "tx": "#80888C",
+    "tx": "#ECE8C8",
     "panel": "#18301C",
     "accent": "#9CE0A0",
-    "text": "#80888C"
+    "text": "#ECE8C8"
   },
   "_staging": {
     "source": "structured-staging",
@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "玻璃之狂"
+    "rawName": "玻璃之狂",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

@@ -24,7 +24,8 @@
     "confidence": 0.85,
     "needsReview": false,
     "created": true,
-    "rawName": "深水区"
+    "rawName": "深水区",
+    "paletteSource": "auto+contrast"
   },
   "_observations": {
     "source": "structured-staging",

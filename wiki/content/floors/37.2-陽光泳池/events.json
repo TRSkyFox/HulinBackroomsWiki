@@ -1,0 +1,53 @@
+{
+  "floorId": "37.2",
+  "floorName": "陽光泳池",
+  "junctions": [],
+  "events": [
+    {
+      "name": "軟掉的池底",
+      "kind": "event",
+      "intro": "這一塊池底的磁磚踩起來軟軟的，好像底下是空的。水面上的漣漪，在這裡變得亂七八糟。",
+      "actions": [
+        {
+          "text": "踩下去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "磁磚陷了下去——大家一起往下掉，掉進一片干干的、冷冷的地方。四周是黃色的牆。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "繞過去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "踩下去",
+      "results": [
+        "磁磚陷了下去——大家一起往下掉，掉進一片干干的、冷冷的地方。四周是黃色的牆。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1812,
+        "ts": "2026-11-03 01:24:10",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

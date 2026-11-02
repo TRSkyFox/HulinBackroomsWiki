@@ -1,0 +1,57 @@
+{
+  "floorId": "399",
+  "floorName": "▒▒▒▒▒",
+  "junctions": [],
+  "events": [
+    {
+      "name": "等樣本的人",
+      "kind": "event",
+      "intro": "Megacolony的交易站前面，一個人一直在看手表。看到你們拿出玻璃罐，他整個人跳了起來：「平靜基地的樣本！終於！」",
+      "actions": [
+        {
+          "text": "把樣本交給他",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "他小心地捧著玻璃罐，對著霓虹燈看了很久，然後付了一大袋代幣，還多送了一張的招待券。",
+                "【委託完成】云、各得到12硬幣消耗品你：得到「杏仁水」",
+                "他小心地捧著玻璃罐，對著霓虹燈看了很久，然後付了一大袋代幣，還多送了一張399的招待券。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "先開罐子聞一下再給",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "把樣本交給他",
+      "results": [
+        "他小心地捧著玻璃罐，對著霓虹燈看了很久，然後付了一大袋代幣，還多送了一張的招待券。",
+        "【委託完成】云、各得到12硬幣消耗品你：得到「杏仁水」",
+        "他小心地捧著玻璃罐，對著霓虹燈看了很久，然後付了一大袋代幣，還多送了一張399的招待券。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-005544",
+        "frame": 1316,
+        "ts": "2026-11-03 01:14:19",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}
