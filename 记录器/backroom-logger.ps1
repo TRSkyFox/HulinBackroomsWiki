@@ -1384,6 +1384,25 @@ function Test-VerticalCut([string]$Path, [int]$LineH = 0) {
   return $false
 }
 
+# 長破折號「——」常被 OCR 讀成「一」，而且 OCR 框只包到「一」。
+# 往框右側找一條連續亮線，找到就代表破折號被切在框外。
+function Test-TrailingLongDash($Bmp, [int]$X1, [int]$Y1, [int]$X2, [int]$Y2) {
+  if (-not $Bmp) { return $false }
+  $x0 = [Math]::Max(0, $X2 - 3)
+  $xEnd = [Math]::Min($Bmp.Width - 1, $X2 + 40)
+  if ($xEnd - $x0 -lt 8) { return $false }
+  for ($y = [Math]::Max(0, $Y1); $y -le [Math]::Min($Bmp.Height - 1, $Y2); $y++) {
+    $run = 0; $best = 0
+    for ($x = $x0; $x -le $xEnd; $x++) {
+      $p = $Bmp.GetPixel($x, $y)
+      $lum = 0.299 * $p.R + 0.587 * $p.G + 0.114 * $p.B
+      if ($lum -gt 110) { $run++; if ($run -gt $best) { $best = $run } } else { $run = 0 }
+    }
+    if ($best -ge 12) { return $true }
+  }
+  return $false
+}
+
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
 function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
@@ -2193,6 +2212,10 @@ function Invoke-RegionOcr {
               }
               $txt = Repair-OcrText (Convert-OcrText $fix)
             }
+          }
+          if ($txt -match '一$' -and
+            (Test-TrailingLongDash $Crop ([int]($x1 + $rc.Left)) ([int]($y1 + $rc.Top)) ([int]($x2 + $rc.Left)) ([int]($y2 + $rc.Top)))) {
+            $txt = $txt.Substring(0, $txt.Length - 1) + '——'
           }
           $vcut = $false
           if ($cropRel) { $vcut = Test-VerticalCut -Path (Join-Path $LineDir $cropRel) -LineH ([int]($y2 - $y1)) }
