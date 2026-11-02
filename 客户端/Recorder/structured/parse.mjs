@@ -117,7 +117,7 @@ function linesOf(f) {
   return f.lines || [];
 }
 function storyOf(f) {
-  return linesOf(f).filter(l => l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.63 && !ui(l.t));
+  return linesOf(f).filter(l => l.r !== 'enemy' && l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.63 && !ui(l.t));
 }
 function titleOf(f) {
   return linesOf(f).find(l => /Level\s*[\dOoIl]+(?:\.[\dOoIl]+)?/i.test(l.t) && l.y < H * 0.08) || null;
@@ -158,11 +158,13 @@ function enemyOf(f, status, story) {
     const m = marker.t.match(/[】〗〕\]]\s*(.+)$/);
     name = m ? cleanEnemyName(m[1]) : '';
   }
-  /* 敵人欄可能同時有 A/B 兩隻；逐行清理，不要把所有行 join 成一個名字。 */
-  const panelNames = linesOf(f)
-    .filter(x => x.x < W * 0.25 && x.y >= H * 0.07 && x.y < H * 0.17 && !ui(x.t) && !/第\s*\d+\s*层|防\s*\d|防\s*御|回合|攻击|命中|掷出|先攻|点一下/.test(x.t))
+  /* 多人戰鬥：敵人欄最多 6 格，整個 enemy 區都是敵人資料。
+     舊版只取畫面高度 7%~17%，所以第 3 隻以後永遠讀不到；這裡優先用 OCR 的 r='enemy' 分區。 */
+  const panelNames = [...new Set(linesOf(f)
+    .filter(x => (x.r === 'enemy' || (!x.r && x.x < W * 0.25 && x.y >= H * 0.055 && x.y < H * 0.32)) &&
+      !ui(x.t) && !/第\s*\d+\s*层|防\s*\d|防\s*御|回合|攻击|命中|掷出|先攻|点一下|HP|生命/.test(x.t))
     .map(x => cleanEnemyName(x.t))
-    .filter(Boolean);
+    .filter(Boolean))].slice(0, 6);
   if (!name && panelNames.length) name = panelNames[0];
   if (!name && status && /戰鬥|战斗/.test(status.t)) {
     const al = linesOf(f).find(x => /攻击\s*[^\s：:，。〈（(]{1,8}\s*[：:〈（(]/.test(x.t));
@@ -239,6 +241,18 @@ function parse(sessionDir) {
   let curFloor = null;
   let floorSeen = new Set();
   let choice = null;
+  const addCombatEnemies = (c, names) => {
+    if (!c || !Array.isArray(names)) return;
+    const list = Array.isArray(c.enemies) ? c.enemies.slice() : (c.enemy && c.enemy.name ? [c.enemy.name] : []);
+    for (const n0 of names) {
+      const n = cleanEnemyName(n0);
+      if (!n) continue;
+      if (!list.some(x => norm(x) === norm(n))) list.push(n);
+    }
+    c.enemies = list.slice(0, 6);
+    if (!c.enemy || !c.enemy.name) c.enemy = { name: c.enemies[0], intro: '', skills: [], drops: [], resistances: [] };
+  };
+
   let combat = null;
   let enemyVotes = new Map();
   let afterDecision = false;
@@ -249,7 +263,7 @@ function parse(sessionDir) {
     const title = titleOf(f);
     const status = statusOf(f);
     const story = storyOf(f);
-    const dropStory = linesOf(f).filter(l => l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.85 && !ui(l.t));
+    const dropStory = linesOf(f).filter(l => l.r !== 'enemy' && l.x < W * 0.62 && l.y >= H * 0.075 && l.y < H * 0.85 && !ui(l.t));
     const enemy = enemyOf(f, status, story);
     const ch = choiceOf(f);
     const qte = linesOf(f).some(l => /照顺序按|照順序按|快速反应|快速反應|按顺序按/.test(l.t));
@@ -381,13 +395,16 @@ function parse(sessionDir) {
       const cand = cleanEnemyName(enemy.name) || (enemy.panelNames || []).map(cleanEnemyName).find(Boolean) || '';
       let votes = 0;
       if (cand) { votes = (enemyVotes.get(cand) || 0) + 1; enemyVotes.set(cand, votes); }
-      const sameEnemy = combat && cand && sim(combat.enemy.name, cand) > 0.6;
-      const nearSame = combat && cand && sim(combat.enemy.name, cand) >= 0.3;
+      const currentNames = combat ? (combat.enemies || [combat.enemy.name]) : [];
+      const seenNames = [cand, ...(enemy.panelNames || [])].filter(Boolean);
+      const sameEnemy = combat && seenNames.some(x => currentNames.some(n => sim(n, x) > 0.6));
+      const nearSame = combat && seenNames.some(x => currentNames.some(n => sim(n, x) >= 0.3));
       if (!combat && cand && votes >= 2) {
         combat = {
           type: 'combat', id: 'combat-' + records.length,
           floor: curFloor ? curFloor.floorId : '',
           enemy: { name: cand, intro: '', skills: [], drops: [], resistances: [] },
+          enemies: [cand, ...(enemy.panelNames || [])].slice(0, 6),
           confidence: 0.55, source: { frame: f.frame, ts: f.ts }
         };
         records.push(combat);
@@ -397,12 +414,14 @@ function parse(sessionDir) {
           type: 'combat', id: 'combat-' + records.length,
           floor: curFloor ? curFloor.floorId : '',
           enemy: { name: cand, intro: '', skills: [], drops: [], resistances: [] },
+          enemies: [cand, ...(enemy.panelNames || [])].slice(0, 6),
           confidence: 0.55, source: { frame: f.frame, ts: f.ts }
         };
         records.push(combat);
         choice = null;
       }
       if (combat) {
+        addCombatEnemies(combat, [cand, ...(enemy.panelNames || [])]);
         const marker = enemy.marker;
         if (!combat.enemy.intro) {
           const idx = marker ? story.findIndex(l => l === marker) : -1;
@@ -501,7 +520,7 @@ function parse(sessionDir) {
   return records.filter(r => {
     if (r.type === 'floor') return !!r.name;
     if (r.type === 'choice') return !!r.prompt && r.options.length >= 2;
-    if (r.type === 'combat') return !!r.enemy.name;
+    if (r.type === 'combat') return !!(r.enemy && r.enemy.name) || (Array.isArray(r.enemies) && r.enemies.length > 0);
     return true;
   });
 }

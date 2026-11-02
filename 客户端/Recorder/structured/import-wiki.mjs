@@ -247,8 +247,11 @@ function badEntityName(s) {
 
 const entityGroups = new Map();
 for (const r of records.filter(x => x.type === 'combat')) {
-  const e = r.enemy || {};
-  if (!e.name) continue;
+  const e0 = r.enemy || {};
+  const names = [...new Set([...(Array.isArray(r.enemies) ? r.enemies : []), e0.name].filter(Boolean))].slice(0, 6);
+  if (!names.length) continue;
+  for (const enemyName of names) {
+  const e = { ...e0, name: enemyName };
   if (badEntityName(e.name)) { report.warnings.push('跳過非實體名：' + e.name); continue; }
   let hName = canonicalEntity(e.name);
   if (/嗡鳴體|嘯鳴體|嗡鸣体/.test(hName)) hName = '嗡鳴體';
@@ -263,6 +266,7 @@ for (const r of records.filter(x => x.type === 'combat')) {
   g.confidence = Math.max(g.confidence, r.confidence || 0);
   g.records++;
   entityGroups.set(hName, g);
+  }
 }
 for (const g of entityGroups.values()) {
   const dir = path.join(out, 'entities', safe(g.n));

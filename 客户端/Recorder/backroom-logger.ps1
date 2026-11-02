@@ -4686,6 +4686,7 @@ $state = [pscustomobject]@{
   Layout          = 'normal'
   LastLayout      = ''
   ShopMode        = $false
+  CombatMode      = $false
   ShopVisit       = $null
 }
 
@@ -5089,18 +5090,16 @@ try {
       # 導致 enemy 蓋到故事、main/opts 重疊。這裡直接給這個尺寸的 normal 實測值。
       # 戰鬥時左上有敵人卡（名稱／HP／防禦），main 要從卡片下方開始；先 OCR 一小塊
       # 選項區判斷是不是戰鬥，避免每幀都做整張探測。
-      $isCombat = $false
-      if (-not $rapidSvc -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
+      # 不另外跑一次 Windows OCR 探測（Rapid 主力時那會多花 0.3~0.5 秒）。
+      # 用上一幀已 OCR 的選項文字判斷戰鬥，這一幀就切換 enemy/main 分區。
+      $isCombat = [bool]$state.CombatMode
+      if (-not $isCombat -and $state.LastRawFrame) {
         try {
-          $probeSpec = @([pscustomobject]@{ Name = 'probe'; Spec = '21,339,880,1011' })
-          $probe = Invoke-RegionOcr -Crop $crop -Engine $ocrEngine -Scale $OcrScale -TmpPng $state.TmpPng -Specs $probeSpec
-          $probeLines = @()
-          if ($null -ne $probe.Lines) { $probeLines = [object[]]$probe.Lines }
-          $probeText = (($probeLines | ForEach-Object { [string]$_.Text }) -join ' ')
-          if ($probeText -match '右手|撤退|切换|使用物品|战利品|攻击|攻擊|技能|防御|防禦|閃躲|闪躲|逃跑|回合|选择行动|選擇行動') {
+          $prevText = (@($state.LastRawFrame) | ForEach-Object { [string]$_.Text }) -join ' '
+          if ($prevText -match '右手|撤退|切换|切换|使用物品|战利品|攻击|攻擊|技能|防御|防禦|閃躲|闪躲|逃跑|回合|选择行动|選擇行動') {
             $isCombat = $true
           }
-        } catch { Write-Log $state ('combat probe error: ' + $_.Exception.Message) }
+        } catch { }
       }
 
       $regionOverride = $false
@@ -5109,7 +5108,7 @@ try {
         # 所以 1600x900、1920x1080、2400x1350 共用同一組 normal 邊界。
         $RegionTitle = '10,705,0,95'          # 只到黃色出口進度條左側（x≈665）
         if ($isCombat) {
-          $RegionEnemy = '16,201,101,282'      # 左上敵人卡（x15..190, y70..195）
+          $RegionEnemy = '16,201,70,282'      # 左上敵人卡（x15..190, y70..195）
           $RegionMain = '21,1087,289,880'      # 卡片下方 y200..609
         } else {
           $RegionEnemy = '10,138,61,130'       # 只有「第 N 層｜岔路」這條
@@ -5388,6 +5387,10 @@ try {
       $state.LastRawFrame = @($rawFrame | ForEach-Object {
           [pscustomobject]@{ Text = $_.Text; Region = $_.Region; X = $_.X; Y = $_.Y; W = $_.W; H = $_.H; Crop = $_.Crop }
         })
+      try {
+        $combatText = (@($rawFrame) | ForEach-Object { [string]$_.Text }) -join ' '
+        $state.CombatMode = ($combatText -match '右手|撤退|切换|切换|使用物品|战利品|攻击|攻擊|技能|防御|防禦|閃躲|闪躲|逃跑|回合|选择行动|選擇行動')
+      } catch { $state.CombatMode = $false }
 
       # 給客戶端浮層的即時狀態（只有區塊與 OCR 行；不進正式紀錄）
       Write-OverlayState -S $state -FrameNo $state.FrameNo -W $origW -H $origH -Layout $layout `
