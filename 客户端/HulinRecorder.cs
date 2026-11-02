@@ -414,14 +414,14 @@ namespace HulinRecorder
             string session = LatestSession();
             if (session == null) { SetState("沒有可匯出的場次", Color.FromArgb(255, 150, 120)); return; }
             PipelineRunning = true;
-            SetState("狀態：停止記錄並匯出…", Color.FromArgb(255, 190, 100));
+            SetState("狀態：停止記錄並匯出 " + Path.GetFileName(session), Color.FromArgb(255, 190, 100));
             var t = new Thread(delegate ()
             {
                 try
                 {
                     StopRecorder(false);
                     RunExport(session);
-                    SetState("狀態：匯出完成（尚未進 Wiki）", Color.FromArgb(130, 220, 140));
+                    SetState("狀態：匯出完成 " + Path.GetFileName(session) + "（尚未進 Wiki）", Color.FromArgb(130, 220, 140));
                 }
                 catch (Exception ex) { Log("export: " + ex); SetState("匯出失敗（看 panel.log）", Color.FromArgb(255, 120, 110)); }
                 finally { PipelineRunning = false; }
@@ -891,4 +891,5 @@ namespace HulinRecorder
         public string detail { get; set; }
     }
 }
+
 
