@@ -395,13 +395,21 @@ namespace ExpeditionRecorder
             return Path.GetFullPath(RecordOut);
         }
 
+        static string ExportRoot()
+        {
+            string parent = Path.GetDirectoryName(RecordOut);
+            if (parent != null && string.Equals(Path.GetFileName(parent), "Recorder", StringComparison.OrdinalIgnoreCase))
+                return Path.Combine(Path.GetDirectoryName(parent), "exports");
+            return Path.Combine(parent ?? RecordOut, "exports");
+        }
+
         static void StopAndExport()
         {
             if (PipelineRunning) return;
             string session = LatestSession();
             if (session == null) { SetState("沒有可匯出的場次", Color.FromArgb(255, 150, 120)); return; }
             PipelineRunning = true;
-            string exportDir = Path.Combine(Path.GetDirectoryName(RecordOut), "exports");
+            string exportDir = ExportRoot();
             SetState("狀態：停止記錄並匯出 " + Path.GetFileName(session) + " → " + exportDir, Color.FromArgb(255, 190, 100));
             var t = new Thread(delegate ()
             {
@@ -429,7 +437,7 @@ namespace ExpeditionRecorder
             string node = Path.Combine(exeDir, "node.exe");
             if (!File.Exists(node)) node = "node.exe";
             string staging = Path.Combine(session, "staging");
-            string exportDir = Path.Combine(Path.GetDirectoryName(RecordOut), "exports");
+            string exportDir = ExportRoot();
             var psi = new ProcessStartInfo(node, "\"" + run + "\" \"" + session + "\" --portable --staging \"" + staging + "\" --out \"" + exportDir + "\"");
             psi.EnvironmentVariables["EXPEDITION_EXPORT_DIR"] = exportDir;
             psi.UseShellExecute = false;
