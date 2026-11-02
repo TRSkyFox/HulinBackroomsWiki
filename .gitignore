@@ -47,3 +47,5 @@ tools/*.exe
 
 客户端/Recorder/logs/
 wiki/_backup/
+
+客户端/exports/
