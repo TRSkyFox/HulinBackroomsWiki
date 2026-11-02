@@ -182,6 +182,8 @@ namespace ExpeditionArchive
                 {
                     string t = line.Trim();
                     if (t.Length == 0) continue;
+                    if (t.StartsWith("+") || t.StartsWith("At ") || t.StartsWith("CategoryInfo") ||
+                        t.StartsWith("FullyQualifiedErrorId") || t.StartsWith("所在位置")) continue;
                     if (t.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         t.StartsWith("Exception", StringComparison.OrdinalIgnoreCase) ||
                         t.IndexOf("錯誤", StringComparison.Ordinal) >= 0 ||
@@ -261,8 +263,10 @@ namespace ExpeditionArchive
                         if (apply && !string.IsNullOrEmpty(pkg)) args = "-Package \"" + pkg + "\" -Apply";
                         else if (apply && !string.IsNullOrEmpty(latest)) args = "-Staging \"" + latest + "\" -Apply";
                         else args = "-Package \"" + pkg + "\"";
+                        string script = "$OutputEncoding=[Text.UTF8Encoding]::new($false); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); & '" + ps1.Replace("'", "''") + "' " + args;
+                        string encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
                         var psi = new ProcessStartInfo("powershell.exe",
-                            "-NoProfile -ExecutionPolicy Bypass -File \"" + ps1 + "\" " + args);
+                            "-NoProfile -ExecutionPolicy Bypass -EncodedCommand " + encoded);
                         psi.UseShellExecute = false;
                         psi.CreateNoWindow = true;
                         psi.RedirectStandardOutput = true;
