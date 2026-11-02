@@ -44,3 +44,6 @@ tools/*.exe
 客户端/Recorder/structured/rapid-primary-service/
 客户端/Recorder/structured/bin/
 客户端/Recorder/structured/*.otf
+
+客户端/Recorder/logs/
+wiki/_backup/
