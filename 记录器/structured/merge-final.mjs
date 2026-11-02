@@ -241,7 +241,19 @@ if (fs.existsSync(eventDir)) {
     let base = old;
     const a = old.indexOf(AUTO_BEGIN), b = old.indexOf(AUTO_END);
     if (a >= 0 && b > a) base = (old.slice(0, a) + old.slice(b + AUTO_END.length)).trim();
-    const tr = rows.map((e, i) => {
+    const eventKey = e => JSON.stringify({
+      p: String(e.prompt || ''),
+      o: (e.options || []).map(o => String(o.text || '')).join('\u0001'),
+      s: e.selected ? String(e.selected.text || '') : ''
+    });
+    const oldEvents = Array.isArray(before._events) ? before._events : [];
+    const mergedEvents = [...oldEvents];
+    const oldKeys = new Set(mergedEvents.map(eventKey));
+    for (const e of rows) {
+      const k = eventKey(e);
+      if (!oldKeys.has(k)) { oldKeys.add(k); mergedEvents.push(e); }
+    }
+    const tr = mergedEvents.map((e, i) => {
       const opts = (e.options || []).map(o => '- ' + escHtml(o.text) + (o.difficulty ? '（' + escHtml(o.difficulty) + '）' : '')).join('<br>');
       const sel = e.selected ? '<br><b>已選：</b>' + escHtml(e.selected.text) : '';
       const res = (e.result || []).filter(Boolean).map(r => '<br>' + escHtml(r)).join('');
@@ -250,7 +262,7 @@ if (fs.existsSync(eventDir)) {
     const auto = rows.length ? (AUTO_BEGIN + '\n<h4>事件</h4>\n<table><tbody>' + tr + '</tbody></table>\n' + AUTO_END) : '';
     const after = JSON.parse(JSON.stringify(before));
     after.doc = base + (base && auto ? '\n' : '') + auto;
-    after._events = rows;
+    after._events = mergedEvents;
     if (!confirm) { report.events.push({ floor: fid, dryRun: true, count: rows.length, raw: rawRows.length }); continue; }
     backupFile(fp);
     write(fp, after);
