@@ -19,14 +19,14 @@ namespace HulinRecorder
         static Process Client, Recorder;
         static bool ClientOwned = false;
         static IntPtr GameHwnd = IntPtr.Zero;
-        static bool PipelineRunning = false, AllowExit = false, ShowOcr = true;
+        static bool PipelineRunning = false, AllowExit = false, ShowOcrVisual = true, ShowOcrReadout = true;
         static bool ProgressDone = false;
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel;
         static Label StageLabel;
         static ProgressBar StageBar;
-        static CheckBox OcrCheck;
+        static Button OcrReadoutBtn, OcrVisualBtn;
         static Button StartRecBtn, StopRecBtn;
         static System.Windows.Forms.Timer UiTimer;
         static OcrOverlayForm Overlay;
@@ -48,8 +48,8 @@ namespace HulinRecorder
                         case "--logdir": if (i + 1 < args.Length) RecordOut = args[++i]; break;
                         case "--profile": if (i + 1 < args.Length) ProfileDir = args[++i]; break;
                         case "--preset": if (i + 1 < args.Length) Preset = args[++i]; break;
-                        case "--overlay": ShowOcr = true; break;
-                        case "--no-overlay": ShowOcr = false; break;
+                        case "--overlay": ShowOcrVisual = true; ShowOcrReadout = true; break;
+                        case "--no-overlay": ShowOcrVisual = false; ShowOcrReadout = false; break;
                         case "--no-record": AutoRecord = false; break;
                     }
                 }
@@ -103,23 +103,26 @@ namespace HulinRecorder
             var close = Btn("關閉客戶端", 202, 24, 180, 28);
             close.Click += delegate { CloseClient(); };
             clientGroup.Controls.Add(close);
-            OcrCheck = new CheckBox();
-            OcrCheck.Text = "OCR 浮層";
-            OcrCheck.SetBounds(14, 58, 120, 22);
-            OcrCheck.Checked = ShowOcr;
-            OcrCheck.ForeColor = Color.FromArgb(220, 220, 226);
-            OcrCheck.BackColor = Color.FromArgb(44, 44, 47);
-            OcrCheck.FlatStyle = FlatStyle.Flat;
-            OcrCheck.CheckedChanged += delegate
+            OcrReadoutBtn = Btn("OCR 讀取：開", 14, 58, 120, 24);
+            OcrReadoutBtn.Click += delegate
             {
-                ShowOcr = OcrCheck.Checked;
-                if (ShowOcr) CreateOverlay();
-                else CloseOverlay();
+                ShowOcrReadout = !ShowOcrReadout;
+                UpdateOcrButtons();
+                if (ShowOcrReadout) CreateOcrReadout(); else CloseOcrReadout();
             };
-            clientGroup.Controls.Add(OcrCheck);
-            var logs = Btn("開啟 logs", 202, 58, 180, 22);
+            clientGroup.Controls.Add(OcrReadoutBtn);
+            OcrVisualBtn = Btn("OCR 可視化：開", 142, 58, 120, 24);
+            OcrVisualBtn.Click += delegate
+            {
+                ShowOcrVisual = !ShowOcrVisual;
+                UpdateOcrButtons();
+                if (ShowOcrVisual) CreateOcrVisual(); else CloseOcrVisual();
+            };
+            clientGroup.Controls.Add(OcrVisualBtn);
+            var logs = Btn("開啟 logs", 270, 58, 112, 24);
             logs.Click += delegate { OpenFolder(RecordOut); };
             clientGroup.Controls.Add(logs);
+            UpdateOcrButtons();
 
             var resLabel = new Label();
             resLabel.SetBounds(14, 88, 54, 20);
@@ -265,7 +268,7 @@ namespace HulinRecorder
                                 Client = p;
                                 GameHwnd = p.MainWindowHandle;
                                 ClientOwned = false;
-                                if (ShowOcr) CreateOverlay();
+                                CreateOverlay();
                                 return true;
                             }
                         }
@@ -299,7 +302,7 @@ namespace HulinRecorder
                     if (Client.MainWindowHandle != IntPtr.Zero && IsWindow(Client.MainWindowHandle))
                     {
                         GameHwnd = Client.MainWindowHandle;
-                        if (ShowOcr) CreateOverlay();
+                        CreateOverlay();
                         SetState("狀態：客戶端已開", Color.FromArgb(130, 220, 140));
                         ScheduleAutoRecord();
                         return true;
@@ -377,7 +380,7 @@ namespace HulinRecorder
                 psi.WindowStyle = ProcessWindowStyle.Hidden;
                 psi.WorkingDirectory = Path.GetDirectoryName(RecorderScript);
                 Recorder = Process.Start(psi);
-                if (ShowOcr) CreateOverlay();
+                CreateOverlay();
                 ProgressDone = false;
                 StageLabel.Text = "目前整理：—";
                 StageBar.Value = 0;
@@ -555,31 +558,62 @@ namespace HulinRecorder
             catch { return null; }
         }
 
+        static void UpdateOcrButtons()
+        {
+            if (OcrReadoutBtn != null) OcrReadoutBtn.Text = "OCR 讀取：" + (ShowOcrReadout ? "開" : "關");
+            if (OcrVisualBtn != null) OcrVisualBtn.Text = "OCR 可視化：" + (ShowOcrVisual ? "開" : "關");
+        }
+
         static void CreateOverlay()
+        {
+            CreateOcrVisual();
+            CreateOcrReadout();
+        }
+
+        static void CreateOcrVisual()
         {
             try
             {
-                if (!ShowOcr || GameHwnd == IntPtr.Zero || !IsWindow(GameHwnd)) return;
+                if (!ShowOcrVisual || GameHwnd == IntPtr.Zero || !IsWindow(GameHwnd)) return;
                 if (Overlay == null || Overlay.IsDisposed)
                 {
                     Overlay = new OcrOverlayForm(GameHwnd);
                     Overlay.Show();
                 }
+            }
+            catch (Exception ex) { Log("overlay visual: " + ex); }
+        }
+
+        static void CreateOcrReadout()
+        {
+            try
+            {
+                if (!ShowOcrReadout || GameHwnd == IntPtr.Zero || !IsWindow(GameHwnd)) return;
                 if (Readout == null || Readout.IsDisposed)
                 {
                     Readout = new OcrReadoutForm(GameHwnd);
                     Readout.Show();
                 }
             }
-            catch (Exception ex) { Log("overlay: " + ex); }
+            catch (Exception ex) { Log("overlay readout: " + ex); }
+        }
+
+        static void CloseOcrVisual()
+        {
+            try { if (Overlay != null && !Overlay.IsDisposed) Overlay.Close(); } catch { }
+            Overlay = null;
+        }
+
+        static void CloseOcrReadout()
+        {
+            try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
+            Readout = null;
         }
 
         static void CloseOverlay()
         {
-            try { if (Overlay != null && !Overlay.IsDisposed) Overlay.Close(); } catch { }
-            try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
-            Overlay = null;
-            Readout = null;
+            CloseOcrVisual();
+            CloseOcrReadout();
         }
 
         static void OpenFolder(string dir)
