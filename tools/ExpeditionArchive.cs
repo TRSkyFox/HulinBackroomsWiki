@@ -37,6 +37,10 @@ namespace ExpeditionArchive
             TextBox Package;
             TextBox Output;
             Label Status;
+            ProgressBar Progress;
+            Timer Pulse;
+            DateTime Started;
+            string Phase = "";
             Button CheckBtn, ApplyBtn;
 
             public ImportForm()
@@ -90,12 +94,30 @@ namespace ExpeditionArchive
                 Status.SetBounds(14, 94, 690, 22);
                 Controls.Add(Status);
 
+                Progress = new ProgressBar();
+                Progress.SetBounds(14, 118, 690, 14);
+                Progress.Minimum = 0;
+                Progress.Maximum = 100;
+                Progress.Style = ProgressBarStyle.Marquee;
+                Progress.MarqueeAnimationSpeed = 25;
+                Progress.Visible = false;
+                Controls.Add(Progress);
+
                 Output = new TextBox();
                 Output.Multiline = true;
                 Output.ReadOnly = true;
                 Output.ScrollBars = ScrollBars.Both;
-                Output.SetBounds(14, 122, 690, 322);
+                Output.SetBounds(14, 140, 690, 304);
                 Controls.Add(Output);
+
+                Pulse = new Timer();
+                Pulse.Interval = 1000;
+                Pulse.Tick += delegate
+                {
+                    if (!Progress.Visible) return;
+                    int sec = (int)(DateTime.Now - Started).TotalSeconds;
+                    Status.Text = Phase + "… 已跑 " + sec + " 秒";
+                };
 
                 WireDrop(this);
                 WireDrop(Package);
@@ -171,6 +193,29 @@ namespace ExpeditionArchive
                 return first.Length > 180 ? first.Substring(0, 180) : first;
             }
 
+            void StartProgress(string phase)
+            {
+                Phase = phase;
+                Started = DateTime.Now;
+                Progress.Visible = true;
+                Progress.Style = ProgressBarStyle.Marquee;
+                Pulse.Start();
+                Status.Text = Phase + "… 已跑 0 秒";
+            }
+
+            void SetPhase(string phase)
+            {
+                Phase = phase;
+                int sec = (int)(DateTime.Now - Started).TotalSeconds;
+                if (Progress.Visible) Status.Text = Phase + "… 已跑 " + sec + " 秒";
+            }
+
+            void StopProgress()
+            {
+                Pulse.Stop();
+                Progress.Visible = false;
+            }
+
             void Run(bool apply)
             {
                 string root = RepoRoot;
@@ -206,8 +251,8 @@ namespace ExpeditionArchive
                 }
                 CheckBtn.Enabled = false;
                 ApplyBtn.Enabled = false;
-                Status.Text = apply ? "整合中…" : "匯入並檢查中…";
                 Output.Clear();
+                StartProgress(apply ? "整合進 Wiki" : "匯入並檢查");
                 var t = new System.Threading.Thread(delegate ()
                 {
                     try
@@ -227,7 +272,18 @@ namespace ExpeditionArchive
                         var p = new Process();
                         p.StartInfo = psi;
                         var sb = new StringBuilder();
-                        p.OutputDataReceived += delegate (object s, DataReceivedEventArgs e) { if (e.Data != null) lock (sb) sb.AppendLine(e.Data); };
+                        p.OutputDataReceived += delegate (object s, DataReceivedEventArgs e)
+                        {
+                            if (e.Data == null) return;
+                            lock (sb) sb.AppendLine(e.Data);
+                            string line = e.Data;
+                            string phase = line.IndexOf("驗證 staging", StringComparison.Ordinal) >= 0 ? "驗證 staging"
+                                : line.IndexOf("產生審查報告", StringComparison.Ordinal) >= 0 ? "產生審查報告"
+                                : line.IndexOf("合併正式 Wiki", StringComparison.Ordinal) >= 0 ? "合併正式 Wiki"
+                                : line.IndexOf("重建 Wiki", StringComparison.Ordinal) >= 0 ? "重建 Wiki"
+                                : null;
+                            if (phase != null) { try { BeginInvoke((Action)delegate { SetPhase(phase); }); } catch { } }
+                        };
                         p.ErrorDataReceived += delegate (object s, DataReceivedEventArgs e) { if (e.Data != null) lock (sb) sb.AppendLine(e.Data); };
                         p.Start();
                         p.BeginOutputReadLine();
@@ -238,6 +294,7 @@ namespace ExpeditionArchive
                         BeginInvoke((Action)delegate
                         {
                             Output.Text = log;
+                            StopProgress();
                             Status.Text = p.ExitCode == 0 ? (apply ? "已整合進 Wiki。" : "檢查完成（尚未改正式 Wiki）。") : ("失敗：" + FirstError(log));
                             Status.ForeColor = p.ExitCode == 0 ? Color.FromArgb(80, 160, 80) : Color.FromArgb(200, 70, 60);
                             CheckBtn.Enabled = true;
@@ -248,6 +305,7 @@ namespace ExpeditionArchive
                     {
                         BeginInvoke((Action)delegate
                         {
+                            StopProgress();
                             Status.Text = "失敗：" + ex.Message;
                             CheckBtn.Enabled = true;
                             ApplyBtn.Enabled = true;
