@@ -300,10 +300,33 @@ namespace ExpeditionRecorder
             return false;
         }
 
+        static bool ClientProcessExists()
+        {
+            string[] names = { Path.GetFileNameWithoutExtension(ClientPath), "ExpeditionClient", "ExpeditionPlayer", "HulinClient", "HulinPlayer", "FoyerClient", "FoyerPlayer" };
+            foreach (string n in names)
+            {
+                try { if (Process.GetProcessesByName(n).Length > 0) return true; } catch { }
+            }
+            return false;
+        }
+
         static bool StartClient()
         {
             try
             {
+                if (ClientProcessExists())
+                {
+                    // 已經有一個 client 在啟動／載入，不要再開第二個。
+                    SetState("狀態：已偵測到客戶端，等待視窗就緒…", Color.FromArgb(255, 190, 100));
+                    for (int i = 0; i < 20; i++)
+                    {
+                        Thread.Sleep(500);
+                        Application.DoEvents();
+                        if (FindClient()) return true;
+                    }
+                    SetState("狀態：客戶端程序存在，但找不到視窗；請關閉舊客戶端後重試", Color.FromArgb(255, 120, 110));
+                    return false;
+                }
                 if (!File.Exists(ClientPath)) { SetState("找不到 ExpeditionClient.exe", Color.FromArgb(255, 120, 110)); return false; }
                 Directory.CreateDirectory(ProfileDir);
                 string ps = "--client-only --url \"" + Url.Replace("\"", "") + "\" --preset " + Preset + " --no-record"
