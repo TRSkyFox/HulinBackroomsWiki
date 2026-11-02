@@ -1424,7 +1424,8 @@ function Get-BinaryOcrBitmap($Bmp) {
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
 function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
-  if ($Factor -le 1.0001) { return $Bmp }
+  if ($Factor -le 0) { return $Bmp }
+  if ([Math]::Abs($Factor - 1.0) -le 0.0001) { return $Bmp }
   $nw = [int][Math]::Round($Bmp.Width * $Factor)
   $nh = [int][Math]::Round($Bmp.Height * $Factor)
   if ($nw -lt 1 -or $nh -lt 1) { return $Bmp }
@@ -1505,7 +1506,7 @@ function Invoke-FrameOcr {
         if (($br.X + $br.Width) -gt $x2) { $x2 = $br.X + $br.Width }
         if (($br.Y + $br.Height) -gt $y2) { $y2 = $br.Y + $br.Height }
       }
-      if ($Scale -gt 1.0001) { $x1 /= $Scale; $y1 /= $Scale; $x2 /= $Scale; $y2 /= $Scale }
+      if ([Math]::Abs($Scale - 1.0) -gt 0.0001) { $x1 /= $Scale; $y1 /= $Scale; $x2 /= $Scale; $y2 /= $Scale }
       $txt = Convert-OcrText $line.Text
       $txt = Repair-OcrText $txt            # 錯字修正規則表（-NoOcrFix 可整層關掉）
       if ($txt -match '^[。！？!?…」』）]+$') {
@@ -2174,7 +2175,7 @@ function Invoke-RegionOcr {
             if (($br.X + $br.Width) -gt $x2) { $x2 = $br.X + $br.Width }
             if (($br.Y + $br.Height) -gt $y2) { $y2 = $br.Y + $br.Height }
           }
-          if ($k -gt 1.0001) { $x1 /= $k; $y1 /= $k; $x2 /= $k; $y2 /= $k }
+          if ([Math]::Abs($k - 1.0) -gt 0.0001) { $x1 /= $k; $y1 /= $k; $x2 /= $k; $y2 /= $k }
           $txt = Convert-OcrText $line.Text
           $txt = Repair-OcrText $txt            # 錯字修正規則表（-NoOcrFix 可整層關掉）
           if ($txt -match '^[。！？!?…」』）]+$') {
@@ -4788,7 +4789,7 @@ try {
       # 分區裁切一定在放大「之前」；每區自己放大 → 自己 OCR
       $origW = $crop.Width; $origH = $crop.Height
       # 2400x1350 已經是 1600 的 1.5 倍像素；再放大只會變慢，不會更準。
-      if ($origW -ge 1900 -and $OcrScale -gt 1.0) { $OcrScale = 1.0 }
+      if ($origW -ge 1900 -and $OcrScale -gt 0.5) { $OcrScale = 0.5 }
       $state.FrameNo++
       $rawFrame = New-Object System.Collections.Generic.List[object]
       $ocrW = 0; $ocrH = 0
