@@ -5,7 +5,8 @@ $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $src = Join-Path $root 'ExpeditionArchive.cs'
 $out = Join-Path $root 'ExpeditionArchive.exe'
 & $csc /nologo /target:winexe /platform:x64 /out:$out `
-  /r:System.Windows.Forms.dll /r:System.Drawing.dll $src
+  /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll $src
 if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（ExpeditionArchive）' }
 Write-Host '已編譯：工具\ExpeditionArchive.exe'
+
 

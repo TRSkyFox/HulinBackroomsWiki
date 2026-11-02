@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -95,6 +96,79 @@ namespace ExpeditionArchive
                 Output.ScrollBars = ScrollBars.Both;
                 Output.SetBounds(14, 122, 690, 322);
                 Controls.Add(Output);
+
+                WireDrop(this);
+                WireDrop(Package);
+                WireDrop(Output);
+            }
+
+            void WireDrop(Control c)
+            {
+                c.AllowDrop = true;
+                c.DragEnter += delegate (object s, DragEventArgs e)
+                {
+                    e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+                };
+                c.DragDrop += delegate (object s, DragEventArgs e)
+                {
+                    if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+                    string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                    if (files == null || files.Length == 0) return;
+                    AcceptPackage(files[0]);
+                };
+            }
+
+            void AcceptPackage(string path)
+            {
+                Package.Text = path ?? "";
+                if (!ValidatePackage(Package.Text.Trim().Trim('"'))) return;
+                Status.ForeColor = Color.FromArgb(60, 60, 64);
+                Status.Text = "已拖入紀錄包，開始匯入檢查…";
+                Run(false);
+            }
+
+            bool ValidatePackage(string path)
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                        throw new Exception("找不到紀錄包：" + path);
+                    if (!path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("不是 .zip／.expedition.zip：" + path);
+                    using (ZipArchive z = ZipFile.OpenRead(path))
+                    {
+                        bool has = z.Entries.Any(e => e.FullName.Replace('\\', '/').TrimStart('/') == "staging/validation.json");
+                        if (!has) throw new Exception("紀錄包缺少 staging/validation.json，不能匯入");
+                    }
+                    Status.ForeColor = Color.FromArgb(60, 60, 64);
+                    Status.Text = "紀錄包格式正常。";
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Status.ForeColor = Color.FromArgb(200, 70, 60);
+                    Status.Text = "紀錄包錯誤：" + ex.Message;
+                    Output.Text = "紀錄包錯誤：" + ex.Message + Environment.NewLine + path;
+                    return false;
+                }
+            }
+
+            string FirstError(string log)
+            {
+                if (string.IsNullOrEmpty(log)) return "沒有輸出";
+                foreach (string line in log.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string t = line.Trim();
+                    if (t.Length == 0) continue;
+                    if (t.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        t.StartsWith("Exception", StringComparison.OrdinalIgnoreCase) ||
+                        t.IndexOf("錯誤", StringComparison.Ordinal) >= 0 ||
+                        t.IndexOf("失败", StringComparison.Ordinal) >= 0 ||
+                        t.IndexOf("失敗", StringComparison.Ordinal) >= 0)
+                        return t.Length > 180 ? t.Substring(0, 180) : t;
+                }
+                string first = log.Trim().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "沒有輸出";
+                return first.Length > 180 ? first.Substring(0, 180) : first;
             }
 
             void Run(bool apply)
@@ -125,6 +199,10 @@ namespace ExpeditionArchive
                 {
                     Status.Text = "找不到紀錄包。";
                     return;
+                }
+                if (!apply || !string.IsNullOrEmpty(pkg))
+                {
+                    if (!ValidatePackage(pkg)) return;
                 }
                 CheckBtn.Enabled = false;
                 ApplyBtn.Enabled = false;
@@ -160,7 +238,7 @@ namespace ExpeditionArchive
                         BeginInvoke((Action)delegate
                         {
                             Output.Text = log;
-                            Status.Text = p.ExitCode == 0 ? (apply ? "已整合進 Wiki。" : "檢查完成（尚未改正式 Wiki）。") : ("失敗（exit " + p.ExitCode + "）");
+                            Status.Text = p.ExitCode == 0 ? (apply ? "已整合進 Wiki。" : "檢查完成（尚未改正式 Wiki）。") : ("失敗：" + FirstError(log));
                             Status.ForeColor = p.ExitCode == 0 ? Color.FromArgb(80, 160, 80) : Color.FromArgb(200, 70, 60);
                             CheckBtn.Enabled = true;
                             ApplyBtn.Enabled = true;
