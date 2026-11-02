@@ -34,6 +34,7 @@ namespace FoyerPanel
         static OcrReadoutForm Readout;
         static double CaptureInterval = 0.5;
         static bool AutoRecord = true;
+        static string Preset = "1600x900";
 
         [STAThread]
         static int Main(string[] args)
@@ -47,6 +48,7 @@ namespace FoyerPanel
                         case "--url": if (i + 1 < args.Length) Url = args[++i]; break;
                         case "--logdir": if (i + 1 < args.Length) RecordOut = args[++i]; break;
                         case "--profile": if (i + 1 < args.Length) ProfileDir = args[++i]; break;
+                        case "--preset": if (i + 1 < args.Length) Preset = args[++i]; break;
                         case "--overlay": ShowOcr = true; break;
                         case "--no-overlay": ShowOcr = false; break;
                         case "--no-record": AutoRecord = false; break;
@@ -86,7 +88,7 @@ namespace FoyerPanel
         {
             ControlWindow = new Form();
             ControlWindow.Text = "狐霖記錄器控制";
-            ControlWindow.ClientSize = new Size(430, 270);
+            ControlWindow.ClientSize = new Size(430, 300);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -120,6 +122,23 @@ namespace FoyerPanel
             logs.Click += delegate { OpenFolder(RecordOut); };
             clientGroup.Controls.Add(logs);
 
+            var resLabel = new Label();
+            resLabel.SetBounds(14, 186, 54, 20);
+            resLabel.ForeColor = Color.FromArgb(200, 200, 206);
+            resLabel.Text = "解析度";
+            ControlWindow.Controls.Add(resLabel);
+            var resCombo = new ComboBox();
+            resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            resCombo.SetBounds(72, 183, 150, 24);
+            resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2560x1440" });
+            resCombo.SelectedItem = Preset;
+            if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
+            resCombo.SelectedIndexChanged += delegate
+            {
+                if (resCombo.SelectedItem != null) Preset = Convert.ToString(resCombo.SelectedItem);
+            };
+            ControlWindow.Controls.Add(resCombo);
+
             var recGroup = Group("記錄", 12, 110, 406, 66);
             StartRecBtn = Btn("開始記錄", 14, 24, 120, 32);
             StartRecBtn.Click += delegate { StartRecording(); };
@@ -132,19 +151,19 @@ namespace FoyerPanel
             recGroup.Controls.Add(proc);
 
             StateLabel = new Label();
-            StateLabel.SetBounds(14, 184, 402, 24);
+            StateLabel.SetBounds(14, 218, 402, 24);
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
             StateLabel.Text = "狀態：等待客戶端";
             ControlWindow.Controls.Add(StateLabel);
 
             StageLabel = new Label();
-            StageLabel.SetBounds(14, 210, 402, 18);
+            StageLabel.SetBounds(14, 244, 402, 18);
             StageLabel.ForeColor = Color.FromArgb(205, 205, 210);
             StageLabel.Text = "目前整理：—";
             ControlWindow.Controls.Add(StageLabel);
 
             StageBar = new ProgressBar();
-            StageBar.SetBounds(14, 232, 402, 14);
+            StageBar.SetBounds(14, 266, 402, 14);
             StageBar.Minimum = 0;
             StageBar.Maximum = 100;
             StageBar.Value = 0;
@@ -265,7 +284,7 @@ namespace FoyerPanel
             {
                 if (!File.Exists(ClientPath)) { SetState("找不到 FoyerClient.exe", Color.FromArgb(255, 120, 110)); return false; }
                 Directory.CreateDirectory(ProfileDir);
-                string ps = "--client-only --url \"" + Url.Replace("\"", "") + "\" --preset 1600x900 --no-record"
+                string ps = "--client-only --url \"" + Url.Replace("\"", "") + "\" --preset " + Preset + " --no-record"
                     + " --logdir \"" + RecordOut.Replace("\"", "") + "\" --profile \"" + ProfileDir.Replace("\"", "") + "\"";
                 var psi = new ProcessStartInfo(ClientPath, ps);
                 psi.UseShellExecute = false;

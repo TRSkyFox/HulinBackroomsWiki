@@ -15,3 +15,6 @@ wiki/site/index.backup-before-content.html
 # 暫存
 *.tmp
 *.log
+
+记录器/structured/rapid-ocr-detect/
+记录器/structured/rapid-ocr-detect.exe
