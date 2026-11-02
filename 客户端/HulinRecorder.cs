@@ -414,14 +414,15 @@ namespace HulinRecorder
             string session = LatestSession();
             if (session == null) { SetState("沒有可匯出的場次", Color.FromArgb(255, 150, 120)); return; }
             PipelineRunning = true;
-            SetState("狀態：停止記錄並匯出 " + Path.GetFileName(session), Color.FromArgb(255, 190, 100));
+            string exportDir = Path.Combine(Path.GetDirectoryName(RecordOut), "exports");
+            SetState("狀態：停止記錄並匯出 " + Path.GetFileName(session) + " → " + exportDir, Color.FromArgb(255, 190, 100));
             var t = new Thread(delegate ()
             {
                 try
                 {
                     StopRecorder(false);
                     RunExport(session);
-                    SetState("狀態：匯出完成 " + Path.GetFileName(session) + "（尚未進 Wiki）", Color.FromArgb(130, 220, 140));
+                    SetState("狀態：匯出完成 " + Path.GetFileName(session) + " → " + exportDir, Color.FromArgb(130, 220, 140));
                 }
                 catch (Exception ex) { Log("export: " + ex); SetState("匯出失敗（看 panel.log）", Color.FromArgb(255, 120, 110)); }
                 finally { PipelineRunning = false; }
@@ -439,7 +440,9 @@ namespace HulinRecorder
             string node = Path.Combine(exeDir, "node.exe");
             if (!File.Exists(node)) node = "node.exe";
             string staging = Path.Combine(session, "staging");
-            var psi = new ProcessStartInfo(node, "\"" + run + "\" \"" + session + "\" --portable --staging \"" + staging + "\"");
+            string exportDir = Path.Combine(Path.GetDirectoryName(RecordOut), "exports");
+            var psi = new ProcessStartInfo(node, "\"" + run + "\" \"" + session + "\" --portable --staging \"" + staging + "\" --out \"" + exportDir + "\"");
+            psi.EnvironmentVariables["HULIN_EXPORT_DIR"] = exportDir;
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;
             psi.WindowStyle = ProcessWindowStyle.Hidden;

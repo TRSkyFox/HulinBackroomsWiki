@@ -11,6 +11,7 @@ const session = path.resolve(args[0]);
 // 先清掉換層瞬間產生的空白樓層檔（只有標題、沒有事件）
 spawnSync(process.execPath, [path.join(here, 'clean-levels.mjs'), session], { stdio: 'inherit' });
 const si = args.indexOf('--staging');
+const oi = args.indexOf('--out');
 const wikiBuild = path.join(WIKI, 'content', 'build.mjs');
 const portable = args.includes('--portable') || fs.existsSync(path.join(here, '..', 'portable.flag')) || !fs.existsSync(wikiBuild);
 const staging = si >= 0 ? path.resolve(args[si + 1]) : (portable ? path.join(session, 'staging') : path.join(INCOMING, path.basename(session)));
@@ -65,7 +66,7 @@ if (val.status !== 0) console.error('staging 驗證有問題（見 validation.js
 
 if (portable) {
   // 給別人的版本：不碰 Wiki；只打包成可傳回的 .hulinlog.zip。
-  const out = path.join(process.env.LOCALAPPDATA || path.dirname(session), 'HulinExpedition', 'exports');
+  const out = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(path.dirname(here), 'exports');
   writeProgress('export', 78, '打包紀錄');
   const exp = spawnSync(process.execPath, [path.join(here, 'export-package.mjs'), session, staging, '--out', out], { stdio: 'inherit' });
   if (exp.status !== 0) console.error('紀錄包匯出失敗');
