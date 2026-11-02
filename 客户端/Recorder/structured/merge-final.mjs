@@ -21,6 +21,7 @@ const confirm = args.includes('--confirm');
    舊的 AUTO-EVENTS 機制會產生第二份事件（而且 verify-final 明確禁止），
    只有真的要除錯時才加 --with-doc-events。 */
 const writeDocEvents = args.includes('--with-doc-events');
+const docsOnly = args.includes('--docs-only');
 const content = CONTENT;
 const valPath = path.join(staging, 'validation.json');
 if (!fs.existsSync(valPath)) { console.error('缺 validation.json'); process.exit(2); }
@@ -80,7 +81,7 @@ function backupFile(p) {
 }
 
 // entities
-for (const d of fs.readdirSync(path.join(staging, 'entities'), { withFileTypes: true }).filter(x => x.isDirectory())) {
+for (const d of (docsOnly ? [] : fs.readdirSync(path.join(staging, 'entities'), { withFileTypes: true }).filter(x => x.isDirectory()))) {
   const sp = path.join(staging, 'entities', d.name, 'entity.json');
   if (!fs.existsSync(sp)) continue;
   const s = read(sp);
@@ -130,6 +131,7 @@ for (const d of fs.readdirSync(path.join(staging, 'floors'), { withFileTypes: tr
   const conf = (s._staging && s._staging.confidence) || 0;
   const fp = floorIndex.get(String(s.id));
   if (!fp) {
+    if (docsOnly) { report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'docs-only: no existing floor' }); continue; }
     /* 新樓層：只有信心 >= 0.8 且真的有介紹才建立。
        以前的版本連 0.55 的單幀 OCR 都會直接建成正式頁（Level 0.22 就是這樣來的）。 */
     if (conf < 0.8) { report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'new floor confidence ' + conf + ' < 0.8' }); continue; }
@@ -165,20 +167,12 @@ for (const d of fs.readdirSync(path.join(staging, 'floors'), { withFileTypes: tr
   const oldDoc = String(after.doc || '');
   const newDoc = String(s.doc || '');
   if (newDoc) {
-    if (!oldDoc || oldDoc.length < 40) {
-      after.doc = newDoc;
-    } else if (newDoc !== oldDoc) {
-      /* 既有介紹不自動覆蓋（連錄音室自己建的樓層也一樣）。
-         2026-10-28 之前這裡是 after.doc = s.doc，一次收工就能把好好的介紹換成截斷的 OCR。 */
-      after._docCandidate = {
-        staging,
-        confidence: conf,
-        length: newDoc.length,
-        note: '新 OCR 介紹未自動覆蓋；要採用請人工比對 staging/floors/ 下的 floor.json'
-      };
-    }
+    /* 使用者 2026-11-03：樓層介紹以新匯入的 staging 為準。
+       舊版怕 OCR 截斷而永遠不覆蓋，結果 Level 2 一直顯示上一層的舊介紹。 */
+    after.doc = newDoc;
+    delete after._docCandidate;
   }
-  const palOk = s.palette && ['bg', 'card', 'line', 'acc', 'tx'].every(k => s.palette[k]) && usablePalette(s.palette);
+  const palOk = !docsOnly && s.palette && ['bg', 'card', 'line', 'acc', 'tx'].every(k => s.palette[k]) && usablePalette(s.palette);
   if (palOk && conf >= 0.8 && (!after.palette || after._staging)) after.palette = s.palette;
   after._observations = { source: 'structured-staging', staging, confidence: conf, intro: s._staging && s._staging.rawIntro };
   if (!confirm) { report.floors.push({ id: s.id, name: s.name, dryRun: true }); continue; }
@@ -196,7 +190,7 @@ const AUTO_BEGIN = '<!-- AUTO-EVENTS:BEGIN -->';
 const AUTO_END = '<!-- AUTO-EVENTS:END -->';
 const eventDir = path.join(staging, 'events');
 const eventReview = [];
-if (fs.existsSync(eventDir)) {
+if (!docsOnly && fs.existsSync(eventDir)) {
   report.events = report.events || [];
   for (const fn of fs.readdirSync(eventDir)) {
     const m = fn.match(/^floor-(.+)-choices\.jsonl$/);
