@@ -34,6 +34,8 @@ try {
 } catch {
   Write-Warning 'HulinClient.exe 正在執行，這次只更新面板；客戶端版本未覆蓋。'
 }
+# HulinPlayer.exe 只是開發用完整體，不進玩家包；玩家只拿 HulinClient.exe。
+Remove-Item (Join-Path $app 'HulinPlayer.exe') -Force -ErrorAction SilentlyContinue
 
 Copy-Item $core (Join-Path $app 'Microsoft.Web.WebView2.Core.dll') -Force
 Copy-Item $wf (Join-Path $app 'Microsoft.Web.WebView2.WinForms.dll') -Force

@@ -41,7 +41,6 @@ D:\BACKROOMS\
     dist\HulinExpedition.zip   給別人的可攜版壓縮檔
     start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 HulinRecorder
     build.ps1                重新編譯 panel＋client
-    postprocess.mjs          按「停止並整理」時執行
     volume-watch.ps1         音量記錄
     fonts\                   字型與字型圖集
   wiki\
@@ -85,7 +84,7 @@ HulinRecorder（控制台）
 - `记录器/structured/` 是**管線唯一來源**。
 - `客户端/app/structured/` 與 `客户端/dist/HulinExpedition/structured/` 是同步副本；
   **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
-- `客户端/postprocess.mjs`、`volume-watch.ps1` 是管線的一部分，原始檔在 `客户端/`；
+- 客户端/volume-watch.ps1 是音量記錄；
   `sync.mjs` 會把它們複製到 app／dist。
 - 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；HulinRecorder 讀它，畫透明區塊框
   與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。

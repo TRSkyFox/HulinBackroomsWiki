@@ -202,6 +202,9 @@ namespace HulinPlayer
                         case "--client-only": ClientOnly = true; break;
                     }
                 }
+                // 分散出去的 HulinClient.exe 永遠只能當遊戲客戶端；不能雙擊就跑出舊的「停止並整理」控制台。
+                if (string.Equals(Path.GetFileNameWithoutExtension(Application.ExecutablePath), "HulinClient", StringComparison.OrdinalIgnoreCase))
+                    ClientOnly = true;
                 bool createdNew = false;
                 SingleInstance = new Mutex(true, ClientOnly ? "Local\\HulinClient-SingleInstance" : "Local\\HulinExpedition-SingleInstance", out createdNew);
                 if (!createdNew)

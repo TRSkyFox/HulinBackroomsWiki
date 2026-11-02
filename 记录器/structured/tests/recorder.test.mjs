@@ -10,7 +10,6 @@ const logger = fs.readFileSync(path.join(ROOT, '记录器/backroom-logger.ps1'),
 const parsejs = fs.readFileSync(path.join(ROOT, '记录器/structured/parse.mjs'), 'utf8');
 const palette = fs.readFileSync(path.join(ROOT, '记录器/palette-from-shots.ps1'), 'utf8');
 const runjs = fs.readFileSync(path.join(ROOT, '记录器/structured/run.mjs'), 'utf8');
-const postpro = fs.readFileSync(path.join(ROOT, '客户端/postprocess.mjs'), 'utf8');
 const mergejs = fs.readFileSync(path.join(ROOT, '记录器/structured/merge-final.mjs'), 'utf8');
 const workerjs = fs.readFileSync(path.join(ROOT, '记录器/structured/ocr-worker.mjs'), 'utf8');
 const eventjs = fs.readFileSync(path.join(ROOT, '记录器/structured/event-import.mjs'), 'utf8');
@@ -44,7 +43,6 @@ export function run() {
   add('logger:shot-needs-main-lines', /shotMainLines\s*=/.test(logger) && /shotMainLines -ge 4/.test(logger), 'avoid loading screen shot');
   add('logger:no-auto-apply', runjs.includes("args.includes('--apply-events')") && runjs.includes("args.includes('--merge')"), 'explicit flags');
   add('pipeline:auto-import', runjs.includes("args.includes('--auto')") && runjs.includes('auto-import.json'), 'auto import report');
-  add('pipeline:postprocess-auto', postpro.includes("'--auto'"), 'postprocess uses auto');
   add('pipeline:merge-lowconf', mergejs.includes('existing floor confidence'), 'existing low-conf floor untouched');
   add('pipeline:event-floor-conf', eventjs.includes('floorConf'), 'events gated by floor confidence');
 
