@@ -1491,6 +1491,10 @@ function Invoke-FrameOcr {
       if ($Scale -gt 1.0001) { $x1 /= $Scale; $y1 /= $Scale; $x2 /= $Scale; $y2 /= $Scale }
       $txt = Convert-OcrText $line.Text
       $txt = Repair-OcrText $txt            # 錯字修正規則表（-NoOcrFix 可整層關掉）
+      if ($txt -match '^[。！？!?…」』）]+$') {
+        if ($all.Count -gt 0) { $all[$all.Count - 1].Text = [string]$all[$all.Count - 1].Text + $txt }
+        continue
+      }
       if (-not (Test-KeepLine $txt)) { continue }
       # 字色：在「縮放前」的影像座標取樣（$x1..$y2 這時還是原圖座標）
       $ink = $null
@@ -2152,6 +2156,10 @@ function Invoke-RegionOcr {
           if ($k -gt 1.0001) { $x1 /= $k; $y1 /= $k; $x2 /= $k; $y2 /= $k }
           $txt = Convert-OcrText $line.Text
           $txt = Repair-OcrText $txt            # 錯字修正規則表（-NoOcrFix 可整層關掉）
+          if ($txt -match '^[。！？!?…」』）]+$') {
+            if ($all.Count -gt 0) { $all[$all.Count - 1].Text = [string]$all[$all.Count - 1].Text + $txt }
+            continue
+          }
           if (-not (Test-KeepLine $txt)) { continue }
           $cropRel = ''
           if ($LineDir) {
