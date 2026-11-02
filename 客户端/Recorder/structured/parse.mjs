@@ -314,7 +314,7 @@ function parse(sessionDir) {
         const noise = /背包|裝備|装备|硬幣|硬币|經驗|经验|升級|升级|升級點|升级点|出口進度|出口进度|工作台|配方|空的|右手|左手|耐久|物品|商店|攤|摊|價格|价格|設定|设定|取消|選單|菜单|戰鬥|战斗|攻擊|攻击|檢定|检定|體力|体力|理智|掉落|戰利品|战利品|已選|已选|想要|等趿|等趺|選|按|玩家|^Level|^【|^〖|^〔|^（|^\(|[\[\]［］【】]|\\|^第\s*\d+\s*[層层]|^出[口囗]|^EXIT|^\(EXIT\)|難度|难度|檢定|检定|失敗|失败|成功|杂讯|雜訊|^\s*[0-9]+\s*\/\s*[0-9]+|[0-9]|杲|剮|殳|蔔|浈|躉|罴|彳|亍|灬|刂|丶|丿|丨|乀|重新连线|重新連線|冒险继续|冒險繼續|上次说到|上次說到|已经走过|已經走過|廢卉|废卉|一地萬|一地万|煦心|大烈仕|长杲|長杲|骨頭在抗議|骨头在抗议|一放更可怕|一地方|甩線|甩线|了萬|了万|樣的遊樂場|样的游乐场/;
         const clean = src.filter(l => {
           const t = String(l.t).trim();
-          return l.y >= H * 0.24 && l.y < H * 0.58 && t.length >= 2 && !noise.test(t) && !(curFloor._prevIntroLines && curFloor._prevIntroLines.has(t.replace(/\s+/g, '')))
+          return l.y >= H * 0.24 && l.y < H * 0.66 && t.length >= 2 && !noise.test(t) && !(curFloor._prevIntroLines && curFloor._prevIntroLines.has(t.replace(/\s+/g, '')))
             && !/(力|敏|體|体|感|智|魅)\s*\d/.test(t)
             && !/一个人冒险|背包里多|自订|自訂|【戰鬥】|【战斗】|获得|獲得|抵抗|抗性/.test(t)
             && !/^(潦浪者|流浪者|浪者)/.test(t)
@@ -353,11 +353,27 @@ function parse(sessionDir) {
               多人模式可能同時有 2~3 句，所以用 while 一次剝到底；
               出現在介紹中間的固定引用句不受影響（不碰中間的行）。 */
         while (block.length && isCharLine(block[block.length - 1].t)) block.pop();
-        if (block.length && (block[block.length - 1].y + (block[block.length - 1].h || 0)) > H * 0.56) block.pop(); /* 5. 貼底被裁 */
+        /* 5. 貼底被裁：只有「碰到面板底」而且最後一行沒有句末標點才丟。
+           以前用固定 56% 高度，Level 5 的「气里有香烟…」「这里很漂亮…」整行被當成裁切丟掉。 */
+        if (block.length) {
+          const lastLine = block[block.length - 1];
+          const bottom = lastLine.y + (lastLine.h || 0);
+          if (bottom > H * 0.63 && !/[。！？…」』]$/.test(String(lastLine.t).trim())) block.pop();
+        }
         /* 2026-11-01 使用者：樓層介紹裡若出現玩家角色名，一律改成「你」。
            介紹會固定引用角色說的話（那些保留），只有最後一句是角色自己的台詞（已在上方丟掉）。 */
         const PLAYER_IN_INTRO = /(?:天狐|狐天|狐夭|冴汰)/g;
-        const txt = textOf(block).replace(PLAYER_IN_INTRO, '你').replace(/[，,]{2,}/g, '，').replace(/[。．]{2,}/g, '。').replace(/^[，。、]+/, '');
+        /* 同一個段落被 OCR 折行時，上一行沒有句末標點就接回去；
+           不然 Level 5 的「……空」和「气里有……」會被當成兩段。 */
+        let introText = '';
+        for (const line of textOf(block).split(/\n/)) {
+          const t = String(line || '').trim();
+          if (!t) continue;
+          if (!introText) introText = t;
+          else if (/[。！？…」』]$/.test(introText)) introText += '\n' + t;
+          else introText += t;
+        }
+        const txt = introText.replace(PLAYER_IN_INTRO, '你').replace(/[，,]{2,}/g, '，').replace(/[。．]{2,}/g, '。').replace(/^[，。、]+/, '');
         const near = !curFloor.introFrame || (f.frame - curFloor.introFrame) <= 2;
         const env = (txt.match(/牆|墙|房間|房间|走廊|地毯|燈|灯|空氣|空气|天花板|地板|門|门|霧|雾|水|森林|城市|商場|商场|大廳|大厅/g) || []).length;
         const score = txt.length + env * 30;
