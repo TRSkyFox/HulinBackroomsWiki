@@ -7,7 +7,7 @@
 )
 
 $ErrorActionPreference = 'Stop'
-$src = Join-Path $PSScriptRoot 'app'
+$src = $PSScriptRoot
 $dst = Join-Path $env:LOCALAPPDATA 'Expedition\app'
 
 New-Item -ItemType Directory -Force $dst | Out-Null
@@ -15,6 +15,9 @@ $copyFailed = @()
 $logsPrefix = (Join-Path $src 'logs') + [IO.Path]::DirectorySeparatorChar
 foreach ($f in Get-ChildItem $src -Recurse -File) {
   if ($f.FullName.StartsWith($logsPrefix, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  if ($f.FullName.StartsWith((Join-Path $src 'dist') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { continue }
+  if ($f.Name -match '\.cs$' -or $f.Name -in @('build.ps1','README.md','start.ps1','啟動.bat','啟動記錄器.bat')) { continue }
+  if ($f.FullName -match '\\fonts\\') { continue }
   $rel = $f.FullName.Substring($src.Length + 1)
   $to = Join-Path $dst $rel
   New-Item -ItemType Directory -Force (Split-Path $to -Parent) | Out-Null

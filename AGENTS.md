@@ -36,7 +36,7 @@ D:\BACKROOMS\
   客户端\
     ExpeditionPlayer.cs           遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
     ExpeditionRecorder.cs            獨立控制台／記錄器面板原始碼
-    app\                     可直接啟動的成品（ExpeditionRecorder + ExpeditionClient）
+                         可直接啟動的成品（ExpeditionRecorder + ExpeditionClient）
     dist\Expedition\      可攜版成品（sync 目標）
     dist\Expedition.zip   給別人的可攜版壓縮檔
     start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 ExpeditionRecorder
@@ -82,7 +82,7 @@ ExpeditionRecorder（控制台）
 ```
 
 - `记录器/structured/` 是**管線唯一來源**。
-- `客户端/app/structured/` 與 `客户端/dist/Expedition/structured/` 是同步副本；
+- `客户端/structured/` 與 `客户端/dist/Expedition/structured/` 是同步副本；
   **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
 - 客户端/volume-watch.ps1 是音量記錄；
   `sync.mjs` 會把它們複製到 app／dist。
@@ -229,7 +229,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 
 10. **管線只有一份來源。**
     - 只改 `记录器/structured/`；改完跑 `sync.mjs`。
-    - 不要手改 `客户端/app/structured` 或 `客户端/dist/Expedition/structured`。
+    - 不要手改 `客户端/structured` 或 `客户端/dist/Expedition/structured`。
     - `sync.mjs --check` 有漂移就 exit 1；漂移沒修好之前不要說「驗收全過」。
 
 11. **事件／結局按樓層。**
@@ -316,7 +316,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 - 不要把截圖放進 Wiki。
 - 不要寫玩家名（`狐天`／`狐夭`）；`天狐` 是角色。
 - 不要直接改 `wiki/site/index.html`。
-- 不要只改 `客户端/app/structured` 或 `dist/.../structured`（會被 sync 覆蓋）。
+- 不要只改 `客户端/structured` 或 `dist/.../structured`（會被 sync 覆蓋）。
 - 不要用全域 `content/events.json` 或 `content/endings/`。
 - 不要自己生成樓層配色。
 - 不要在沒有備份的情況下 `--confirm`／`--apply`。

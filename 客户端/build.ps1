@@ -1,7 +1,7 @@
 ﻿# 從 ExpeditionPlayer.cs 重新編譯，並把 WebView2 / 記錄器腳本放進 app\
 $ErrorActionPreference = 'Stop'
 $root = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
-$app = Join-Path $root 'app'
+$app = $root
 New-Item -ItemType Directory -Force $app | Out-Null
 
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -41,7 +41,6 @@ Copy-Item $core (Join-Path $app 'Microsoft.Web.WebView2.Core.dll') -Force
 Copy-Item $wf (Join-Path $app 'Microsoft.Web.WebView2.WinForms.dll') -Force
 Copy-Item (Join-Path $expeditionWebDllPath 'WebView2Loader.dll') $app -Force
 Copy-Item (Join-Path $root '..\记录器\backroom-logger.ps1') $app -Force
-Copy-Item (Join-Path $root 'volume-watch.ps1') $app -Force
 Copy-Item (Join-Path $root '..\记录器\palette-from-shots.ps1') $app -Force
 New-Item -ItemType Directory -Force (Join-Path $app 'structured') | Out-Null
 Copy-Item (Join-Path $root '..\记录器\structured\*') (Join-Path $app 'structured') -Recurse -Force

@@ -31,7 +31,7 @@ if (!['all', 'app', 'dist'].includes(destFilter)) {
 }
 
 const DEST = {
-  app: path.join(ROOT, '客户端/app'),
+  app: path.join(ROOT, '客户端'),
   dist: path.join(ROOT, '客户端/dist/Expedition')
 };
 const dests = Object.entries(DEST).filter(([k]) => destFilter === 'all' || destFilter === k);

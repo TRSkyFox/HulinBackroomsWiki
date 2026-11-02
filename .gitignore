@@ -26,3 +26,10 @@ wiki/site/index.backup-before-content.html
 tools/*.exe
 
 记录器/exports/
+
+客户端/*.exe
+客户端/*.dll
+客户端/backroom-logger.ps1
+客户端/palette-from-shots.ps1
+客户端/structured/
+客户端/app/

@@ -30,7 +30,7 @@ const wiki = path.join(root, 'wiki');
 const content = path.join(wiki, 'content');
 const floorsRoot = path.join(content, 'floors');
 const logger = path.join(root, '记录器/structured');
-const app = path.join(root, '客户端/app/structured');
+const app = path.join(root, '客户端/structured');
 const dist = path.join(root, '客户端/dist/Expedition/structured');
 
 const out = { ok: true, checks: [] };
