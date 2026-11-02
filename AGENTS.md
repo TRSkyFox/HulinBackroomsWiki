@@ -16,7 +16,7 @@
 - 遊戲是 Unity WebGL，`#game` 是 `<canvas>`，DOM／無障礙樹讀不到內容，只能靠 OCR。
 - 三條產品線：
   1. `wiki/`：內容與離線單檔網站。
-  2. `记录器/`：OCR 記錄器與 staging 管線。
+  2. `客户端/Recorder/`：OCR 記錄器與 staging 管線。
   3. `客户端/`：ExpeditionRecorder 控制台＋ExpeditionClient 遊戲客戶端，附帶 logs 記錄與可攜版。
 - **不做自動玩**。遊戲作者不允許，任何 `auto/`、`quark/`、`sessions/`、自動玩入口都不要恢復。
 
@@ -61,7 +61,7 @@ D:\BACKROOMS\
   `wiki/README.md`、`wiki/ARCHITECTURE.md`、`文档/交接.md` → `备份/legacy-wiki-20261101.zip`。
 - `wiki/頁面` → `备份/legacy-wiki-pages-20261101.zip`。
 - `wiki/_design`、2026-10-29 的 failed-run 備份 → `备份/20261029-old-runs-and-design.zip`。
-- `记录器/player/`（舊 ExpeditionPlayer 副本與 135.8 MB 測試 profile）已移除；
+- `客户端/Recorder/player/`（舊 ExpeditionPlayer 副本與 135.8 MB 測試 profile）已移除；
   `客户端/build.ps1` 改用 `客户端/dist/Expedition` 的 WebView2 DLL。
 
 ---
@@ -71,8 +71,8 @@ D:\BACKROOMS\
 ```text
 ExpeditionRecorder（控制台）
   → ExpeditionClient（WebView 遊戲）
-  → 记录器/backroom-logger.ps1
-  → 记录器/logs/backroom-<時間>/structured.jsonl
+  → 客户端/Recorder/backroom-logger.ps1
+  → 客户端/Recorder/logs/backroom-<時間>/structured.jsonl
   → 客户端/Recorder/structured（font-correct → clean-levels → parse／event-parse／input-bind
                        → event-import → import-wiki → validate → merge-final）
   → wiki/_incoming/<session>/            staging（預設不寫正式庫）
@@ -86,7 +86,7 @@ ExpeditionRecorder（控制台）
   **不要手改副本**，改來源後跑 `node 客户端/Recorder/structured/sync.mjs`。
 - 客户端/volume-watch.ps1 是音量記錄；
   `sync.mjs` 會把它們複製到 app／dist。
-- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框
+- 除錯覆蓋層：記錄器每幀寫 `客户端/Recorder/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框
   與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
 - 事件分段：`event-parse.mjs` 會用「大空隙」（> max(2.5×行距, 50px)）切斷 intro／results；普通段落 35px 不會被切。沒有標題的事件不會自動生成。
 
@@ -174,7 +174,7 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
   - 1600×900 normal 已加專用分區：`title 9,0,656,66`、`main 20,80,1005,529`、`opts 20,609,1005,278`、`enemy 9,42,121,48`、`char 1030,66,565,84`。戰鬥時先 OCR 選項區判斷 `攻擊／技能／防禦／逃跑／右手…`，改用 `enemy 15,70,175,125`、`main 20,200,1005,409`（主區從敵人卡下方開始）。此尺寸不要開 AutoRegion：measured main 會量到 x≈990（實際面板右緣 1025）。
   - 管線路徑已集中到 `客户端/Recorder/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
 - 已做的清理：
-  - 移除 `记录器/player/`（136.6 MB）。
+  - 移除 `客户端/Recorder/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
   - ExpeditionRecorder／ExpeditionClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
@@ -243,7 +243,7 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
     - 有正文的樓層不要留 `_status: 'name-only'`。
 
 13. **原始 logs 只讀。**
-    - `记录器/logs/backroom-*/` 的 `structured.jsonl`、`wiki.md`、`ocr-raw.log` 不要刪、不要覆蓋。
+    - `客户端/Recorder/logs/backroom-*/` 的 `structured.jsonl`、`wiki.md`、`ocr-raw.log` 不要刪、不要覆蓋。
     - `levels/` 只允許 `clean-levels.mjs` 刪假樓層檔；`floor-shots/` 只允許配色腳本取樣後刪。
     - 要清舊場次，先確認沒有要回溯的出處行號，再問使用者。
 
@@ -298,12 +298,12 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 ## 9. 清理、備份、版本控制
 
 - `git` 已初始化（2026-11-01）。`.gitignore` 排除：
-  `记录器/logs/`、`记录器/player/`、`客户端/Recorder/structured/bin/`、`客户端/Recorder/structured/*.otf`、
+  `客户端/Recorder/logs/`、`客户端/Recorder/player/`、`客户端/Recorder/structured/bin/`、`客户端/Recorder/structured/*.otf`、
   `客户端/app/`、`客户端/dist/`、`客户端/fonts/`、`备份/`、`wiki/_incoming/`、
   `wiki/site/index.html`、`wiki/site/index.backup-before-content.html`。
 - 內容變更用 commit 記錄；不要用「複製整個資料夾」當版本控制。
 - `备份/legacy-wiki-20261101.zip` 是舊 Wiki 管線與舊 handover 的封存；不要沒事解開覆蓋現行檔案。
-- `记录器/logs/` 是原始資料，體積大；要清舊場次先問，不要用批次刪除。
+- `客户端/Recorder/logs/` 是原始資料，體積大；要清舊場次先問，不要用批次刪除。
 - `客户端/dist/Expedition/` 是 sync 目標；`Expedition.zip` 是給別人的成品。兩個都保留。
 - `客户端/app/` 是 build.ps1 產物；要重新產生就跑 `build.ps1`。
 
@@ -321,4 +321,4 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 - 不要自己生成樓層配色。
 - 不要在沒有備份的情況下 `--confirm`／`--apply`。
 - 不要在新程式裡寫死 `D:/BACKROOMS`；用 `import.meta.url` 或參數。
-- 不要把 `记录器/logs`、`备份`、字型、OCR binary 加進 git。
+- 不要把 `客户端/Recorder/logs`、`备份`、字型、OCR binary 加進 git。
