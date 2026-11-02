@@ -135,6 +135,20 @@ foreach ($f in Get-ChildItem -LiteralPath $shotDir -File -Filter '*.png' | Sort-
       if ($lnL -gt ($txL + 38)) {
         $tmp = $tx; $tx = $line; $line = $tmp
       }
+      # 正文跟底色太接近（遊戲截圖常把 UI 灰字抓成正文）→ 用安全的淺色；
+      # 不要讓 Wiki 變成灰字配深底，這種配色比沒有配色更難讀。
+      $bgL = Lum $bgc
+      $txL2 = Lum ([System.Drawing.ColorTranslator]::FromHtml($tx))
+      $contrast = ([Math]::Max($bgL, $txL2) + 12) / ([Math]::Min($bgL, $txL2) + 12)
+      if ($contrast -lt 3.2) {
+        $tx = '#ECE8C8'
+        $txL2 = Lum ([System.Drawing.ColorTranslator]::FromHtml($tx))
+        $contrast = ([Math]::Max($bgL, $txL2) + 12) / ([Math]::Min($bgL, $txL2) + 12)
+        if ($contrast -lt 3.2 -and $acc) {
+          $accL = Lum ([System.Drawing.ColorTranslator]::FromHtml($acc))
+          if ((([Math]::Max($bgL, $accL) + 12) / ([Math]::Min($bgL, $accL) + 12)) -ge 3.2) { $tx = $acc }
+        }
+      }
     } catch { }
     $items += [pscustomobject]@{
       id = $id; name = $nm; source = 'auto-floor-shot'; shot = $f.Name
