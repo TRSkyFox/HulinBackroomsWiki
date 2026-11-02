@@ -80,6 +80,8 @@ param(
   [string]$TitleMatch = '後室|Backrooms|狐霖|hulin',
   # 只抓一張、印出結果就結束（測試用）
   [switch]$Once,
+  # 關掉 DirectML RapidOCR 主識別，退回 Windows OCR（預設用 RapidOCR）
+  [switch]$NoRapidPrimary,
   # 要留截圖才加這個（預設不留：OCR 完就把圖刪掉）
   [switch]$SaveFrames,
   # 字體模板校正用：只留 OCR 文字行的暫存裁圖（處理完可刪）
@@ -4593,6 +4595,99 @@ function Add-Note {
 
 
 
+
+# ---- DirectML RapidOCR 常駐服務：模型只載入一次，每幀只丢圖片路徑 ----
+function Start-RapidPrimaryService {
+  param([string]$WorkDir)
+  $exe = @(
+    (Join-Path $PSScriptRoot 'structured\rapid-primary-service\rapid-primary-service.exe'),
+    (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\rapid-primary-service\rapid-primary-service.exe'),
+    (Join-Path $PSScriptRoot 'structured\rapid-primary\rapid-primary.exe')
+  ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+  if (-not $exe) { return $null }
+  New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $exe
+  $psi.Arguments = '"' + $WorkDir + '"'
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+  $p = [System.Diagnostics.Process]::Start($psi)
+  $ready = Join-Path $WorkDir 'ready'
+  $deadline = (Get-Date).AddSeconds(20)
+  while ((Get-Date) -lt $deadline -and -not (Test-Path -LiteralPath $ready)) { Start-Sleep -Milliseconds 100 }
+  if (-not (Test-Path -LiteralPath $ready)) {
+    try { if (-not $p.HasExited) { $p.Kill() } } catch { }
+    return $null
+  }
+  return [pscustomobject]@{ Proc = $p; Work = $WorkDir; Exe = $exe }
+}
+
+function Stop-RapidPrimaryService {
+  param($Svc)
+  if (-not $Svc) { return }
+  try { New-Item -ItemType File -Force -Path (Join-Path $Svc.Work 'stop') | Out-Null } catch { }
+  try {
+    if (-not $Svc.Proc.HasExited) { [void]$Svc.Proc.WaitForExit(2000) }
+    if (-not $Svc.Proc.HasExited) { $Svc.Proc.Kill() }
+  } catch { }
+}
+
+function Invoke-RapidPrimaryFrame {
+  param($Crop, $Svc, [int]$TargetW = 960)
+  if (-not $Crop -or -not $Svc) { return $null }
+  $scale = $TargetW / [double]$Crop.Width
+  $small = $null
+  try {
+    $small = Scale-Image $Crop.Clone() $scale
+    $id = [guid]::NewGuid().ToString('N')
+    $img = Join-Path $Svc.Work ('frame-' + $id + '.png')
+    $small.Save($img, [System.Drawing.Imaging.ImageFormat]::Png)
+    $req = Join-Path $Svc.Work ('req-' + $id + '.json')
+    $resp = Join-Path $Svc.Work ('resp-' + $id + '.json')
+    $job = @{ id = $id; image = $img } | ConvertTo-Json -Compress
+    [System.IO.File]::WriteAllText($req, $job, (New-Object System.Text.UTF8Encoding($false)))
+    $deadline = (Get-Date).AddSeconds(5)
+    while ((Get-Date) -lt $deadline -and -not (Test-Path -LiteralPath $resp)) { Start-Sleep -Milliseconds 15 }
+    if (-not (Test-Path -LiteralPath $resp)) { return $null }
+    $data = Get-Content -LiteralPath $resp -Raw -Encoding UTF8 | ConvertFrom-Json
+    $rows = New-Object System.Collections.Generic.List[object]
+    foreach ($row in @($data.rows)) {
+      $xs = @($row.box | ForEach-Object { [double]$_[0] })
+      $ys = @($row.box | ForEach-Object { [double]$_[1] })
+      $x0 = ($xs | Measure-Object -Minimum).Minimum / $scale
+      $x1 = ($xs | Measure-Object -Maximum).Maximum / $scale
+      $y0 = ($ys | Measure-Object -Minimum).Minimum / $scale
+      $y1 = ($ys | Measure-Object -Maximum).Maximum / $scale
+      $rows.Add([pscustomobject]@{
+          Text = (Repair-OcrText (Convert-OcrText ([string]$row.text)))
+          X = [int]$x0; Y = [int]$y0; W = [int]($x1 - $x0); H = [int]($y1 - $y0)
+        })
+    }
+    return [pscustomobject]@{ Rows = $rows; W = $small.Width; H = $small.Height }
+  } catch {
+    return $null
+  } finally {
+    if ($small) { $small.Dispose() }
+    if ($img) { Remove-Item -LiteralPath $img -Force -ErrorAction SilentlyContinue }
+    if ($req) { Remove-Item -LiteralPath $req -Force -ErrorAction SilentlyContinue }
+    if ($resp) { Remove-Item -LiteralPath $resp -Force -ErrorAction SilentlyContinue }
+  }
+}
+
+function Get-RapidPrimaryRegion {
+  param([int]$X, [int]$Y, [int]$W, [int]$H, [string]$Layout, [int]$OrigW, [int]$OrigH)
+  if ($Layout -ne 'normal') { return 'full' }
+  $titleBottom = 66.0 * $OrigH / 900.0
+  $mainTop = 80.0 * $OrigH / 900.0
+  $optsTop = 609.0 * $OrigH / 900.0
+  $charLeft = 1030.0 * $OrigW / 1600.0
+  if ($Y -lt $titleBottom) { return 'title' }
+  if ($X -ge $charLeft) { return 'char' }
+  if ($Y -ge $optsTop) { return 'opts' }
+  if ($Y -lt $mainTop) { return 'enemy' }
+  return 'main'
+}
+
 if (-not $Quiet) {
   Write-Host ''
   Write-Host '  狐霖的後室 RPG — 畫面文字記錄器（Wiki 版）' -ForegroundColor Yellow
@@ -4699,6 +4794,21 @@ Set-InitialLevelLog -S $state
 Write-Log $state ('逐層分檔：' + $state.Files.LevelsDir + '（目前：' + $state.CurrentLevelFile + '）；跨樓層事件：' + $state.Files.Transitions)
 
 
+$rapidSvc = $null
+if (-not $NoRapidPrimary) {
+  try {
+    $rapidWork = Join-Path $sessionDir '.rapid-primary'
+    $rapidSvc = Start-RapidPrimaryService -WorkDir $rapidWork
+    if ($rapidSvc) {
+      Write-Log $state ('DirectML RapidOCR 主識別已啟動（' + $rapidSvc.Exe + '）')
+      $SaveLineCrops = $false
+      $lineDir = ''
+      $state.LineDir = ''
+    } else {
+      Write-Log $state 'DirectML RapidOCR 啟動失敗，退回 Windows OCR'
+    }
+  } catch { Write-Log $state ('DirectML RapidOCR 啟動失敗：' + $_.Exception.Message); $rapidSvc = $null }
+}
 $pageRect = $null
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -4811,7 +4921,7 @@ try {
       # 戰鬥時左上有敵人卡（名稱／HP／防禦），main 要從卡片下方開始；先 OCR 一小塊
       # 選項區判斷是不是戰鬥，避免每幀都做整張探測。
       $isCombat = $false
-      if ($origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
+      if (-not $rapidSvc -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
         try {
           $probeSpec = @([pscustomobject]@{ Name = 'probe'; Spec = '21,339,880,1011' })
           $probe = Invoke-RegionOcr -Crop $crop -Engine $ocrEngine -Scale $OcrScale -TmpPng $state.TmpPng -Specs $probeSpec
@@ -4960,6 +5070,20 @@ try {
         $ocrW = $origW; $ocrH = $origH
         $state.DupFrames++
       }
+      # ---- DirectML RapidOCR 主識別：整張圖一次辨識，再依座標分區 ----
+      elseif ($rapidSvc) {
+        $rapid = Invoke-RapidPrimaryFrame -Crop $crop -Svc $rapidSvc -TargetW 1200
+        if ($rapid -and $rapid.Rows.Count -gt 0) {
+          foreach ($r in $rapid.Rows) {
+            $reg = Get-RapidPrimaryRegion -X $r.X -Y $r.Y -W $r.W -H $r.H -Layout $layout -OrigW $origW -OrigH $origH
+            $rawFrame.Add([pscustomobject]@{ Text = $r.Text; Region = $reg; X = $r.X; Y = $r.Y; W = $r.W; H = $r.H; Crop = '' })
+          }
+          $ocrW = $rapid.W; $ocrH = $rapid.H
+          [void](Test-RegionTextLayout -Lines ([object[]]$rawFrame) -Layout ([ref]$layout))
+        } else {
+          Write-Log $state 'DirectML RapidOCR 這一幀沒有回傳文字'
+        }
+      }
       # ---- 分區 OCR（特殊版面直接整張；正常版面才用分區）----
       elseif ($layout -ne 'normal' -or $isSpecialScreen) {
         $full = $null
@@ -5085,7 +5209,7 @@ try {
       # 選項被白色高亮時 Windows OCR 會整行漏掉（例如「伸手碰鏡子」）。
       # 有「要怎麼做？」時，用 RapidOCR 對整個選項區重跑一次，補回漏掉的行。
       $promptLine = $rawFrame | Where-Object { $_.Region -eq 'main' -and $RxPrompt.IsMatch([string]$_.Text) } | Select-Object -First 1
-      if ($promptLine -and $layout -eq 'normal') {
+      if (-not $rapidSvc -and $promptLine -and $layout -eq 'normal') {
         try {
           $optsRc = ConvertTo-RegionRect -Spec $RegionOpts -CropW $origW -CropH $origH -Name 'opts'
           if ($optsRc) {
@@ -5376,6 +5500,7 @@ try {
     Start-Sleep -Milliseconds $wait
   }
 } finally {
+  Stop-RapidPrimaryService -Svc $rapidSvc
   if ($Once) { exit 0 }
   if ($state.Events.Count -gt 0) { Write-WikiFiles -S $state }
   # 逐層分檔：把還沒落檔的事件補寫完（正常情況下每一幀都已經寫過，這裡只是保險）
