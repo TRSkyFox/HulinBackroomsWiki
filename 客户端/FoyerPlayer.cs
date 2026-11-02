@@ -731,6 +731,7 @@ namespace FoyerPlayer
                 case "1280x720": w = 1280; h = 720; return true;
                 case "1600x900": w = 1600; h = 900; return true;
                 case "1920x1080": w = 1920; h = 1080; return true;
+                case "2400x1350": w = 2400; h = 1350; return true;
                 case "2560x1440": w = 2560; h = 1440; return true;
             }
             return false;

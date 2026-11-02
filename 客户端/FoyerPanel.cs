@@ -130,7 +130,7 @@ namespace FoyerPanel
             var resCombo = new ComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             resCombo.SetBounds(72, 183, 150, 24);
-            resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2560x1440" });
+            resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
             resCombo.SelectedIndexChanged += delegate
