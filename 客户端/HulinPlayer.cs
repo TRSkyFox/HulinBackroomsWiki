@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -13,7 +13,7 @@ using System.Web.Script.Serialization;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
-namespace FoyerPlayer
+namespace HulinPlayer
 {
     static class Program
     {
@@ -57,7 +57,7 @@ namespace FoyerPlayer
 
         /* ── 介面語言（繁體／簡體）──
            遊戲本身是簡體，但工具介面預設繁體；有些使用者只看簡體，
-           所以在控制視窗放一顆切換鈕，選擇存在 %LOCALAPPDATA%\FoyerLogger\ui.txt。 */
+           所以在控制視窗放一顆切換鈕，選擇存在 %LOCALAPPDATA%\HulinExpedition\ui.txt。 */
         static bool UiHans = false;
         static string UiLangFile;
         class UiItem { public Control C; public string Hant; public string Hans; public float Size; public bool Bold; }
@@ -138,7 +138,7 @@ namespace FoyerPlayer
         {
             try
             {
-                UiLangFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "ui.txt");
+                UiLangFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "ui.txt");
                 if (File.Exists(UiLangFile))
                 {
                     string v = File.ReadAllText(UiLangFile).Trim();
@@ -153,7 +153,7 @@ namespace FoyerPlayer
             try
             {
                 if (string.IsNullOrEmpty(UiLangFile))
-                    UiLangFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "ui.txt");
+                    UiLangFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "ui.txt");
                 Directory.CreateDirectory(Path.GetDirectoryName(UiLangFile));
                 File.WriteAllText(UiLangFile, UiHans ? "hans" : "hant");
             }
@@ -203,7 +203,7 @@ namespace FoyerPlayer
                     }
                 }
                 bool createdNew = false;
-                SingleInstance = new Mutex(true, ClientOnly ? "Local\\FoyerClient-SingleInstance" : "Local\\FoyerRecorder-SingleInstance", out createdNew);
+                SingleInstance = new Mutex(true, ClientOnly ? "Local\\HulinClient-SingleInstance" : "Local\\HulinExpedition-SingleInstance", out createdNew);
                 if (!createdNew)
                 {
                     MessageBox.Show(ClientOnly ? "遊戲客戶端已經在執行中。" : "狐霖記錄器已經在執行中。\n一次只能開啟一個控制台。", "狐霖記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -214,7 +214,7 @@ namespace FoyerPlayer
                 if (hasW && ovW >= 800) W = ovW;
                 if (hasH && ovH >= 600) H = ovH;
                 if (string.IsNullOrEmpty(ProfileDir))
-                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "webview2-profile");
+                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "webview2-profile");
                 Directory.CreateDirectory(ProfileDir);
                 Port = Port > 0 ? FindFreeDebugPort(Port) : 0;
 
@@ -226,7 +226,7 @@ namespace FoyerPlayer
                 if (ClientOnly)
                 {
                     /* 只開遊戲，不建控制台、不啟動記錄器。
-                       控制台由另一個 FoyerPanel.exe 負責，關掉記錄器不會關到這裡。 */
+                       控制台由另一個 HulinRecorder.exe 負責，關掉記錄器不會關到這裡。 */
                     ShowOcrVisual = false;
                     CreateGameWindow();
                     Window.Show();
@@ -321,7 +321,7 @@ namespace FoyerPlayer
                 {
                     string args2 = (Port > 0 ? "--remote-debugging-port=" + Port + " --remote-allow-origins=* " : "")
                         + "--disable-features=CalculateNativeWinOcclusion --autoplay-policy=no-user-gesture-required";
-                    try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "foyer-debug.log"), DateTime.Now.ToString("HH:mm:ss") + " profile=" + ProfileDir + " port=" + Port + " args=" + args2 + Environment.NewLine); } catch { }
+                    try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "hulin-debug.log"), DateTime.Now.ToString("HH:mm:ss") + " profile=" + ProfileDir + " port=" + Port + " args=" + args2 + Environment.NewLine); } catch { }
                     CoreWebView2Environment env = await CoreWebView2Environment.CreateAsync(null, ProfileDir, new CoreWebView2EnvironmentOptions(args2));
                     WebEnv = env;
                     await View.EnsureCoreWebView2Async(env);
@@ -759,7 +759,7 @@ namespace FoyerPlayer
                 if (!File.Exists(script)) { Log("找不到 volume-watch.ps1，這次不記錄音量。"); return; }
                 string logDir = string.IsNullOrEmpty(RecordOut) ? Path.Combine(exeDir, "logs") : RecordOut;
                 Directory.CreateDirectory(logDir);
-                VolumeStopFile = Path.Combine(Path.GetTempPath(), "FoyerVolume-stop-" + Process.GetCurrentProcess().Id + ".flag");
+                VolumeStopFile = Path.Combine(Path.GetTempPath(), "HulinVolume-stop-" + Process.GetCurrentProcess().Id + ".flag");
                 try { if (File.Exists(VolumeStopFile)) File.Delete(VolumeStopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\" -LogDir \"" + logDir + "\" -StopFile \"" + VolumeStopFile + "\"";
                 var psi = new ProcessStartInfo("powershell.exe", ps);
@@ -802,9 +802,9 @@ namespace FoyerPlayer
                 foreach (var c in cs) if (File.Exists(c)) { RecorderScript = c; break; }
                 if (RecorderScript == null) { Log("找不到 backroom-logger.ps1，這次不錄 logs。"); return; }
                 if (string.IsNullOrEmpty(RecordOut)) RecordOut = Path.Combine(exeDir, "logs");
-                if (!EnsureWritable(RecordOut)) { RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "logs"); EnsureWritable(RecordOut); }
+                if (!EnsureWritable(RecordOut)) { RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "logs"); EnsureWritable(RecordOut); }
                 Directory.CreateDirectory(RecordOut);
-                StopFile = Path.Combine(Path.GetTempPath(), "FoyerLogger-stop-" + Process.GetCurrentProcess().Id + ".flag");
+                StopFile = Path.Combine(Path.GetTempPath(), "HulinExpedition-stop-" + Process.GetCurrentProcess().Id + ".flag");
                 try { if (File.Exists(StopFile)) File.Delete(StopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + RecorderScript + "\""
                     + " -OutDir \"" + RecordOut + "\" -Hwnd " + hwnd.ToInt64()
@@ -1349,8 +1349,8 @@ namespace FoyerPlayer
 
         static readonly string InputCaptureScript = @"
 (function(){
-  if(window.__foyerInputCapture) return;
-  window.__foyerInputCapture = true;
+  if(window.__hulinInputCapture) return;
+  window.__hulinInputCapture = true;
   function targetName(e){
     try { var t=e.target; return (t && t.tagName) ? String(t.tagName) : ''; } catch(x){ return ''; }
   }
@@ -1470,7 +1470,7 @@ namespace FoyerPlayer
                     + ",\"logger\":" + (Recorder == null ? "0" : Recorder.Id.ToString())
                     + ",\"kind\":\"webview2\",\"started\":\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"}";
                 WriteJson(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "state", "player.json"), json);
-                WriteJson(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "player.json"), json);
+                WriteJson(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "player.json"), json);
             }
             catch { }
         }

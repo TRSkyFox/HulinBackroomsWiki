@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+﻿import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { WIKI, INCOMING } from './paths.mjs';
@@ -64,8 +64,8 @@ const val = spawnSync(process.execPath, [path.join(here, 'validate.mjs'), stagin
 if (val.status !== 0) console.error('staging 驗證有問題（見 validation.json）');
 
 if (portable) {
-  // 給別人的版本：不碰 Wiki；只打包成可傳回的 .foyerlog.zip。
-  const out = path.join(process.env.LOCALAPPDATA || path.dirname(session), 'FoyerRecorder', 'exports');
+  // 給別人的版本：不碰 Wiki；只打包成可傳回的 .hulinlog.zip。
+  const out = path.join(process.env.LOCALAPPDATA || path.dirname(session), 'HulinExpedition', 'exports');
   writeProgress('export', 78, '打包紀錄');
   const exp = spawnSync(process.execPath, [path.join(here, 'export-package.mjs'), session, staging, '--out', out], { stdio: 'inherit' });
   if (exp.status !== 0) console.error('紀錄包匯出失敗');

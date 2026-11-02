@@ -1,4 +1,4 @@
-// sync.mjs — 把 pipeline 的唯一來源（logger/structured）同步到 app／可攜版。
+﻿// sync.mjs — 把 pipeline 的唯一來源（logger/structured）同步到 app／可攜版。
 //
 // 為什麼要有這個檔：2026-10-28 之前 parse.mjs 同時存在三份、內容各不相同，
 // 「修好的那份」和「實際在跑的那份」不是同一個檔案。從現在起：
@@ -32,7 +32,7 @@ if (!['all', 'app', 'dist'].includes(destFilter)) {
 
 const DEST = {
   app: path.join(ROOT, '客户端/app'),
-  dist: path.join(ROOT, '客户端/dist/FoyerRecorder')
+  dist: path.join(ROOT, '客户端/dist/HulinExpedition')
 };
 const dests = Object.entries(DEST).filter(([k]) => destFilter === 'all' || destFilter === k);
 
@@ -52,9 +52,8 @@ if (fs.existsSync(rapidExe)) PAIRS.push({ rel: 'structured/bin/rapid-ocr.exe', s
 PAIRS.push(
   { rel: 'backroom-logger.ps1', src: path.join(ROOT, '记录器/backroom-logger.ps1') },
   { rel: 'palette-from-shots.ps1', src: path.join(ROOT, '记录器/palette-from-shots.ps1') },
-  { rel: 'postprocess.mjs', src: path.join(ROOT, '客户端/postprocess.mjs') },
   { rel: 'volume-watch.ps1', src: path.join(ROOT, '客户端/volume-watch.ps1') },
-  { rel: 'FoyerPlayer.exe.config', src: path.join(ROOT, '客户端/FoyerPlayer.exe.config') }
+  { rel: 'HulinPlayer.exe.config', src: path.join(ROOT, '客户端/HulinPlayer.exe.config') }
 );
 
 function sha(file) {

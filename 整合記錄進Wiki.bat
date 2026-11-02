@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0¹¤¾ß\FoyerImport.exe" --repo "%~dp0"
+start "" "%~dp0tools\HulinArchive.exe" --repo "%~dp0"

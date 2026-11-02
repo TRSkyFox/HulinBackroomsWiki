@@ -1,4 +1,4 @@
-// font-correct.mjs — 用 RapidOCR 的辨識結果替換 Windows OCR 的行文字。
+﻿// font-correct.mjs — 用 RapidOCR 的辨識結果替換 Windows OCR 的行文字。
 //
 // 2026-10-29 改版：改成「邊錄邊認」。
 //   - 錄製時 ocr-worker.mjs 會在背景把新出現的裁圖丟給 RapidOCR，結果寫進 rapid.jsonl
@@ -30,9 +30,9 @@ export function safeCorrection(a, b) {
 function findRapid() {
   const cands = [
     path.join(HERE, 'bin', 'rapid-ocr.exe'),
-    path.resolve(HERE, '..', '..', '客户端', 'dist', 'FoyerRecorder', 'structured', 'bin', 'rapid-ocr.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'FoyerLogger', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'FoyerRecorder', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.resolve(HERE, '..', '..', '客户端', 'dist', 'HulinExpedition', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'HulinExpedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'HulinExpedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
   ];
   return cands.find(p => p && fs.existsSync(p)) || null;
 }

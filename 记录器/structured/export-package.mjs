@@ -1,10 +1,10 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 /*
- * 把一場 session 打包成可傳給 Wiki 主人的 .foyerlog.zip。
+ * 把一場 session 打包成可傳給 Wiki 主人的 .hulinlog.zip。
  * 不含手動截圖；Wiki content 不會被打包。
  *
  * node export-package.mjs <sessionDir> <stagingDir> [--out <dir>] [--include-raw]
@@ -15,7 +15,7 @@ if (args.length < 2) { console.error('usage: node export-package.mjs <sessionDir
 const session = path.resolve(args[0]);
 const staging = path.resolve(args[1]);
 const oi = args.indexOf('--out');
-const outDir = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(process.env.LOCALAPPDATA || session, 'FoyerRecorder', 'exports');
+const outDir = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(process.env.LOCALAPPDATA || session, 'HulinExpedition', 'exports');
 const includeRaw = args.includes('--include-raw');
 if (!fs.existsSync(session) || !fs.existsSync(staging)) { console.error('session/staging 不存在'); process.exit(2); }
 
@@ -54,7 +54,7 @@ const fileInfo = files.map(p => ({
 let report = {};
 try { report = JSON.parse(fs.readFileSync(path.join(staging, 'report.json'), 'utf8')); } catch { }
 const manifest = {
-  format: 'foyerlog-staging',
+  format: 'hulinlog-staging',
   version: 1,
   session: name,
   created: new Date().toISOString(),
@@ -76,7 +76,7 @@ fs.writeFileSync(path.join(work, 'README.txt'), [
 ].join('\r\n'), 'utf8');
 
 fs.mkdirSync(outDir, { recursive: true });
-const zip = path.join(outDir, 'FoyerLog-' + name + '.foyerlog.zip');
+const zip = path.join(outDir, 'HulinLog-' + name + '.hulinlog.zip');
 try { if (fs.existsSync(zip)) fs.rmSync(zip, { force: true }); } catch { }
 const ps = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
   'Compress-Archive -Path "' + work.replace(/"/g, '""') + '\\*" -DestinationPath "' + zip.replace(/"/g, '""') + '" -Force'], { encoding: 'utf8' });

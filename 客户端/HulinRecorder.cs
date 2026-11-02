@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,7 +10,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-namespace FoyerPanel
+namespace HulinRecorder
 {
     static class Program
     {
@@ -54,21 +54,21 @@ namespace FoyerPanel
                     }
                 }
                 bool createdNew = false;
-                SingleInstance = new Mutex(true, "Local\\FoyerPanel-SingleInstance", out createdNew);
+                SingleInstance = new Mutex(true, "Local\\HulinRecorder-SingleInstance", out createdNew);
                 if (!createdNew)
                 {
-                    MessageBox.Show("狐霖記錄器控制台已經在執行中。", "狐霖記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("狐霖勘探記錄器已經在執行中。", "狐霖勘探記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return 0;
                 }
 
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-                ClientPath = Path.Combine(exeDir, "FoyerClient.exe");
-                if (!File.Exists(ClientPath)) ClientPath = Path.Combine(exeDir, "FoyerPlayer.exe");
+                ClientPath = Path.Combine(exeDir, "HulinClient.exe");
+                if (!File.Exists(ClientPath)) ClientPath = Path.Combine(exeDir, "HulinPlayer.exe");
                 RecorderScript = Path.Combine(exeDir, "backroom-logger.ps1");
                 if (string.IsNullOrEmpty(RecordOut))
-                    RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerRecorder", "logs");
+                    RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "logs");
                 if (string.IsNullOrEmpty(ProfileDir))
-                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FoyerLogger", "webview2-profile");
+                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "webview2-profile");
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -86,7 +86,7 @@ namespace FoyerPanel
         static void CreateUi()
         {
             ControlWindow = new Form();
-            ControlWindow.Text = "狐霖記錄器控制";
+            ControlWindow.Text = "狐霖勘探記錄器";
             ControlWindow.ClientSize = new Size(430, 340);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -257,7 +257,7 @@ namespace FoyerPanel
         {
             try
             {
-                string[] names = { Path.GetFileNameWithoutExtension(ClientPath), "FoyerClient", "FoyerPlayer" };
+                string[] names = { Path.GetFileNameWithoutExtension(ClientPath), "HulinClient", "HulinPlayer" };
                 foreach (string n in names)
                 {
                     foreach (var p in Process.GetProcessesByName(n))
@@ -285,7 +285,7 @@ namespace FoyerPanel
         {
             try
             {
-                if (!File.Exists(ClientPath)) { SetState("找不到 FoyerClient.exe", Color.FromArgb(255, 120, 110)); return false; }
+                if (!File.Exists(ClientPath)) { SetState("找不到 HulinClient.exe", Color.FromArgb(255, 120, 110)); return false; }
                 Directory.CreateDirectory(ProfileDir);
                 string ps = "--client-only --url \"" + Url.Replace("\"", "") + "\" --preset " + Preset + " --no-record"
                     + " --logdir \"" + RecordOut.Replace("\"", "") + "\" --profile \"" + ProfileDir.Replace("\"", "") + "\"";
@@ -369,7 +369,7 @@ namespace FoyerPanel
             {
                 if (!File.Exists(RecorderScript)) { SetState("找不到 backroom-logger.ps1", Color.FromArgb(255, 120, 110)); return; }
                 Directory.CreateDirectory(RecordOut);
-                StopFile = Path.Combine(Path.GetTempPath(), "FoyerPanel-stop-" + Process.GetCurrentProcess().Id + ".flag");
+                StopFile = Path.Combine(Path.GetTempPath(), "HulinRecorder-stop-" + Process.GetCurrentProcess().Id + ".flag");
                 try { if (File.Exists(StopFile)) File.Delete(StopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + RecorderScript + "\""
                     + " -OutDir \"" + RecordOut + "\" -Hwnd " + GameHwnd.ToInt64()
@@ -895,3 +895,4 @@ namespace FoyerPanel
         public string detail { get; set; }
     }
 }
+

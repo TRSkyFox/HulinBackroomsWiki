@@ -1,4 +1,4 @@
-// ocr-worker.mjs — 錄製期間在背景把 linecrops 用 RapidOCR 重認一次。
+﻿// ocr-worker.mjs — 錄製期間在背景把 linecrops 用 RapidOCR 重認一次。
 //
 // 為什麼要有這支：rapid-ocr.exe 是 PyInstaller 單檔包（119MB），每次啟動要解包模型，
 // 1~3 秒起跳。原本的做法是收工後一次把所有裁圖丟給它 —— 11 分鐘的局要等 87 秒。
@@ -34,8 +34,8 @@ const TICK_MS = 400;
 function findRapid() {
   const cands = [
     path.join(HERE, 'bin', 'rapid-ocr.exe'),
-    path.resolve(HERE, '..', '..', '客户端', 'dist', 'FoyerRecorder', 'structured', 'bin', 'rapid-ocr.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'FoyerLogger', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.resolve(HERE, '..', '..', '客户端', 'dist', 'HulinExpedition', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'HulinExpedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
   ];
   return cands.find(p => p && fs.existsSync(p)) || null;
 }

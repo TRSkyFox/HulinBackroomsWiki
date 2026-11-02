@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = 'Stop'
 $src = Join-Path $PSScriptRoot 'app'
-$dst = Join-Path $env:LOCALAPPDATA 'FoyerLogger\app'
+$dst = Join-Path $env:LOCALAPPDATA 'HulinExpedition\app'
 
 New-Item -ItemType Directory -Force $dst | Out-Null
 $copyFailed = @()
@@ -53,7 +53,7 @@ if (-not (Test-Path $appLogs)) {
   cmd /c mklink /J "$appLogs" "$logDir" | Out-Null
 }
 
-$exe = Join-Path $dst 'FoyerPanel.exe'
+$exe = Join-Path $dst 'HulinRecorder.exe'
 $argsList = @('--url', $Url, '--logdir', $logDir)
 if ($Profile) { $argsList += @('--profile', $Profile) }
 if ($NoRecord) { $argsList += '--no-record' }

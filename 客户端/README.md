@@ -1,9 +1,9 @@
-# 狐霖的後室 RPG — 自帶 Edge 的遊戲客戶端 ＋ logs 記錄器
+﻿# 狐霖的後室 RPG — 自帶 Edge 的遊戲客戶端 ＋ logs 記錄器
 
 這個資料夾分成兩個程式：
 
-- **FoyerPanel.exe**：記錄器控制台、OCR 浮層、整理流程。
-- **FoyerClient.exe**：只負責 WebView2 遊戲視窗。
+- **HulinRecorder.exe**：記錄器控制台、OCR 浮層、整理流程。
+- **HulinClient.exe**：只負責 WebView2 遊戲視窗。
 
 兩個是獨立 process。更新面板／記錄器 script 不需要重開遊戲，只要重開控制台。
 
@@ -17,18 +17,18 @@
 
 它會：
 
-1. 把 `app\` 複製到 `%LOCALAPPDATA%\FoyerLogger\app\`
+1. 把 `app\` 複製到 `%LOCALAPPDATA%\HulinExpedition\app\`
 2. 把 `app\logs` 接成 `D:\BACKROOMS\记录器\logs` 的 junction
-3. 從本機那份啟動 `FoyerPanel.exe`
-4. 控制台再啟動 `FoyerClient.exe`，遊戲載入後自動開始記錄
+3. 從本機那份啟動 `HulinRecorder.exe`
+4. 控制台再啟動 `HulinClient.exe`，遊戲載入後自動開始記錄
 
-> 更新面板時如果客戶端還在跑，`start.ps1` 會跳過被鎖住的 `FoyerClient.exe`／WebView DLL，只更新面板；之後重開控制台即可。
+> 更新面板時如果客戶端還在跑，`start.ps1` 會跳過被鎖住的 `HulinClient.exe`／WebView DLL，只更新面板；之後重開控制台即可。
 
 ## 停止／生命週期
 
 客戶端和記錄器是分開的 process：
 
-- **關閉控制台（X）**：只關 `FoyerPanel.exe`；客戶端繼續跑。重新開控制台會自動接上現有客戶端。
+- **關閉控制台（X）**：只關 `HulinRecorder.exe`；客戶端繼續跑。重新開控制台會自動接上現有客戶端。
 - **停止記錄**：只停記錄器，客戶端繼續；再按「開始記錄」會續錄同一場。
 - **停止並整理**：停止記錄器並跑 `postprocess.mjs`；**不會關客戶端**。
 - **關閉客戶端**：才關遊戲視窗；記錄器在背景快速停止，**不跑整理**。
@@ -43,7 +43,7 @@
 狐霖記錄器控制
 ```
 
-- **開啟／關閉客戶端**：啟動或關閉 `FoyerClient.exe`。關閉客戶端不會跑整理。
+- **開啟／關閉客戶端**：啟動或關閉 `HulinClient.exe`。關閉客戶端不會跑整理。
 - **開始／停止記錄**：只控制記錄器。停止後遊戲仍開著，可續錄同一場。
 - **OCR 浮層**：同時開關遊戲畫面的透明框線＋右側 OCR 讀取面板；讀取面板可拖曳調整寬度。
 - **停止並整理**：停止記錄器並跑整理流程；不會關客戶端。整理時下方有進度條與目前階段。
@@ -68,10 +68,10 @@
 啟動.bat -NoOverlay
 ```
 
-也可以直接給 FoyerPlayer：
+也可以直接給 HulinPlayer：
 
 ```text
-FoyerPanel.exe --no-overlay
+HulinRecorder.exe --no-overlay
 ```
 
 ## 整理（clean\）
@@ -129,7 +129,7 @@ node D:\BACKROOMS\wiki\content\build.mjs
 要傳給別人時，傳這個壓縮檔：
 
 ```text
-D:\BACKROOMS\客户端\dist\FoyerRecorder.zip
+D:\BACKROOMS\客户端\dist\HulinExpedition.zip
 ```
 
 對方解壓後雙擊：
@@ -140,14 +140,14 @@ D:\BACKROOMS\客户端\dist\FoyerRecorder.zip
 
 - 不需要 Wiki
 - 不需要安裝 Node（已內建 `node.exe`）
-- logs 存在 `%LOCALAPPDATA%\FoyerRecorder\logs`
+- logs 存在 `%LOCALAPPDATA%\HulinExpedition\logs`
 - 關閉遊戲後，紀錄包會出現在：
 
 ```text
-%LOCALAPPDATA%\FoyerRecorder\exports\FoyerLog-<session>.foyerlog.zip
+%LOCALAPPDATA%\HulinExpedition\exports\HulinLog-<session>.hulinlog.zip
 ```
 
-對方把 `.foyerlog.zip` 傳回來即可。
+對方把 `.hulinlog.zip` 傳回來即可。
 
 Wiki 主人收到後，把 zip 拖到：
 
@@ -169,7 +169,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File D:\BACKROOMS\wiki\import-pac
 D:\BACKROOMS\记录器\logs\backroom-YYYYMMDD-HHMMSS\
 ```
 
-`%LOCALAPPDATA%\FoyerLogger\app\logs` 是指向這裡的 junction，所以從哪邊開都看到同一批 logs。
+`%LOCALAPPDATA%\HulinExpedition\app\logs` 是指向這裡的 junction，所以從哪邊開都看到同一批 logs。
 
 每場一個資料夾：
 
@@ -234,9 +234,9 @@ I 你：得到「急救毯」
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-`build.ps1` 會從 `FoyerPlayer.cs` 重新編譯，並把 WebView2、`backroom-logger.ps1` 放進 `app\`。
+`build.ps1` 會從 `HulinPlayer.cs` 重新編譯，並把 WebView2、`backroom-logger.ps1` 放進 `app\`。
 
-- `FoyerPlayer.cs`：WebView2 客戶端＋啟動記錄器
+- `HulinPlayer.cs`：WebView2 客戶端＋啟動記錄器
 - `app\`：可直接複製到本機執行的成品
 - `start.ps1`／`啟動.bat`：複製到本機並啟動
 ## 音量記錄

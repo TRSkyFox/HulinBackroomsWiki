@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +31,7 @@ const content = path.join(wiki, 'content');
 const floorsRoot = path.join(content, 'floors');
 const logger = path.join(root, '记录器/structured');
 const app = path.join(root, '客户端/app/structured');
-const dist = path.join(root, '客户端/dist/FoyerRecorder/structured');
+const dist = path.join(root, '客户端/dist/HulinExpedition/structured');
 
 const out = { ok: true, checks: [] };
 function check(name, ok, detail) { out.checks.push({ name, ok: !!ok, detail: detail === undefined ? '' : String(detail) }); if (!ok) out.ok = false; }
