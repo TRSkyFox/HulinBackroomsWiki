@@ -4280,7 +4280,8 @@ function Get-ShopSnapshot {
     if ($nm.Length -lt 1 -or $nm.Length -gt 24) { continue }
     $price = $null
     $priceLine = $arr | Where-Object {
-      [int]$_.Y -gt ($st.Y - 2) -and [int]$_.Y -lt ($st.Y + 110) -and [int]$_.X -lt $st.X -and
+      [int]$_.Y -gt ($st.Y - 2) -and [int]$_.Y -lt ($st.Y + 180) -and
+      [Math]::Abs([int]$_.X - [int]$nameLine.X) -le 220 -and
       ([string]$_.Text) -match '^\s*(\d{1,4})\s*硬币'
     } | Sort-Object Y | Select-Object -First 1
     if ($priceLine -and ([string]$priceLine.Text -match '(\d{1,4})\s*(?:硬币|硬幣)')) { $price = [int]$Matches[1] }
@@ -4288,12 +4289,18 @@ function Get-ShopSnapshot {
   }
   if ($items.Count -lt 1) { return $null }
 
-  $merchantLine = $arr | Where-Object { ([string]$_.Text) -match '商人|店主|店長|摊主|攤主' } | Sort-Object Y | Select-Object -First 1
-  $merchant = if ($merchantLine) { ([string]$merchantLine.Text).Trim() } else { '' }
   $firstY = ($stock | Measure-Object Y -Minimum).Minimum
+  $nameCandidates = $arr | Where-Object {
+    [int]$_.Y -lt ($firstY - 15) -and [int]$_.X -ge 150 -and [int]$_.X -le 2200 -and
+    ([string]$_.Text).Trim().Length -ge 2 -and ([string]$_.Text).Trim().Length -le 16 -and
+    ([string]$_.Text) -notmatch '^\s*\d+\s*/\s*\d+\s*$|Level\s*\d|第\s*\d+\s*层|硬币|剩\s*\d|购买|購買|买不了|買不了|打开|打開|买好了|背包|先收起来|逛商店|投票|离开'
+  } | Sort-Object Y
+  $merchantLine = $nameCandidates | Select-Object -Last 1
+  $merchant = if ($merchantLine) { ([string]$merchantLine.Text).Trim() } else { '' }
   $introLines = $arr | Where-Object {
     [int]$_.Y -gt ($(if ($merchantLine) { [int]$merchantLine.Y } else { 0 })) -and [int]$_.Y -lt ($firstY - 8) -and
-    ([string]$_.Text) -notmatch 'Level\s*\d|第\s*\d+\s*层|买好了|买好了|打开背包|硬币|剩\s*\d'
+    ([string]$_.Text).Trim().Length -ge 10 -and
+    ([string]$_.Text) -notmatch 'Level\s*\d|第\s*\d+\s*层|买好了|买好了|打开背包|硬币|剩\s*\d|背包|先收起来|逛商店|投票'
   } | Sort-Object Y
   $intro = (($introLines | ForEach-Object { [string]$_.Text }) -join '')
   $sell = $all -match '卖东西给这里|賣東西給這裡|卖东西|賣東西'
