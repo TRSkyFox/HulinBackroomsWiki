@@ -32,7 +32,6 @@ namespace HulinRecorder
         static OcrOverlayForm Overlay;
         static OcrReadoutForm Readout;
         static double CaptureInterval = 0.5;
-        static bool AutoRecord = true;
         static string Preset = "1600x900";
 
         [STAThread]
@@ -50,7 +49,6 @@ namespace HulinRecorder
                         case "--preset": if (i + 1 < args.Length) Preset = args[++i]; break;
                         case "--overlay": ShowOcrVisual = true; ShowOcrReadout = true; break;
                         case "--no-overlay": ShowOcrVisual = false; ShowOcrReadout = false; break;
-                        case "--no-record": AutoRecord = false; break;
                     }
                 }
                 bool createdNew = false;
@@ -76,7 +74,7 @@ namespace HulinRecorder
                 ControlWindow.Show();
                 FindClient();
                 if (GameHwnd == IntPtr.Zero) SetState("狀態：選好解析度後開啟客戶端", Color.FromArgb(200, 200, 200));
-                else { SetState("狀態：客戶端已開", Color.FromArgb(130, 220, 140)); ScheduleAutoRecord(); }
+                else { SetState("狀態：客戶端已開（按開始記錄）", Color.FromArgb(130, 220, 140)); }
                 Application.Run(new ApplicationContext(ControlWindow));
                 return 0;
             }
@@ -304,7 +302,6 @@ namespace HulinRecorder
                         GameHwnd = Client.MainWindowHandle;
                         CreateOverlay();
                         SetState("狀態：客戶端已開", Color.FromArgb(130, 220, 140));
-                        ScheduleAutoRecord();
                         return true;
                     }
                 }
@@ -317,27 +314,6 @@ namespace HulinRecorder
                 SetState("開啟客戶端失敗", Color.FromArgb(255, 120, 110));
                 return false;
             }
-        }
-
-        static void ScheduleAutoRecord()
-        {
-            if (!AutoRecord) return;
-            var t = new Thread(delegate ()
-            {
-                Thread.Sleep(2500);
-                try
-                {
-                    if (ControlWindow == null || ControlWindow.IsDisposed) return;
-                    ControlWindow.BeginInvoke((Action)delegate
-                    {
-                        if (GameHwnd == IntPtr.Zero || !IsWindow(GameHwnd)) return;
-                        if (Recorder == null || Recorder.HasExited) StartRecording();
-                    });
-                }
-                catch { }
-            });
-            t.IsBackground = true;
-            t.Start();
         }
 
         static void CloseClient()
@@ -397,6 +373,8 @@ namespace HulinRecorder
         {
             if (PipelineRunning) return;
             StopRecorder(true);
+            CloseOverlay();
+            ClearOverlayState();
             SetState(GameHwnd != IntPtr.Zero ? "狀態：已停止記錄（客戶端仍開）" : "狀態：已停止記錄", Color.FromArgb(255, 190, 100));
         }
 
@@ -424,6 +402,8 @@ namespace HulinRecorder
                 try
                 {
                     StopRecorder(false);
+                    CloseOverlay();
+                    ClearOverlayState();
                     RunExport(session);
                     SetState("狀態：匯出完成 " + Path.GetFileName(session) + " → " + exportDir, Color.FromArgb(130, 220, 140));
                 }
@@ -608,6 +588,16 @@ namespace HulinRecorder
         {
             try { if (Readout != null && !Readout.IsDisposed) Readout.Close(); } catch { }
             Readout = null;
+        }
+
+        static void ClearOverlayState()
+        {
+            try
+            {
+                string p = OverlayPath();
+                if (!string.IsNullOrEmpty(p) && File.Exists(p)) File.Delete(p);
+            }
+            catch { }
         }
 
         static void CloseOverlay()
