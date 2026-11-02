@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0客户端\app\FoyerImport.exe" --repo "%~dp0"
+start "" "%~dp0工具\FoyerImport.exe" --repo "%~dp0"

@@ -27,13 +27,6 @@ $panelOut = Join-Path $app 'FoyerPanel.exe'
   /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll $panelSrc
 if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（FoyerPanel）' }
 
-# 整合 Wiki：獨立程式（匯出仍留在面板）
-$importSrc = Join-Path $root 'FoyerImport.cs'
-$importOut = Join-Path $app 'FoyerImport.exe'
-& $csc /nologo /target:winexe /platform:x64 /out:$importOut `
-  /r:System.Windows.Forms.dll /r:System.Drawing.dll $importSrc
-if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（FoyerImport）' }
-
 # 遊戲客戶端：client-only 模式；獨立檔名，才能在客戶端執行時更新面板。
 try {
   Copy-Item $outExe (Join-Path $app 'FoyerClient.exe') -Force -ErrorAction Stop
@@ -53,4 +46,4 @@ Copy-Item (Join-Path $root '..\记录器\palette-from-shots.ps1') $app -Force
 New-Item -ItemType Directory -Force (Join-Path $app 'structured') | Out-Null
 Copy-Item (Join-Path $root '..\记录器\structured\*') (Join-Path $app 'structured') -Recurse -Force
 
-Write-Host '已編譯：FoyerPanel／FoyerPlayer／FoyerClient／FoyerImport'
+Write-Host '已編譯：FoyerPanel／FoyerPlayer／FoyerClient'

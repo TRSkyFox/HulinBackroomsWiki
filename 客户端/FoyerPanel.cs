@@ -21,7 +21,6 @@ namespace FoyerPanel
         static IntPtr GameHwnd = IntPtr.Zero;
         static bool PipelineRunning = false, AllowExit = false, ShowOcr = true;
         static bool ProgressDone = false;
-        static string ActiveSession;
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel;
@@ -168,15 +167,10 @@ namespace FoyerPanel
 
             var exportBtn = new Button();
             exportBtn.Text = "停止並匯出";
-            exportBtn.SetBounds(14, 292, 195, 30);
+            exportBtn.SetBounds(14, 292, 398, 30);
             exportBtn.Click += delegate { StopAndExport(); };
             ControlWindow.Controls.Add(exportBtn);
 
-            var importBtn = new Button();
-            importBtn.Text = "整合 Wiki（獨立程式）";
-            importBtn.SetBounds(217, 292, 195, 30);
-            importBtn.Click += delegate { LaunchTool("FoyerImport.exe", "--repo \"" + RepoRoot() + "\""); };
-            ControlWindow.Controls.Add(importBtn);
 
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
             {
@@ -418,20 +412,6 @@ namespace FoyerPanel
             return Path.GetFullPath(RecordOut);
         }
 
-        static void LaunchTool(string name, string args)
-        {
-            try
-            {
-                string exe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name);
-                if (!File.Exists(exe)) { SetState("找不到 " + name, Color.FromArgb(255, 120, 110)); return; }
-                var psi = new ProcessStartInfo(exe, args);
-                psi.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                psi.UseShellExecute = true;
-                Process.Start(psi);
-            }
-            catch (Exception ex) { Log("launch: " + ex); SetState("開啟工具失敗", Color.FromArgb(255, 120, 110)); }
-        }
-
         static void StopAndExport()
         {
             if (PipelineRunning) return;
@@ -471,35 +451,6 @@ namespace FoyerPanel
             var p = Process.Start(psi);
             if (p != null) p.WaitForExit();
             if (p != null && p.ExitCode != 0) throw new Exception("run.mjs exit " + p.ExitCode);
-        }
-
-        static void StopAndProcess()
-        {
-            if (PipelineRunning) return;
-            string ses = LatestSession();
-            if (ses == null) { SetState("沒有可整理的場次", Color.FromArgb(255, 150, 120)); return; }
-            PipelineRunning = true;
-            ProgressDone = false;
-            SetState("狀態：停止記錄並整理…", Color.FromArgb(255, 190, 100));
-            var t = new Thread(delegate ()
-            {
-                try
-                {
-                    StopRecorder(false);
-                    RunPostprocess();
-                    SetState("狀態：整理完成", Color.FromArgb(130, 220, 140));
-                }
-                catch (Exception ex) { Log("process: " + ex); SetState("整理失敗（看 player.log）", Color.FromArgb(255, 120, 110)); }
-                finally
-                {
-                    PipelineRunning = false;
-                    ProgressDone = true;
-                    StageLabel.Text = "上次整理：完成";
-                    StageBar.Value = 100;
-                }
-            });
-            t.IsBackground = true;
-            t.Start();
         }
 
         static void RefreshProgress()
@@ -587,25 +538,6 @@ namespace FoyerPanel
                 return dirs[dirs.Length - 1];
             }
             catch { return null; }
-        }
-
-        static void RunPostprocess()
-        {
-            string session = LatestSession();
-            if (session == null) return;
-            ActiveSession = session;
-            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-            string script = Path.Combine(exeDir, "postprocess.mjs");
-            if (!File.Exists(script)) return;
-            string node = Path.Combine(exeDir, "node.exe");
-            if (!File.Exists(node)) node = "node.exe";
-            var psi = new ProcessStartInfo(node, "\"" + script + "\" \"" + session + "\"");
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-            psi.WindowStyle = ProcessWindowStyle.Hidden;
-            psi.WorkingDirectory = exeDir;
-            var p = Process.Start(psi);
-            if (p != null) p.WaitForExit();
         }
 
         static string OverlayPath()
