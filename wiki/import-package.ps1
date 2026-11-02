@@ -53,17 +53,24 @@ if ($Staging) {
   }
   $pending = Get-ChildItem -LiteralPath $stagingRoot -Directory -Filter 'import-*' -ErrorAction SilentlyContinue |
     Where-Object { (Get-StagingPackageHash $_.FullName) -eq $packageHash } | Select-Object -First 1
-  if ($pending) {
-    throw ('這個紀錄包已在待審查 staging，請直接套用：' + $pending.FullName)
-  }
-  $name = 'import-' + [IO.Path]::GetFileNameWithoutExtension($Package) + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
-  $dest = Join-Path $stagingRoot $name
-  New-Item -ItemType Directory -Force $dest | Out-Null
-  Expand-Archive -LiteralPath $Package -DestinationPath $dest -Force
-  [System.IO.File]::WriteAllText((Join-Path $dest '.package-sha256'), $packageHash, (New-Object System.Text.UTF8Encoding($false)))
-  $staging = Join-Path $dest 'staging'
-  if (-not (Test-Path -LiteralPath (Join-Path $staging 'validation.json'))) {
-    throw '紀錄包裡找不到 staging\validation.json'
+  if ($pending -and $Apply) {
+    # 上次只展開／驗證過（或中途失敗），直接沿用同一份 staging 再套用，不重複展開。
+    $dest = $pending.FullName
+    $staging = Join-Path $dest 'staging'
+    Write-Host ('沿用待審查 staging：' + $dest)
+  } else {
+    if ($pending) {
+      throw ('這個紀錄包已在待審查 staging，請直接套用：' + $pending.FullName)
+    }
+    $name = 'import-' + [IO.Path]::GetFileNameWithoutExtension($Package) + '-' + (Get-Date -Format 'yyyyMMdd-HHmmss')
+    $dest = Join-Path $stagingRoot $name
+    New-Item -ItemType Directory -Force $dest | Out-Null
+    Expand-Archive -LiteralPath $Package -DestinationPath $dest -Force
+    [System.IO.File]::WriteAllText((Join-Path $dest '.package-sha256'), $packageHash, (New-Object System.Text.UTF8Encoding($false)))
+    $staging = Join-Path $dest 'staging'
+    if (-not (Test-Path -LiteralPath (Join-Path $staging 'validation.json'))) {
+      throw '紀錄包裡找不到 staging\validation.json'
+    }
   }
 }
 
