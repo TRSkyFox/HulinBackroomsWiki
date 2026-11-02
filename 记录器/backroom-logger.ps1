@@ -1423,6 +1423,24 @@ function Get-BinaryOcrBitmap($Bmp) {
   } catch { $out.Dispose(); return $null }
 }
 
+# 只 hash OCR 真正關心的區域；標題列倒數、血條動畫不該讓整幀重跑 OCR。
+function Get-BitmapRectHash {
+  param($Bmp, $Rect)
+  if (-not $Bmp -or -not $Rect -or $Rect.Width -lt 2 -or $Rect.Height -lt 2) { return '' }
+  $c = $null
+  try {
+    $c = $Bmp.Clone($Rect, $Bmp.PixelFormat)
+    $fm = $c.LockBits((New-Object System.Drawing.Rectangle(0, 0, $c.Width, $c.Height)), [System.Drawing.Imaging.ImageLockMode]::ReadOnly, $c.PixelFormat)
+    try {
+      $len = [Math]::Abs($fm.Stride) * $c.Height
+      $buf = New-Object byte[] $len
+      [System.Runtime.InteropServices.Marshal]::Copy($fm.Scan0, $buf, 0, $len)
+      $sha = [System.Security.Cryptography.SHA1]::Create()
+      try { return ([BitConverter]::ToString($sha.ComputeHash($buf))).Replace('-', '').Substring(0, 16) } finally { $sha.Dispose() }
+    } finally { $c.UnlockBits($fm) }
+  } catch { return '' } finally { if ($c) { $c.Dispose() } }
+}
+
 # 放大點陣圖（OCR 前用）。HighQualityBicubic 對小字效果最好。
 function Scale-Image {  param($Bmp, [double]$Factor)
   if (-not $Bmp) { return $Bmp }
@@ -5110,15 +5128,14 @@ try {
       # structured.jsonl 照樣寫這一幀，所以敵名連 2 幀投票那些邏輯不受影響。
       $frameHash = ''
       try {
-        $rectAll = New-Object System.Drawing.Rectangle(0, 0, $crop.Width, $crop.Height)
-        $fm = $crop.LockBits($rectAll, [System.Drawing.Imaging.ImageLockMode]::ReadOnly, $crop.PixelFormat)
-        try {
-          $len = [Math]::Abs($fm.Stride) * $crop.Height
-          $buf = New-Object byte[] $len
-          [System.Runtime.InteropServices.Marshal]::Copy($fm.Scan0, $buf, 0, $len)
-          $sha = [System.Security.Cryptography.SHA1]::Create()
-          try { $frameHash = ([BitConverter]::ToString($sha.ComputeHash($buf))).Replace('-', '').Substring(0, 16) } finally { $sha.Dispose() }
-        } finally { $crop.UnlockBits($fm) }
+        $hashParts = New-Object System.Collections.Generic.List[string]
+        foreach ($nm in @('main', 'opts')) {
+          $sp = $frameSpecs | Where-Object { $_.Name -eq $nm } | Select-Object -First 1
+          if (-not $sp) { continue }
+          $rc = ConvertTo-RegionRect -Spec $sp.Spec -CropW $crop.Width -CropH $crop.Height -Name $nm
+          if ($rc) { $hashParts.Add((Get-BitmapRectHash -Bmp $crop -Rect $rc)) }
+        }
+        if ($hashParts.Count -gt 0) { $frameHash = ($hashParts -join '') } else { $frameHash = '' }
       } catch { $frameHash = '' }
       $reuseFrame = ($layout -eq 'normal' -and $frameHash -ne '' -and $frameHash -eq $state.LastImgHash -and $state.LastRawFrame -and $state.LastRawFrame.Count -gt 0)
       if ($reuseFrame) {
@@ -5270,64 +5287,6 @@ try {
           $all | Select-Object -First ($all.Count - $KeepFrames) | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
         }
       }
-      # 選項被白色高亮時 Windows OCR 會整行漏掉（例如「伸手碰鏡子」）。
-      # 有「要怎麼做？」時，用 RapidOCR 對整個選項區重跑一次，補回漏掉的行。
-      $promptLine = $rawFrame | Where-Object { $_.Region -eq 'main' -and $RxPrompt.IsMatch([string]$_.Text) } | Select-Object -First 1
-      if (-not $rapidSvc -and $promptLine -and $layout -eq 'normal') {
-        try {
-          $optsRc = ConvertTo-RegionRect -Spec $RegionOpts -CropW $origW -CropH $origH -Name 'opts'
-          if ($optsRc) {
-            $optsBmp = $crop.Clone($optsRc, $crop.PixelFormat)
-            $optsPng = Join-Path $env:TEMP ('foyer-opts-' + $PID + '.png')
-            $optsJson = Join-Path $env:TEMP ('foyer-opts-' + $PID + '.json')
-            $optsBmp.Save($optsPng, [System.Drawing.Imaging.ImageFormat]::Png)
-            $optsBmp.Dispose()
-            $sha = [System.Security.Cryptography.SHA1]::Create()
-            $optsHash = [BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($optsPng))).Replace('-', '')
-            $sha.Dispose()
-            if ($optsHash -ne $script:OptsDetectHash -or $state.SessionName -ne $script:OptsDetectSession) {
-              $optsExe = @(
-                (Join-Path $PSScriptRoot 'structured\rapid-ocr-detect\rapid-ocr-detect.exe'),
-                (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\rapid-ocr-detect\rapid-ocr-detect.exe'),
-                'D:\BACKROOMS\记录器\structured\rapid-ocr-detect\rapid-ocr-detect.exe',
-                (Join-Path $PSScriptRoot 'structured\rapid-ocr-detect.exe')
-              ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-              if ($optsExe) {
-                $optsTmp = Join-Path $OutDir '.opts-tmp'
-                New-Item -ItemType Directory -Force -Path $optsTmp | Out-Null
-                $oldTmp = $env:TMP; $oldTemp = $env:TEMP
-                try {
-                  $env:TMP = $optsTmp; $env:TEMP = $optsTmp
-                  & $optsExe $optsPng $optsJson 2>$null | Out-Null
-                } finally {
-                  $env:TMP = $oldTmp; $env:TEMP = $oldTemp
-                }
-                if (Test-Path -LiteralPath $optsJson) {
-                  $rows = @(Get-Content -LiteralPath $optsJson -Raw -Encoding UTF8 | ConvertFrom-Json)
-                  foreach ($row in $rows) {
-                    $t = Repair-OcrText (Convert-OcrText ([string]$row.text))
-                    if (-not $t) { continue }
-                    $key = ($t -replace '\s', '')
-                    $dup = $rawFrame | Where-Object { $_.Region -eq 'opts' -and (([string]$_.Text -replace '\s', '') -eq $key) } | Select-Object -First 1
-                    if ($dup) { continue }
-                    $xs = @($row.box | ForEach-Object { [double]$_[0] })
-                    $ys = @($row.box | ForEach-Object { [double]$_[1] })
-                    $x0 = ($xs | Measure-Object -Minimum).Minimum + $optsRc.Left
-                    $x1 = ($xs | Measure-Object -Maximum).Maximum + $optsRc.Left
-                    $y0 = ($ys | Measure-Object -Minimum).Minimum + $optsRc.Top
-                    $y1 = ($ys | Measure-Object -Maximum).Maximum + $optsRc.Top
-                    $rawFrame.Add([pscustomobject]@{ Text = $t; Region = 'opts'; X = [int]$x0; Y = [int]$y0; W = [int]($x1 - $x0); H = [int]($y1 - $y0); Crop = '' })
-                  }
-                }
-              }
-              $script:OptsDetectHash = $optsHash
-              $script:OptsDetectSession = [string]$state.SessionName
-            }
-            Remove-Item -LiteralPath $optsPng, $optsJson -Force -ErrorAction SilentlyContinue
-          }
-        } catch { }
-      }
-
       $state.Frames++
       $lines = $rawFrame
 
