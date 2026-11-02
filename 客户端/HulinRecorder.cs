@@ -87,7 +87,7 @@ namespace HulinRecorder
         {
             ControlWindow = new Form();
             ControlWindow.Text = "狐霖勘探記錄器";
-            ControlWindow.ClientSize = new Size(430, 340);
+            ControlWindow.ClientSize = new Size(430, 300);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -145,6 +145,9 @@ namespace HulinRecorder
             StopRecBtn = Btn("停止記錄", 142, 24, 120, 32);
             StopRecBtn.Click += delegate { StopRecording(); };
             recGroup.Controls.Add(StopRecBtn);
+            var exportBtn = Btn("停止並匯出", 270, 24, 120, 32);
+            exportBtn.Click += delegate { StopAndExport(); };
+            recGroup.Controls.Add(exportBtn);
 
             StateLabel = new Label();
             StateLabel.SetBounds(14, 218, 402, 24);
@@ -164,12 +167,6 @@ namespace HulinRecorder
             StageBar.Maximum = 100;
             StageBar.Value = 0;
             ControlWindow.Controls.Add(StageBar);
-
-            var exportBtn = new Button();
-            exportBtn.Text = "停止並匯出";
-            exportBtn.SetBounds(14, 292, 398, 30);
-            exportBtn.Click += delegate { StopAndExport(); };
-            ControlWindow.Controls.Add(exportBtn);
 
 
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
