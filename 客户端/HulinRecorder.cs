@@ -75,7 +75,7 @@ namespace HulinRecorder
                 CreateUi();
                 ControlWindow.Show();
                 FindClient();
-                if (GameHwnd == IntPtr.Zero) StartClient();
+                if (GameHwnd == IntPtr.Zero) SetState("狀態：選好解析度後開啟客戶端", Color.FromArgb(200, 200, 200));
                 else { SetState("狀態：客戶端已開", Color.FromArgb(130, 220, 140)); ScheduleAutoRecord(); }
                 Application.Run(new ApplicationContext(ControlWindow));
                 return 0;
@@ -96,7 +96,7 @@ namespace HulinRecorder
             var wa = Screen.PrimaryScreen.WorkingArea;
             ControlWindow.Location = new Point(Math.Max(wa.Left + 20, wa.Right - ControlWindow.Width - 24), wa.Top + 60);
 
-            var clientGroup = Group("客戶端", 12, 10, 406, 92);
+            var clientGroup = Group("客戶端", 12, 10, 406, 120);
             var open = Btn("開啟客戶端", 14, 24, 180, 28);
             open.Click += delegate { EnsureClient(true); };
             clientGroup.Controls.Add(open);
@@ -122,13 +122,13 @@ namespace HulinRecorder
             clientGroup.Controls.Add(logs);
 
             var resLabel = new Label();
-            resLabel.SetBounds(14, 186, 54, 20);
+            resLabel.SetBounds(14, 88, 54, 20);
             resLabel.ForeColor = Color.FromArgb(200, 200, 206);
             resLabel.Text = "解析度";
-            ControlWindow.Controls.Add(resLabel);
+            clientGroup.Controls.Add(resLabel);
             var resCombo = new ComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            resCombo.SetBounds(72, 183, 150, 24);
+            resCombo.SetBounds(72, 86, 150, 24);
             resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
@@ -136,9 +136,9 @@ namespace HulinRecorder
             {
                 if (resCombo.SelectedItem != null) Preset = Convert.ToString(resCombo.SelectedItem);
             };
-            ControlWindow.Controls.Add(resCombo);
+            clientGroup.Controls.Add(resCombo);
 
-            var recGroup = Group("記錄", 12, 110, 406, 66);
+            var recGroup = Group("記錄", 12, 136, 406, 108);
             StartRecBtn = Btn("開始記錄", 14, 24, 120, 32);
             StartRecBtn.Click += delegate { StartRecording(); };
             recGroup.Controls.Add(StartRecBtn);
@@ -149,25 +149,24 @@ namespace HulinRecorder
             exportBtn.Click += delegate { StopAndExport(); };
             recGroup.Controls.Add(exportBtn);
 
-            StateLabel = new Label();
-            StateLabel.SetBounds(14, 218, 402, 24);
-            StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
-            StateLabel.Text = "狀態：等待客戶端";
-            ControlWindow.Controls.Add(StateLabel);
-
             StageLabel = new Label();
-            StageLabel.SetBounds(14, 244, 402, 18);
+            StageLabel.SetBounds(14, 62, 378, 18);
             StageLabel.ForeColor = Color.FromArgb(205, 205, 210);
             StageLabel.Text = "目前整理：—";
-            ControlWindow.Controls.Add(StageLabel);
+            recGroup.Controls.Add(StageLabel);
 
             StageBar = new ProgressBar();
-            StageBar.SetBounds(14, 266, 402, 14);
+            StageBar.SetBounds(14, 84, 378, 14);
             StageBar.Minimum = 0;
             StageBar.Maximum = 100;
             StageBar.Value = 0;
-            ControlWindow.Controls.Add(StageBar);
+            recGroup.Controls.Add(StageBar);
 
+            StateLabel = new Label();
+            StateLabel.SetBounds(14, 252, 402, 24);
+            StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
+            StateLabel.Text = "狀態：選好解析度後開啟客戶端";
+            ControlWindow.Controls.Add(StateLabel);
 
             ControlWindow.FormClosing += delegate (object s, FormClosingEventArgs e)
             {
