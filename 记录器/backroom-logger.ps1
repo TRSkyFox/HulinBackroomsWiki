@@ -4248,6 +4248,82 @@ if ($WikiAll -or $WikiSession) {
 
 
 
+
+# ---- 商店觀測：只留商人、介紹、商品名、價格、庫存、是否能賣東西 ----
+# 商店卡片裡的灰字說明不進 shops.jsonl；同一次商店的多頁會累積成同一個 visit。
+function Get-ShopSnapshot {
+  param($Lines)
+  $arr = @($Lines)
+  if ($arr.Count -lt 4) { return $null }
+  $all = (($arr | ForEach-Object { [string]$_.Text }) -join ' ')
+  if ($all -notmatch '(?i)买好了|買好了|打开背包|打開背包') { return $null }
+  if ($all -notmatch '硬币|硬幣') { return $null }
+  if ($all -notmatch '剩\s*\d') { return $null }
+  if ($all -notmatch '购买|購買|买不了|買不了') { return $null }
+
+  $stock = New-Object System.Collections.Generic.List[object]
+  foreach ($l in $arr) {
+    $m = [regex]::Match([string]$l.Text, '^(?<type>[^\s|｜丨]{1,8})\s*[|｜丨]\s*剩\s*(?<n>\d+)')
+    if (-not $m.Success) { continue }
+    $stock.Add([pscustomobject]@{ Y = [int]$l.Y; X = [int]$l.X; N = [int]$m.Groups['n'].Value; Text = [string]$l.Text })
+  }
+  if ($stock.Count -lt 1) { return $null }
+
+  $items = New-Object System.Collections.Generic.List[object]
+  foreach ($st in $stock) {
+    $nameLine = $arr | Where-Object {
+      [int]$_.Y -ge ($st.Y - 10) -and [int]$_.Y -le ($st.Y + 10) -and [int]$_.X -lt $st.X -and
+      ([string]$_.Text) -notmatch '剩\s*\d|硬币|硬幣|购买|購買|买不了|買不了|打开|打開|买好了'
+    } | Sort-Object X -Descending | Select-Object -First 1
+    if (-not $nameLine) { continue }
+    $nm = ([string]$nameLine.Text).Trim()
+    if ($nm.Length -lt 1 -or $nm.Length -gt 24) { continue }
+    $price = $null
+    $priceLine = $arr | Where-Object {
+      [int]$_.Y -gt ($st.Y - 2) -and [int]$_.Y -lt ($st.Y + 110) -and [int]$_.X -lt $st.X -and
+      ([string]$_.Text) -match '^\s*(\d{1,4})\s*硬币'
+    } | Sort-Object Y | Select-Object -First 1
+    if ($priceLine -and ([string]$priceLine.Text -match '(\d{1,4})\s*(?:硬币|硬幣)')) { $price = [int]$Matches[1] }
+    $items.Add([pscustomobject]@{ n = $nm; price = $price; stock = [int]$st.N })
+  }
+  if ($items.Count -lt 1) { return $null }
+
+  $merchantLine = $arr | Where-Object { ([string]$_.Text) -match '商人|店主|店長|摊主|攤主' } | Sort-Object Y | Select-Object -First 1
+  $merchant = if ($merchantLine) { ([string]$merchantLine.Text).Trim() } else { '' }
+  $firstY = ($stock | Measure-Object Y -Minimum).Minimum
+  $introLines = $arr | Where-Object {
+    [int]$_.Y -gt ($(if ($merchantLine) { [int]$merchantLine.Y } else { 0 })) -and [int]$_.Y -lt ($firstY - 8) -and
+    ([string]$_.Text) -notmatch 'Level\s*\d|第\s*\d+\s*层|买好了|买好了|打开背包|硬币|剩\s*\d'
+  } | Sort-Object Y
+  $intro = (($introLines | ForEach-Object { [string]$_.Text }) -join '')
+  $sell = $all -match '卖东西给这里|賣東西給這裡|卖东西|賣東西'
+  return [pscustomobject]@{ Name = $merchant; Intro = $intro; Sell = [bool]$sell; Items = $items }
+}
+
+function Write-ShopSnapshot {
+  param($S, $Snap)
+  if (-not $Snap -or -not $Snap.Items -or $Snap.Items.Count -lt 1) { return }
+  if (-not $S.ShopVisit) {
+    $S.ShopVisit = [pscustomobject]@{
+      Id = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 6)
+      Name = ([string]$Snap.Name).Trim(); Intro = [string]$Snap.Intro; Sell = [bool]$Snap.Sell; Items = @{}
+    }
+    Write-Log $S ('商店：' + $S.ShopVisit.Name + '（開始記錄，visit=' + $S.ShopVisit.Id + '）')
+  }
+  if ($Snap.Name -and -not $S.ShopVisit.Name) { $S.ShopVisit.Name = [string]$Snap.Name }
+  if ($Snap.Intro -and -not $S.ShopVisit.Intro) { $S.ShopVisit.Intro = [string]$Snap.Intro }
+  if ($Snap.Sell) { $S.ShopVisit.Sell = $true }
+  foreach ($it in $Snap.Items) {
+    $S.ShopVisit.Items[[string]$it.n] = [pscustomobject]@{ price = $it.price; stock = $it.stock }
+  }
+  $outItems = @($S.ShopVisit.Items.Keys | Sort-Object | ForEach-Object { [pscustomobject]@{ n = $_; price = $S.ShopVisit.Items[$_].price; stock = $S.ShopVisit.Items[$_].stock } })
+  $rec = [pscustomobject]@{
+    t = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'); visit = $S.ShopVisit.Id;
+    n = $S.ShopVisit.Name; q = $S.ShopVisit.Intro; sell = [bool]$S.ShopVisit.Sell; items = $outItems
+  }
+  [System.IO.File]::AppendAllText($S.Files.Shops, ($rec | ConvertTo-Json -Depth 5 -Compress) + [Environment]::NewLine, (New-Object System.Text.UTF8Encoding($false)))
+}
+
 # ============================ 主流程（錄影） ============================
 # ---- 校正模式：只掃面板邊界，不錄影 ----
 function Invoke-Calibrate {
@@ -4512,6 +4588,7 @@ $files = @{
   FloorColors = Join-Path $sessionDir 'floor-colors.log'
   LevelsDir   = Join-Path $sessionDir 'levels'
   Transitions = Join-Path $sessionDir '_transitions.log'
+  Shops       = Join-Path $sessionDir 'shops.jsonl'
 }
 # 給客戶端覆蓋層讀的「目前這一幀」；放在 logs 根目錄，不進單一場次。
 $overlayFile = Join-Path $OutDir 'overlay.json'
@@ -4601,6 +4678,8 @@ $state = [pscustomobject]@{
   # ---- 特殊版面偵測用的狀態 ----
   Layout          = 'normal'
   LastLayout      = ''
+  ShopMode        = $false
+  ShopVisit       = $null
 }
 
 function Write-Log {
@@ -5307,6 +5386,22 @@ try {
       Write-OverlayState -S $state -FrameNo $state.FrameNo -W $origW -H $origH -Layout $layout `
         -ColorHex $colorHex -Specs $frameSpecs -Lines $rawFrame -Fallbacks $state.Fallbacks -Detail ''
 
+      $shopNow = $false
+      try {
+        $shopSnap = Get-ShopSnapshot -Lines $rawFrame
+        if ($shopSnap) {
+          $shopNow = $true
+          $state.ShopMode = $true
+          Write-ShopSnapshot -S $state -Snap $shopSnap
+          # 商店畫面不進事件流；商品資料已寫進 shops.jsonl
+          $rawFrame = New-Object System.Collections.Generic.List[object]
+        } elseif ($state.ShopMode) {
+          $state.ShopMode = $false
+          if ($state.ShopVisit) { Write-Log $state ('商店：' + $state.ShopVisit.Name + '（離開，visit=' + $state.ShopVisit.Id + '）') }
+          $state.ShopVisit = $null
+        }
+      } catch { }
+
       # ---- 樓層配色（自動記錄 ＋ 累積配色快取） ----
       if ($bg) {
         $titleLines = @($rawFrame | Where-Object { $_.Region -eq 'title' })
@@ -5357,11 +5452,12 @@ try {
       # ---- 原始記錄（完整保留，不經過濾）----
       # 2026-10-30：與上一幀完全相同時不重寫 —— 內容一字不差，重寫只是把同一段文字再抄一遍。
       # （那場 8 小時停在主選單的 ocr-raw.log 就是這樣長到 45 MB 的。）
-      if (-not $reuseFrame) {
+      if (-not $shopNow -and -not $reuseFrame) {
         Write-RawFrame -Path $files.Raw -Bom $utf8Bom -FrameNo $state.FrameNo -ImgW $origW -ImgH $origH `
           -OcrW $ocrW -OcrH $ocrH -ColorHex $colorHex -Lines $rawFrame -Layout $layout `
           -Deskew $(if ($deskewAngle -ne 0.0) { [string][Math]::Round($deskewAngle, 2) + '度' } else { '' })
       }
+      if (-not $shopNow) {
       try {
         if ($reuseFrame -and $layout -eq 'normal') {
           if (-not $state.DupStart) { $state.DupStart = $state.FrameNo }
@@ -5375,6 +5471,7 @@ try {
           Write-StructuredFrame -Path $files.Structured -FrameNo $state.FrameNo -ImgW $origW -ImgH $origH -Layout $layout -ColorHex $colorHex -Lines $rawFrame
         }
       } catch { }
+      }
 
       if ($Once) {
         foreach ($l in $rawFrame) { Write-Host ('  [' + $l.Region + '] y={0,4} x={1,4}  {2}' -f $l.Y, $l.X, $l.Text) }

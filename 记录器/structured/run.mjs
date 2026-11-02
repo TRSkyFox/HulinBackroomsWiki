@@ -64,6 +64,10 @@ writeProgress('validate', 68, '驗證 staging');
 const val = spawnSync(process.execPath, [path.join(here, 'validate.mjs'), staging], { stdio: 'inherit' });
 if (val.status !== 0) console.error('staging 驗證有問題（見 validation.json）');
 
+// 商店出現率（若這一場有 shops.jsonl）
+const st = spawnSync(process.execPath, [path.join(here, 'shop-stats.mjs'), session], { stdio: 'inherit' });
+if (st.status !== 0) console.error('商店統計失敗（session 仍保留 shops.jsonl）');
+
 if (portable) {
   // 給別人的版本：不碰 Wiki；只打包成可傳回的 .expedition.zip。
   const out = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(path.dirname(here), 'exports');

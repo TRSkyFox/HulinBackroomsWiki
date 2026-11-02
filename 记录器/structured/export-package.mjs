@@ -34,7 +34,7 @@ function copyDir(src, dst) {
   if (!fs.existsSync(src)) return;
   fs.cpSync(src, dst, { recursive: true, force: true });
 }
-for (const f of ['wiki.jsonl', 'wiki.md', 'structured.jsonl', 'structured.ocr.jsonl', 'transcript.md', 'transcript.jsonl', 'consensus.md', 'consensus.jsonl', 'volume.jsonl', 'floor-colors.log', '_transitions.log']) copyFile(path.join(session, f), path.join(work, 'session', f));
+for (const f of ['wiki.jsonl', 'wiki.md', 'structured.jsonl', 'structured.ocr.jsonl', 'transcript.md', 'transcript.jsonl', 'consensus.md', 'consensus.jsonl', 'volume.jsonl', 'floor-colors.log', '_transitions.log', 'shops.jsonl', 'shop-stats.json']) copyFile(path.join(session, f), path.join(work, 'session', f));
 if (includeRaw) copyFile(path.join(session, 'ocr-raw.log'), path.join(work, 'session', 'ocr-raw.log'));
 copyDir(path.join(session, 'clean'), path.join(work, 'session', 'clean'));
 copyDir(path.join(session, 'levels'), path.join(work, 'session', 'levels'));
