@@ -4787,6 +4787,8 @@ try {
       # ---- OCR ----
       # 分區裁切一定在放大「之前」；每區自己放大 → 自己 OCR
       $origW = $crop.Width; $origH = $crop.Height
+      # 2400x1350 已經是 1600 的 1.5 倍像素；再放大只會變慢，不會更準。
+      if ($origW -ge 1900 -and $OcrScale -gt 1.0) { $OcrScale = 1.0 }
       $state.FrameNo++
       $rawFrame = New-Object System.Collections.Generic.List[object]
       $ocrW = 0; $ocrH = 0
@@ -5081,8 +5083,8 @@ try {
       }
       # 選項被白色高亮時 Windows OCR 會整行漏掉（例如「伸手碰鏡子」）。
       # 有「要怎麼做？」時，用 RapidOCR 對整個選項區重跑一次，補回漏掉的行。
-      $hasOpts = @($rawFrame | Where-Object { $_.Region -eq 'opts' }).Count -gt 0
-      if ($hasOpts -and $layout -eq 'normal') {
+      $promptLine = $rawFrame | Where-Object { $_.Region -eq 'main' -and $RxPrompt.IsMatch([string]$_.Text) } | Select-Object -First 1
+      if ($promptLine -and $layout -eq 'normal') {
         try {
           $optsRc = ConvertTo-RegionRect -Spec $RegionOpts -CropW $origW -CropH $origH -Name 'opts'
           if ($optsRc) {
