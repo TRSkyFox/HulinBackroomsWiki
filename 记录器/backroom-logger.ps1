@@ -4822,8 +4822,9 @@ try {
       }
 
       $regionOverride = $false
-      if (-not $AutoRegion -and $origW -eq 1600 -and $origH -eq 900 -and $layout -eq 'normal') {
-        # 這些是 1696x1300 基準座標（ConvertTo-RegionRect 會再換算成 1600x900）
+      if (-not $AutoRegion -and $layout -eq 'normal') {
+        # 這些是 1696x1300 基準座標；ConvertTo-RegionRect 會依實際 render 尺寸縮放，
+        # 所以 1600x900、1920x1080、2400x1350 共用同一組 normal 邊界。
         $RegionTitle = '10,705,0,95'          # 只到黃色出口進度條左側（x≈665）
         if ($isCombat) {
           $RegionEnemy = '16,201,101,282'      # 左上敵人卡（x15..190, y70..195）
