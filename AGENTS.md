@@ -17,7 +17,7 @@
 - 三條產品線：
   1. `wiki/`：內容與離線單檔網站。
   2. `记录器/`：OCR 記錄器與 staging 管線。
-  3. `客户端/`：HulinRecorder 控制台＋HulinClient 遊戲客戶端，附帶 logs 記錄與可攜版。
+  3. `客户端/`：ExpeditionRecorder 控制台＋ExpeditionClient 遊戲客戶端，附帶 logs 記錄與可攜版。
 - **不做自動玩**。遊戲作者不允許，任何 `auto/`、`quark/`、`sessions/`、自動玩入口都不要恢復。
 
 ---
@@ -34,12 +34,12 @@ D:\BACKROOMS\
     logs\                    各場次原始 logs（只讀）
     說明.md                  記錄器手冊
   客户端\
-    HulinPlayer.cs           遊戲客戶端原始碼（client-only 由 HulinClient 啟動）
-    HulinRecorder.cs            獨立控制台／記錄器面板原始碼
-    app\                     可直接啟動的成品（HulinRecorder + HulinClient）
-    dist\HulinExpedition\      可攜版成品（sync 目標）
-    dist\HulinExpedition.zip   給別人的可攜版壓縮檔
-    start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 HulinRecorder
+    ExpeditionPlayer.cs           遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
+    ExpeditionRecorder.cs            獨立控制台／記錄器面板原始碼
+    app\                     可直接啟動的成品（ExpeditionRecorder + ExpeditionClient）
+    dist\Expedition\      可攜版成品（sync 目標）
+    dist\Expedition.zip   給別人的可攜版壓縮檔
+    start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 ExpeditionRecorder
     build.ps1                重新編譯 panel＋client
     volume-watch.ps1         音量記錄
     fonts\                   字型與字型圖集
@@ -61,16 +61,16 @@ D:\BACKROOMS\
   `wiki/README.md`、`wiki/ARCHITECTURE.md`、`文档/交接.md` → `备份/legacy-wiki-20261101.zip`。
 - `wiki/頁面` → `备份/legacy-wiki-pages-20261101.zip`。
 - `wiki/_design`、2026-10-29 的 failed-run 備份 → `备份/20261029-old-runs-and-design.zip`。
-- `记录器/player/`（舊 HulinPlayer 副本與 135.8 MB 測試 profile）已移除；
-  `客户端/build.ps1` 改用 `客户端/dist/HulinExpedition` 的 WebView2 DLL。
+- `记录器/player/`（舊 ExpeditionPlayer 副本與 135.8 MB 測試 profile）已移除；
+  `客户端/build.ps1` 改用 `客户端/dist/Expedition` 的 WebView2 DLL。
 
 ---
 
 ## 3. 資料流
 
 ```text
-HulinRecorder（控制台）
-  → HulinClient（WebView 遊戲）
+ExpeditionRecorder（控制台）
+  → ExpeditionClient（WebView 遊戲）
   → 记录器/backroom-logger.ps1
   → 记录器/logs/backroom-<時間>/structured.jsonl
   → 记录器/structured（font-correct → clean-levels → parse／event-parse／input-bind
@@ -82,11 +82,11 @@ HulinRecorder（控制台）
 ```
 
 - `记录器/structured/` 是**管線唯一來源**。
-- `客户端/app/structured/` 與 `客户端/dist/HulinExpedition/structured/` 是同步副本；
+- `客户端/app/structured/` 與 `客户端/dist/Expedition/structured/` 是同步副本；
   **不要手改副本**，改來源後跑 `node 记录器/structured/sync.mjs`。
 - 客户端/volume-watch.ps1 是音量記錄；
   `sync.mjs` 會把它們複製到 app／dist。
-- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；HulinRecorder 讀它，畫透明區塊框
+- 除錯覆蓋層：記錄器每幀寫 `记录器/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框
   與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
 - 事件分段：`event-parse.mjs` 會用「大空隙」（> max(2.5×行距, 50px)）切斷 intro／results；普通段落 35px 不會被切。沒有標題的事件不會自動生成。
 
@@ -177,8 +177,8 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
   - 移除 `记录器/player/`（136.6 MB）。
   - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
-  - HulinRecorder／HulinClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
-  - 客戶端／記錄器生命週期已解耦：`HulinRecorder.exe` 是獨立控制台；`HulinClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。更新 `HulinRecorder.exe`／記錄器 script 不需要重開遊戲；只有更新 `HulinClient.exe` 才要重開遊戲。
+  - ExpeditionRecorder／ExpeditionClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
+  - 客戶端／記錄器生命週期已解耦：`ExpeditionRecorder.exe` 是獨立控制台；`ExpeditionClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。更新 `ExpeditionRecorder.exe`／記錄器 script 不需要重開遊戲；只有更新 `ExpeditionClient.exe` 才要重開遊戲。
   - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
 
 ---
@@ -229,7 +229,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 
 10. **管線只有一份來源。**
     - 只改 `记录器/structured/`；改完跑 `sync.mjs`。
-    - 不要手改 `客户端/app/structured` 或 `客户端/dist/HulinExpedition/structured`。
+    - 不要手改 `客户端/app/structured` 或 `客户端/dist/Expedition/structured`。
     - `sync.mjs --check` 有漂移就 exit 1；漂移沒修好之前不要說「驗收全過」。
 
 11. **事件／結局按樓層。**
@@ -284,13 +284,13 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 ### 8.3 改客戶端／記錄器腳本
 
 ```text
-改 客户端/HulinRecorder.cs（控制台／OCR 浮層）或 HulinPlayer.cs（client-only 遊戲）
+改 客户端/ExpeditionRecorder.cs（控制台／OCR 浮層）或 ExpeditionPlayer.cs（client-only 遊戲）
 → powershell -ExecutionPolicy Bypass -File 客户端/build.ps1
-→ 用 start.ps1 重開 HulinRecorder；HulinClient 可保持開啟
+→ 用 start.ps1 重開 ExpeditionRecorder；ExpeditionClient 可保持開啟
 ```
 
-- 只改 `HulinRecorder.exe` 或 `backroom-logger.ps1`：關掉控制台、重新 `start.ps1` 即可，**不用關遊戲**。
-- 只有改到 `HulinPlayer.cs` / `HulinClient.exe`（WebView 遊戲本身）才需要關遊戲 client。
+- 只改 `ExpeditionRecorder.exe` 或 `backroom-logger.ps1`：關掉控制台、重新 `start.ps1` 即可，**不用關遊戲**。
+- 只有改到 `ExpeditionPlayer.cs` / `ExpeditionClient.exe`（WebView 遊戲本身）才需要關遊戲 client。
 - `start.ps1` 會跳過被 client 鎖住的 exe／DLL；更新面板不會強關客戶端。
 
 ---
@@ -304,7 +304,7 @@ node D:\BACKROOMS\记录器\structured\tests\run-tests.mjs
 - 內容變更用 commit 記錄；不要用「複製整個資料夾」當版本控制。
 - `备份/legacy-wiki-20261101.zip` 是舊 Wiki 管線與舊 handover 的封存；不要沒事解開覆蓋現行檔案。
 - `记录器/logs/` 是原始資料，體積大；要清舊場次先問，不要用批次刪除。
-- `客户端/dist/HulinExpedition/` 是 sync 目標；`HulinExpedition.zip` 是給別人的成品。兩個都保留。
+- `客户端/dist/Expedition/` 是 sync 目標；`Expedition.zip` 是給別人的成品。兩個都保留。
 - `客户端/app/` 是 build.ps1 產物；要重新產生就跑 `build.ps1`。
 
 ---

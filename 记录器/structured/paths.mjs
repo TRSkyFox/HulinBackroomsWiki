@@ -1,6 +1,6 @@
 ﻿// paths.mjs — 管線腳本的路徑唯一出口。
 // 從目前檔案位置往上找含 `wiki/content` 的工作區根目錄；
-// 這樣 source、`客户端/app/structured`、`dist/HulinExpedition/structured` 都能用。
+// 這樣 source、`客户端/app/structured`、`dist/Expedition/structured` 都能用。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

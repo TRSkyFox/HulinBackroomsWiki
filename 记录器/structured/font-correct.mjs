@@ -30,9 +30,9 @@ export function safeCorrection(a, b) {
 function findRapid() {
   const cands = [
     path.join(HERE, 'bin', 'rapid-ocr.exe'),
-    path.resolve(HERE, '..', '..', '客户端', 'dist', 'HulinExpedition', 'structured', 'bin', 'rapid-ocr.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'HulinExpedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
-    path.join(process.env.LOCALAPPDATA || '', 'HulinExpedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.resolve(HERE, '..', '..', '客户端', 'dist', 'Expedition', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'Expedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'Expedition', 'app', 'structured', 'bin', 'rapid-ocr.exe'),
   ];
   return cands.find(p => p && fs.existsSync(p)) || null;
 }

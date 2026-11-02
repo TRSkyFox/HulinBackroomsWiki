@@ -32,7 +32,7 @@ if (!['all', 'app', 'dist'].includes(destFilter)) {
 
 const DEST = {
   app: path.join(ROOT, '客户端/app'),
-  dist: path.join(ROOT, '客户端/dist/HulinExpedition')
+  dist: path.join(ROOT, '客户端/dist/Expedition')
 };
 const dests = Object.entries(DEST).filter(([k]) => destFilter === 'all' || destFilter === k);
 
@@ -53,7 +53,7 @@ PAIRS.push(
   { rel: 'backroom-logger.ps1', src: path.join(ROOT, '记录器/backroom-logger.ps1') },
   { rel: 'palette-from-shots.ps1', src: path.join(ROOT, '记录器/palette-from-shots.ps1') },
   { rel: 'volume-watch.ps1', src: path.join(ROOT, '客户端/volume-watch.ps1') },
-  { rel: 'HulinPlayer.exe.config', src: path.join(ROOT, '客户端/HulinPlayer.exe.config') }
+  { rel: 'ExpeditionClient.exe.config', src: path.join(ROOT, '客户端/ExpeditionClient.exe.config') }
 );
 
 function sha(file) {

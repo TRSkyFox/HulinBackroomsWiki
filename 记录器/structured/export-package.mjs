@@ -15,7 +15,7 @@ if (args.length < 2) { console.error('usage: node export-package.mjs <sessionDir
 const session = path.resolve(args[0]);
 const staging = path.resolve(args[1]);
 const oi = args.indexOf('--out');
-const outDir = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(process.env.LOCALAPPDATA || session, 'HulinExpedition', 'exports');
+const outDir = oi >= 0 ? path.resolve(args[oi + 1]) : path.join(process.env.LOCALAPPDATA || session, 'Expedition', 'exports');
 const includeRaw = args.includes('--include-raw');
 if (!fs.existsSync(session) || !fs.existsSync(staging)) { console.error('session/staging 不存在'); process.exit(2); }
 

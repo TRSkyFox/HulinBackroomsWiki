@@ -10,7 +10,7 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
-namespace HulinRecorder
+namespace ExpeditionRecorder
 {
     static class Program
     {
@@ -52,7 +52,7 @@ namespace HulinRecorder
                     }
                 }
                 bool createdNew = false;
-                SingleInstance = new Mutex(true, "Local\\HulinRecorder-SingleInstance", out createdNew);
+                SingleInstance = new Mutex(true, "Local\\ExpeditionRecorder-SingleInstance", out createdNew);
                 if (!createdNew)
                 {
                     MessageBox.Show("狐霖勘探記錄器已經在執行中。", "狐霖勘探記錄器", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -60,13 +60,13 @@ namespace HulinRecorder
                 }
 
                 string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-                ClientPath = Path.Combine(exeDir, "HulinClient.exe");
-                if (!File.Exists(ClientPath)) ClientPath = Path.Combine(exeDir, "HulinPlayer.exe");
+                ClientPath = Path.Combine(exeDir, "ExpeditionClient.exe");
+                if (!File.Exists(ClientPath)) ClientPath = Path.Combine(exeDir, "ExpeditionPlayer.exe");
                 RecorderScript = Path.Combine(exeDir, "backroom-logger.ps1");
                 if (string.IsNullOrEmpty(RecordOut))
-                    RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "logs");
+                    RecordOut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Expedition", "logs");
                 if (string.IsNullOrEmpty(ProfileDir))
-                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HulinExpedition", "webview2-profile");
+                    ProfileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Expedition", "webview2-profile");
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
@@ -84,7 +84,7 @@ namespace HulinRecorder
         static void CreateUi()
         {
             ControlWindow = new Form();
-            ControlWindow.Text = "狐霖勘探記錄器";
+            ControlWindow.Text = "Expedition Recorder";
             ControlWindow.ClientSize = new Size(430, 300);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -254,7 +254,7 @@ namespace HulinRecorder
         {
             try
             {
-                string[] names = { Path.GetFileNameWithoutExtension(ClientPath), "HulinClient", "HulinPlayer" };
+                string[] names = { Path.GetFileNameWithoutExtension(ClientPath), "ExpeditionClient", "ExpeditionPlayer" };
                 foreach (string n in names)
                 {
                     foreach (var p in Process.GetProcessesByName(n))
@@ -282,7 +282,7 @@ namespace HulinRecorder
         {
             try
             {
-                if (!File.Exists(ClientPath)) { SetState("找不到 HulinClient.exe", Color.FromArgb(255, 120, 110)); return false; }
+                if (!File.Exists(ClientPath)) { SetState("找不到 ExpeditionClient.exe", Color.FromArgb(255, 120, 110)); return false; }
                 Directory.CreateDirectory(ProfileDir);
                 string ps = "--client-only --url \"" + Url.Replace("\"", "") + "\" --preset " + Preset + " --no-record"
                     + " --logdir \"" + RecordOut.Replace("\"", "") + "\" --profile \"" + ProfileDir.Replace("\"", "") + "\"";
@@ -344,7 +344,7 @@ namespace HulinRecorder
             {
                 if (!File.Exists(RecorderScript)) { SetState("找不到 backroom-logger.ps1", Color.FromArgb(255, 120, 110)); return; }
                 Directory.CreateDirectory(RecordOut);
-                StopFile = Path.Combine(Path.GetTempPath(), "HulinRecorder-stop-" + Process.GetCurrentProcess().Id + ".flag");
+                StopFile = Path.Combine(Path.GetTempPath(), "ExpeditionRecorder-stop-" + Process.GetCurrentProcess().Id + ".flag");
                 try { if (File.Exists(StopFile)) File.Delete(StopFile); } catch { }
                 string ps = "-NoProfile -ExecutionPolicy Bypass -File \"" + RecorderScript + "\""
                     + " -OutDir \"" + RecordOut + "\" -Hwnd " + GameHwnd.ToInt64()
@@ -425,7 +425,7 @@ namespace HulinRecorder
             string staging = Path.Combine(session, "staging");
             string exportDir = Path.Combine(Path.GetDirectoryName(RecordOut), "exports");
             var psi = new ProcessStartInfo(node, "\"" + run + "\" \"" + session + "\" --portable --staging \"" + staging + "\" --out \"" + exportDir + "\"");
-            psi.EnvironmentVariables["HULIN_EXPORT_DIR"] = exportDir;
+            psi.EnvironmentVariables["EXPEDITION_EXPORT_DIR"] = exportDir;
             psi.UseShellExecute = false;
             psi.CreateNoWindow = true;
             psi.WindowStyle = ProcessWindowStyle.Hidden;

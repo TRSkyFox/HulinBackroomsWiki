@@ -10,9 +10,9 @@
 
 ## 1. 現在是什麼狀態
 
-- 專案：非官方 Wiki ＋ OCR 記錄器 ＋ HulinRecorder／HulinClient 客戶端。
+- 專案：非官方 Wiki ＋ OCR 記錄器 ＋ ExpeditionRecorder／ExpeditionClient 客戶端。
 - 內容來源：`wiki/content/`；產物：`wiki/site/index.html`。
-- 管線來源：`记录器/structured/`；同步副本：`客户端/app/structured`、`客户端/dist/HulinExpedition/structured`。
+- 管線來源：`记录器/structured/`；同步副本：`客户端/app/structured`、`客户端/dist/Expedition/structured`。
 - 版本控制：`git` 已初始化，`.gitignore` 已排除 logs／app／dist／字型／OCR binary／備份／staging。
 
 目前實測（2026-11-01）：
@@ -41,8 +41,8 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
    - `verify-final.mjs` 的 `root` 改由 `import.meta.url` 推算，不再寫死 `D:/BACKROOMS`。
    - `font.test.mjs`、`wiki/smoke.mjs` 改用系統暫存目錄，不往倉庫寫測試檔。
 5. **清理**：
-   - 移除 `记录器/player/`（舊 HulinPlayer 副本＋135.8 MB 測試 profile）。
-   - `客户端/build.ps1` 改用 `客户端/dist/HulinExpedition` 的 WebView2 DLL。
+   - 移除 `记录器/player/`（舊 ExpeditionPlayer 副本＋135.8 MB 測試 profile）。
+   - `客户端/build.ps1` 改用 `客户端/dist/Expedition` 的 WebView2 DLL。
    - 舊 Wiki 管線（`_data`、`_drafts`、`_backup`、`_gen`、`_i18n`、`build-site.ps1`、`lib-*.ps1`、`ui-smoke.mjs`、舊 README／ARCHITECTURE）與舊 `交接.md` 壓進 `备份/legacy-wiki-20261101.zip`。
    - `wiki/_design` 與 2026-10-29 failed-run 備份壓進 `备份/20261029-old-runs-and-design.zip`。
    - `wiki/頁面` 舊 Markdown 頁壓進 `备份/legacy-wiki-pages-20261101.zip`。
@@ -51,9 +51,9 @@ node 记录器/structured/sync.mjs --check        → 80 項對齊
    - `event-import` 的繁簡比對改讀 `记录器/structured/i18n-table.txt`。
    - `build-char-freq` 只讀 `wiki/content`。
 7. **重寫 `AGENTS.md`**：只留現行規則、目錄、指令、狀態與禁區。
-8. **OCR 覆蓋層（除錯）**：記錄器每幀寫 `记录器/logs/overlay.json`；HulinRecorder 讀它，畫透明區塊框（title／enemy／main／opts／char）＋右側 OCR 讀取面板；框線只畫邊、滑鼠穿透，`--no-overlay`／`啟動.bat -NoOverlay` 可關。
+8. **OCR 覆蓋層（除錯）**：記錄器每幀寫 `记录器/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框（title／enemy／main／opts／char）＋右側 OCR 讀取面板；框線只畫邊、滑鼠穿透，`--no-overlay`／`啟動.bat -NoOverlay` 可關。
 9. **建立 git 基線**：第一個 commit 是清理後的可運作狀態。
-10. **客戶端／記錄器生命週期解耦**：`HulinRecorder.exe` 是獨立控制台；`HulinClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。停止記錄只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；更新 panel／記錄器 script 不用重開遊戲，只有更新 `HulinClient.exe` 才要重開遊戲。控制窗有「OCR 浮層」勾選框，可即時同時開關遊戲畫面的透明框線與右側讀取面板。
+10. **客戶端／記錄器生命週期解耦**：`ExpeditionRecorder.exe` 是獨立控制台；`ExpeditionClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。停止記錄只停記錄器、遊戲仍開；「停止並整理」才跑 postprocess；更新 panel／記錄器 script 不用重開遊戲，只有更新 `ExpeditionClient.exe` 才要重開遊戲。控制窗有「OCR 浮層」勾選框，可即時同時開關遊戲畫面的透明框線與右側讀取面板。
 
 ---
 
@@ -91,7 +91,7 @@ wiki 仍有 61 條事件是單段格式。`steps.mjs` 與 `event-parse` 已經�
 
 - `template.html` 2.44 MB，產物 2.93 MB；建議拆成 `template/` 局部檔再拼成單檔，加 size budget 與 CSS／JS lint。
 - 沒有 CI／pre-commit；至少做一個 `check.ps1` 或 `package.json` scripts，把 build／verify／smoke／sync 串起來。
-- `客户端/dist/HulinExpedition.zip` 約 169 MB；若不需要常備成品，可只留 `dist/HulinExpedition/`，用打包腳本重新產生 zip。
+- `客户端/dist/Expedition.zip` 約 169 MB；若不需要常備成品，可只留 `dist/Expedition/`，用打包腳本重新產生 zip。
 - `记录器/logs/` 約 633 MB；要清舊場次先確認出處行號，再問使用者。
 
 ---

@@ -1,7 +1,7 @@
 ﻿# 結構化 logs → Wiki staging
 
 這個資料夾是**管線唯一來源**。`客户端/app/structured` 與
-`客户端/dist/HulinExpedition/structured` 都是同步副本，不要在那兩份上改。
+`客户端/dist/Expedition/structured` 都是同步副本，不要在那兩份上改。
 
 ```powershell
 node 记录器/structured/sync.mjs           # 同步到 app／可攜版
