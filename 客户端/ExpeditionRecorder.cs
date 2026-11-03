@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -256,6 +256,7 @@ namespace ExpeditionRecorder
             try
             {
                 if (p == null || p.HasExited) return false;
+                if (IsBrowserProcess(p)) return false;
                 p.Refresh();
                 if (p.MainWindowHandle == IntPtr.Zero || !IsWindow(p.MainWindowHandle)) return false;
                 Client = p;
@@ -264,6 +265,43 @@ namespace ExpeditionRecorder
                 CreateOverlay();
                 SetState("狀態：已接上現有客戶端（按開始記錄）", Color.FromArgb(130, 220, 140));
                 return true;
+            }
+            catch { return false; }
+        }
+
+        static bool IsBrowserProcess(Process p)
+        {
+            string n = (p.ProcessName ?? "").ToLowerInvariant();
+            if (n.Contains("browser") || n.Contains("chrome") || n.Contains("edge") ||
+                n.Contains("firefox") || n.Contains("opera") || n.Contains("brave") ||
+                n.Contains("vivaldi") || n.Contains("360se") || n.Contains("360chrome") ||
+                n.Contains("qqbrowser") || n.Contains("sogou") || n.Contains("liebao") ||
+                n.Contains("maxthon") || n.Contains("ucbrowser") || n.Contains("2345"))
+                return true;
+            switch (n)
+            {
+                case "iexplore":
+                case "safari":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        static bool IsLikelyClientProcess(Process p)
+        {
+            if (p == null || IsBrowserProcess(p)) return false;
+            string n = (p.ProcessName ?? "").ToLowerInvariant();
+            if (n.Contains("recorder")) return false;
+            if (n.Contains("expedition") || n.Contains("hulin") || n.Contains("foyer")) return true;
+
+            // 舊版／改名後的 client：只接受和目前 client 同一個安裝資料夾的程序。
+            // 不再用「視窗標題像遊戲」掃全機程序，否則 Chrome/Edge 開著遊戲也會被誤認。
+            try
+            {
+                string exeDir = Path.GetDirectoryName(Path.GetFullPath(ClientPath));
+                string procDir = Path.GetDirectoryName(Path.GetFullPath(p.MainModule.FileName));
+                return string.Equals(exeDir, procDir, StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
         }
@@ -280,13 +318,14 @@ namespace ExpeditionRecorder
                         if (AttachClient(p)) return true;
                     }
                 }
-                // 舊版或改名後的 client 可能不是已知的 process name；用遊戲視窗標題再找一次。
+                // 舊版或改名後的 client 可能不是已知的 process name。
+                // 只掃同一個 app 資料夾的程序；瀏覽器與其他位置的程式一律不碰。
                 foreach (var p in Process.GetProcesses())
                 {
                     try
                     {
                         if (p.Id == Process.GetCurrentProcess().Id) continue;
-                        if (p.ProcessName.IndexOf("Recorder", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                        if (!IsLikelyClientProcess(p)) continue;
                         string title = p.MainWindowTitle ?? "";
                         if (title.IndexOf("後室", StringComparison.Ordinal) < 0 &&
                             title.IndexOf("Backrooms", StringComparison.OrdinalIgnoreCase) < 0 &&
