@@ -12,18 +12,12 @@ namespace ExpeditionArchive
     static class Program
     {
         static string RepoRoot;
-        static string StartupPackage;
-        static bool StartupCheck;
 
         [STAThread]
         static void Main(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
-            {
                 if (args[i] == "--repo" && i + 1 < args.Length) RepoRoot = args[++i];
-                else if (args[i] == "--package" && i + 1 < args.Length) StartupPackage = args[++i];
-                else if (args[i] == "--check") StartupCheck = true;
-            }
             if (string.IsNullOrEmpty(RepoRoot))
             {
                 string p = AppDomain.CurrentDomain.BaseDirectory;
@@ -142,12 +136,6 @@ namespace ExpeditionArchive
                 WireDrop(this);
                 WireDrop(Package);
                 WireDrop(Output);
-
-                if (!string.IsNullOrEmpty(StartupPackage))
-                {
-                    Package.Text = CleanPath(StartupPackage);
-                    Shown += delegate { RunSafe(!StartupCheck); };
-                }
             }
 
             void WireDrop(Control c)
