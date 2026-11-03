@@ -1,4 +1,4 @@
-﻿# 工作約定（AGENTS.md）
+# 工作約定（AGENTS.md）
 
 > 2026-11-01 全面重寫。工作區：`D:\BACKROOMS`。
 > 這份只留「現在仍然有效」的規則；歷史事故、舊路徑、舊管線已移到
@@ -28,21 +28,21 @@
 D:\BACKROOMS\
   AGENTS.md                 本檔：現行規則
   启动记录器.bat             啟動記錄器
-  记录器\
-    backroom-logger.ps1      OCR 記錄器本體
-    structured\              管線唯一來源（parse／event／import／merge／tests）
-    logs\                    各場次原始 logs（只讀）
-    說明.md                  記錄器手冊
   客户端\
-    ExpeditionPlayer.cs           遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
-    ExpeditionRecorder.cs            獨立控制台／記錄器面板原始碼
-                         可直接啟動的成品（ExpeditionRecorder + ExpeditionClient）
-    dist\Expedition\      可攜版成品（sync 目標）
-    dist\Expedition.zip   給別人的可攜版壓縮檔
-    start.ps1／啟動.bat      複製到 %LOCALAPPDATA% 後啟動 ExpeditionRecorder
-    build.ps1                重新編譯 panel＋client
-    volume-watch.ps1         音量記錄
-    fonts\                   字型與字型圖集
+    Recorder\
+      backroom-logger.ps1   OCR 記錄器本體（唯一來源）
+      structured\           管線唯一來源（parse／event／import／merge／tests）
+      logs\                 各場次原始 logs（只讀）
+      說明.md               記錄器手冊
+    ExpeditionPlayer.cs       遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
+    ExpeditionRecorder.cs     獨立控制台／記錄器面板原始碼
+    structured\               app 同步副本；只由 sync.mjs 更新，不要手改
+    dist\Expedition\          可攜版成品（sync 目標）
+    dist\Expedition.zip       給別人的可攜版壓縮檔
+    start.ps1／啟動.bat       複製到 %LOCALAPPDATA% 後啟動 ExpeditionRecorder
+    build.ps1                 重新編譯 panel＋client
+    volume-watch.ps1          音量記錄
+    fonts\                    字型與字型圖集
   wiki\
     content\                 ★ Wiki 唯一內容來源
     site\index.html          建置產物（雙擊即開；不要手改）
@@ -136,7 +136,7 @@ node D:\BACKROOMS\wiki\content\build.mjs
 node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs
 node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs --check
 
-# 完整驗收（目前 870 項；項數會變，以輸出 summary 為準）
+# 完整驗收（目前 824 項；項數會變，以輸出 summary 為準）
 node D:\BACKROOMS\客户端\Recorder\structured\tests\verify-final.mjs
 
 # 內容引用完整性（verify-final 也會跑；可單獨執行）
@@ -155,20 +155,19 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 
 ---
 
-## 6. 目前狀態（2026-11-01）
+## 6. 目前狀態（2026-11-03）
 
 > 數字會變；下面是這次交接時的實測，不是永久保證。要現在的值就重跑指令。
 
-- 樓層：**93 層**（含 `name-only`／`id-only` 占位；以 `verify-final` 輸出為準）。
-- 事件檔：17 個樓層有 `events.json`；結局檔：4 個。
-- 角色 97、實體 71、物品 453、商店 17。
-- 驗收：`verify-final` **870 / 870**（warnings 5）；`smoke` **9 / 9**；`sync --check` **80 項對齊**。
+- 樓層：**96 層**（含 `name-only`／`id-only` 占位；以 `verify-final` 輸出為準）。
+- 事件檔：13 個樓層有 `events.json`；結局檔：4 個。
+- 角色 98、實體 71、物品 455、商店 17。
+- 驗收：`verify-final` **824 / 824**（warnings 5）；`smoke` **7 / 7**；`sync --check` **82 項對齊**。
 - 已知內容債：
-  - 453 件物品中約 259 件沒有 `desc`、101 件沒有 `eff`（這次審計值）；**多數是使用者尚未截圖，先不要代寫**，等他自己補。
+  - 455 件物品中約 261 件沒有 `desc`；**多數是使用者尚未截圖，先不要代寫**，等他自己補。
   - 116 處角色／實體／商店／配方引用找不到對應物品（含 OCR 雜訊與真缺條目）。
-  - 43 個 JSON 仍含 `D:\BACKROOMS\...` 絕對路徑（多在 `_staging`／`_observations`）。
-  - `steps` 回填未完成：wiki 仍有 61 條事件是單段格式。
-  - `event-import` 的 `isFloorIntroLine` 已接進 results 清洗；仍需用真實場次驗證。
+  - 54 個 JSON 仍含 `D:\BACKROOMS\...` 絕對路徑（多在 `_staging`／`_observations`）。
+  - 9 個樓層仍是 `id-only`（0.41、1.1、154.1、188、21、372、399.1、6.2、87），舊資料沒有可恢復的名字，不要編造。
   - `212-發光深淵` 缺完整介紹；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
   - `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。
   - 1600×900 normal 已加專用分區：`title 9,0,656,66`、`main 20,80,1005,529`、`opts 20,609,1005,278`、`enemy 9,42,121,48`、`char 1030,66,565,84`。戰鬥時先 OCR 選項區判斷 `攻擊／技能／防禦／逃跑／右手…`，改用 `enemy 15,70,175,125`、`main 20,200,1005,409`（主區從敵人卡下方開始）。此尺寸不要開 AutoRegion：measured main 會量到 x≈990（實際面板右緣 1025）。
@@ -179,6 +178,7 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
   - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
   - ExpeditionRecorder／ExpeditionClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
   - 客戶端／記錄器生命週期已解耦：`ExpeditionRecorder.exe` 是獨立控制台；`ExpeditionClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。更新 `ExpeditionRecorder.exe`／記錄器 script 不需要重開遊戲；只有更新 `ExpeditionClient.exe` 才要重開遊戲。
+  - 記錄器不再用全機視窗標題掃描來認遊戲；只認已知 client process／同安裝資料夾的 legacy client，並排除瀏覽器。
   - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
 
 ---

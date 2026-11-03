@@ -1,4 +1,4 @@
-﻿// sync.mjs — 把 pipeline 的唯一來源（logger/structured）同步到 app／可攜版。
+// sync.mjs — 把 pipeline 的唯一來源（logger/structured）同步到 app／可攜版。
 //
 // 為什麼要有這個檔：2026-10-28 之前 parse.mjs 同時存在三份、內容各不相同，
 // 「修好的那份」和「實際在跑的那份」不是同一個檔案。從現在起：
@@ -87,10 +87,14 @@ for (const [key, base] of dests) {
   }
 }
 
-/* 舊的第三份副本若還在，提醒（不自動刪，避免動到使用者檔案）。 */
-const legacy = path.join(CLIENT, 'structured');
-if (fs.existsSync(legacy)) {
-  console.warn('⚠ 仍存在舊副本：player-logger/structured（請確認後移入 _archive）');
+/* 舊的第三份副本若還在，提醒（不自動刪，避免動到使用者檔案）。
+   `CLIENT/structured` 是 app 的同步目標，不是舊副本；舊副本只在舊路徑出現。 */
+const legacy = [
+  path.join(ROOT, 'player-logger', 'structured'),
+  path.join(CLIENT, '记录器', 'structured')
+].find(p => fs.existsSync(p));
+if (legacy) {
+  console.warn('⚠ 仍存在舊副本：' + path.relative(ROOT, legacy) + '（請確認後移入 _archive）');
 }
 
 if (checkOnly) {

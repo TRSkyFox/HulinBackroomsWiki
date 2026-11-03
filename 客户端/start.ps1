@@ -33,6 +33,15 @@ if ($copyFailed.Count -gt 0) {
   Write-Host ('客戶端檔案正在使用，這次跳過：' + ($copyFailed -join '、')) -ForegroundColor DarkGray
 }
 
+# 記錄器腳本的唯一來源在 Recorder。根目錄舊副本已移除，
+# 這裡直接從來源覆蓋 app，避免「改了來源、start 卻抄到舊副本」。
+foreach ($name in @('backroom-logger.ps1', 'palette-from-shots.ps1')) {
+  $from = Join-Path $src ('Recorder\' + $name)
+  if (-not (Test-Path $from)) { continue }
+  try { Copy-Item -LiteralPath $from -Destination (Join-Path $dst $name) -Force -ErrorAction Stop }
+  catch { $copyFailed += $name }
+}
+
 # logs 的實體位置：D:\BACKROOMS\客户端\Recorder\logs
 $loggerRoot = Join-Path $PSScriptRoot 'Recorder'
 $logDir = Join-Path $loggerRoot 'logs'
