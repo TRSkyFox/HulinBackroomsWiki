@@ -42,6 +42,8 @@ function optionOf(l) {
   if (/你自己的选择|你自己的選擇|你选了就算数|你選了就算數/.test(t)) return '';
   if (!shouldKeep(t)) return '';
   if (/^(继续|繼續|选一个去做|選一個去做|要怎么做|要怎麼做|跟随多数|跟隨多數|天狐|狐天|狐夭|你|你們|你们)$/i.test(t)) return '';
+  if (/^[（(]只有你察覺到|^[（(]只有你察觉到/.test(t)) return '';
+  if (/^「.+」/.test(t)) return '';
   if (/难度|難度|检定|檢定|全员|全員/i.test(t)) return '';
   if (/^「.+」.*(?:会用掉|會用掉|用掉)/.test(t)) return '';
   return t;
@@ -49,11 +51,14 @@ function optionOf(l) {
 
 function finalize(cur, out) {
   if (!cur) return;
-  // intro 以最完整的一份為準
-  cur.intro = clean(cur.intro).replace(/(?:天狐|狐天|狐夭|冴汰)/g, '你');
-  for (const a of cur.actions || []) a.text = String(a.text || '').replace(/(?:天狐|狐天|狐夭|冴汰)/g, '你');
+  // 玩家帳號名換成你；天狐是遊戲角色，保留。
+  const player = s => String(s || '').replace(/狐天|狐夭/g, '你');
+  cur.intro = player(clean(cur.intro));
+  for (const a of cur.actions || []) a.text = player(a.text);
   if (cur.steps && cur.steps.length) {
     for (const st of cur.steps) {
+      st.selected = player(st.selected);
+      st.actions = (st.actions || []).map(player);
       const seen = new Set();
       const filtered = st.results.map(clean).filter(Boolean).map(x => {
         // 檢定結果只留「成功／失敗」後面的敘述；骰值、難度、屬性都不是事件結果正文。
@@ -75,8 +80,7 @@ function finalize(cur, out) {
         else if (!/[。！？…」』）)]$/.test(joined[joined.length - 1])) joined[joined.length - 1] += x;
         else joined.push(x);
       }
-      st.results = joined.map(x => String(x)
-        .replace(/(?:天狐|狐天|狐夭|冴汰)/g, '你')
+      st.results = joined.map(x => player(String(x))
         .replace(/[，、；]?[^，。；]{0,10}(?:理智|體力|体力|口渴|飢餓|饥饿|經驗|经验|HP|MP)\s*[-+]?\d+/g, '')
         .trim()).filter(Boolean).filter(x => {
         const t = clean(x);
