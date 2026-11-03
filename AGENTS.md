@@ -36,6 +36,8 @@ D:\BACKROOMS\
       說明.md               記錄器手冊
     ExpeditionPlayer.cs       遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
     ExpeditionRecorder.cs     獨立控制台／記錄器面板原始碼
+    backroom-logger.ps1       app 同步副本（由 sync.mjs 從 Recorder 更新）
+    palette-from-shots.ps1    app 同步副本（由 sync.mjs 從 Recorder 更新）
     structured\               app 同步副本；只由 sync.mjs 更新，不要手改
     dist\Expedition\          可攜版成品（sync 目標）
     dist\Expedition.zip       給別人的可攜版壓縮檔
