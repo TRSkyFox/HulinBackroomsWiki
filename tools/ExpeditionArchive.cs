@@ -18,6 +18,16 @@ namespace ExpeditionArchive
         {
             for (int i = 0; i < args.Length; i++)
                 if (args[i] == "--repo" && i + 1 < args.Length) RepoRoot = args[++i];
+
+            /* .bat 的 "%~dp0" 結尾是反斜線；`--repo "%~dp0"` 會讓反斜線吃掉結尾引號，
+               解析成 `D:\BACKROOMS"`，Path.Combine 就會說「路徑中具有非法字符」。
+               這裡把引號與多餘尾斜線吃掉，舊啟動器也能運作。 */
+            if (!string.IsNullOrEmpty(RepoRoot))
+            {
+                RepoRoot = RepoRoot.Trim().Trim('"').Trim();
+                if (RepoRoot.Length > 3) RepoRoot = RepoRoot.TrimEnd('\\');
+            }
+
             if (string.IsNullOrEmpty(RepoRoot))
             {
                 string p = AppDomain.CurrentDomain.BaseDirectory;
