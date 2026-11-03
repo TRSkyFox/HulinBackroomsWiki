@@ -1,0 +1,40 @@
+{
+  "key": "60|盡力彌補",
+  "id": "60",
+  "name": "盡力彌補",
+  "info": {
+    "roman": "LX",
+    "id": "60",
+    "name": "盡力彌補",
+    "items": []
+  },
+  "doc": "<h4>環境</h4>\n<blockquote>白。<br>睜開眼睛，是一根柱子。好粗、好白，往上、往上，一直往上，消失在一片白霧裡。<br>旁邊是另一根。再旁邊又一根。一根一根，排成一格一格的，往四面八方延伸。地上是大理石，乾淨得發亮。<br>好安靜。光從四面八方來，沒有一個地方是暗的。<br>腦子裡，有兩個聲音同時說：「這裡好美。」「這裡好可怕。」<br>吶豆：「……要一起出去喔，一個都不能少。」</blockquote>",
+  "palette": {
+    "bg": "#EDEBE6",
+    "bg2": "#E5E3DD",
+    "card": "#F4F2EE",
+    "card2": "#EAE8E2",
+    "line": "#CFCBC1",
+    "line2": "#B9B4A8",
+    "acc": "#6F6A5E",
+    "acc2": "#57534A",
+    "tx": "#2C2B27",
+    "tx2": "#57544C",
+    "tx3": "#7A766C",
+    "ok": "#5c7a4a",
+    "bad": "#a4543c",
+    "sh-bg": "#E9E6DF",
+    "sh-panel": "#E3DFD6",
+    "sh-head": "#DDD9CF",
+    "sh-line": "#C3BEB2",
+    "sh-line2": "#ACA695",
+    "sh-tx": "#2C2B27",
+    "sh-tx2": "#4E4A42",
+    "sh-dim": "#6E6A60",
+    "sh-acc": "#7A5B2E",
+    "sh-acc2": "#5E4C33"
+  },
+  "_observations": 3,
+  "_created": "2026-10-31T02:32:13.101Z",
+  "paletteKey": "60"
+}

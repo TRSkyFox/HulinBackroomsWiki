@@ -1,0 +1,18 @@
+/* Level 12「血肉之屋」專屬頁面設計
+   只作用於 html[data-pal="12"]，不引用其他樓層。 */
+html[data-pal="12"]{
+  --bg:#CFCBC4;
+  --bg2:#C5C0B8;
+  --card:#D9D5CE;
+  --card2:#CEC9C1;
+  --line:#A8A299;
+  --line2:#8D867C;
+  --acc:#5A5248;
+  --acc2:#3F3931;
+  --tx:#262420;
+  --tx2:#4A453E;
+  --tx3:#6E675E;
+  --t-bg:#CFCBC4; --t-panel:#D9D5CE; --t-head:#CEC9C1;
+  --t-line:#A8A299; --t-line2:#8D867C;
+  --t-tx:#262420; --t-dim:#6E675E; --t-acc:#5A5248; --t-acc2:#3F3931;
+}

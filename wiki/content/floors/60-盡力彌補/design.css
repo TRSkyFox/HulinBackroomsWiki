@@ -1,0 +1,18 @@
+/* Level 60「盡力彌補」專屬頁面設計
+   只作用於 html[data-pal="60"]，不引用其他樓層。 */
+html[data-pal="60"]{
+  --bg:#EDEBE6;
+  --bg2:#E5E3DD;
+  --card:#F4F2EE;
+  --card2:#EAE8E2;
+  --line:#CFCBC1;
+  --line2:#B9B4A8;
+  --acc:#6F6A5E;
+  --acc2:#57534A;
+  --tx:#2C2B27;
+  --tx2:#57544C;
+  --tx3:#7A766C;
+  --t-bg:#EDEBE6; --t-panel:#F4F2EE; --t-head:#EAE8E2;
+  --t-line:#CFCBC1; --t-line2:#B9B4A8;
+  --t-tx:#2C2B27; --t-dim:#7A766C; --t-acc:#6F6A5E; --t-acc2:#57534A;
+}
