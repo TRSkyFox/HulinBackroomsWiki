@@ -76,6 +76,8 @@ param(
   [switch]$NoResize,
   # 直接指定視窗代碼（不給就自動找標題符合的瀏覽器視窗）
   [long]$Hwnd = 0,
+  # 只給除錯／校正用：允許明確指定或自動挑瀏覽器視窗。正常錄影一律不開。
+  [switch]$AllowBrowserWindow,
   # 自動找視窗時，標題要符合的關鍵字
   [string]$TitleMatch = '後室|Backrooms|狐霖|hulin',
   # 只抓一張、印出結果就結束（測試用）
@@ -186,6 +188,7 @@ public class BrWin {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder sb, int max);
   [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr h);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint processId);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr h, StringBuilder sb, int max);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
@@ -1153,11 +1156,55 @@ function Write-LevelFiles {
 }
 
 # ============================ 視窗 / 畫面 ============================
+function Test-BrowserProcessName {
+  param([string]$Name)
+  $n = ([string]$Name).ToLowerInvariant()
+  return ($n -match 'browser|chrome|edge|firefox|opera|brave|vivaldi|360se|360chrome|qqbrowser|sogou|liebao|maxthon|ucbrowser|2345|iexplore|safari')
+}
+
+function Get-WindowProcessName {
+  param([IntPtr]$Hwnd)
+  try {
+    $ownerPid = [uint32]0
+    [void][BrWin]::GetWindowThreadProcessId($Hwnd, [ref]$ownerPid)
+    if ($ownerPid -eq 0) { return '' }
+    $p = Get-Process -Id $ownerPid -ErrorAction SilentlyContinue
+    if ($p) { return [string]$p.ProcessName }
+  } catch { }
+  return ''
+}
+
+function Test-GameWindowProcess {
+  param([IntPtr]$Hwnd)
+  try {
+    $ownerPid = [uint32]0
+    [void][BrWin]::GetWindowThreadProcessId($Hwnd, [ref]$ownerPid)
+    if ($ownerPid -eq 0) { return $false }
+    $p = Get-Process -Id $ownerPid -ErrorAction SilentlyContinue
+    if (-not $p) { return $false }
+    $n = ([string]$p.ProcessName).ToLowerInvariant()
+    if (Test-BrowserProcessName $n) { return $false }
+    if ($n -match 'expedition|hulin|foyer') { return $true }
+    # 改名後的 client：允許和記錄器同一個 app 資料夾的程序。
+    try {
+      $dir = Split-Path -Parent ([string]$p.MainModule.FileName)
+      return [string]::Equals($dir.TrimEnd('\'), ([string]$PSScriptRoot).TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)
+    } catch { }
+  } catch { }
+  return $false
+}
+
 function Find-GameWindow {
-  param([long]$Hwnd, [string]$TitleMatch)
+  param([long]$Hwnd, [string]$TitleMatch, [switch]$AllowBrowser)
   if ($Hwnd -ne 0 -and [BrWin]::IsWindow([IntPtr]$Hwnd)) {
-    return [pscustomobject]@{ Hwnd = [IntPtr]$Hwnd; Pid = 0; Title = [BrWin]::Title([IntPtr]$Hwnd) }
+    $procName = Get-WindowProcessName -Hwnd ([IntPtr]$Hwnd)
+    if (-not $AllowBrowser -and -not (Test-GameWindowProcess -Hwnd ([IntPtr]$Hwnd))) {
+      return $null
+    }
+    return [pscustomobject]@{ Hwnd = [IntPtr]$Hwnd; Pid = 0; Title = [BrWin]::Title([IntPtr]$Hwnd); Process = $procName }
   }
+  # 正常錄影不給 Hwnd 時不再自動掃瀏覽器；只有除錯／校正明確加 -AllowBrowserWindow 才做。
+  if (-not $AllowBrowser) { return $null }
   $browsers = @('msedge', 'chrome', 'brave', 'msedgewebview2')
   $procs = @()
   foreach ($b in $browsers) { $procs += @(Get-Process -Name $b -ErrorAction SilentlyContinue) }
@@ -1165,7 +1212,7 @@ function Find-GameWindow {
   $hit = $withWin | Where-Object { $_.MainWindowTitle -match $TitleMatch } | Select-Object -First 1
   if (-not $hit) { $hit = $withWin | Select-Object -First 1 }
   if (-not $hit) { return $null }
-  return [pscustomobject]@{ Hwnd = [IntPtr]$hit.MainWindowHandle; Pid = $hit.Id; Title = $hit.MainWindowTitle }
+  return [pscustomobject]@{ Hwnd = [IntPtr]$hit.MainWindowHandle; Pid = $hit.Id; Title = $hit.MainWindowTitle; Process = $hit.ProcessName }
 }
 
 function Find-RenderWidget {
@@ -4342,8 +4389,8 @@ function Invoke-Calibrate {
     $bmp = [System.Drawing.Bitmap]::FromFile($Image)
     Write-Host ('  校正來源：' + $Image + '（' + $bmp.Width + 'x' + $bmp.Height + '）') -ForegroundColor Gray
   } else {
-    $w = Find-GameWindow -Hwnd $Hwnd -TitleMatch $TitleMatch
-    if (-not $w) { throw '找不到瀏覽器視窗；請用 -CalibrateImage <圖檔> 或先把遊戲開在 Edge 裡。' }
+    $w = Find-GameWindow -Hwnd $Hwnd -TitleMatch $TitleMatch -AllowBrowser:$AllowBrowserWindow
+    if (-not $w) { throw '找不到遊戲客戶端視窗；瀏覽器視窗不會被當成遊戲。請用 ExpeditionClient，或明確指定 -Hwnd。' }
     Write-Host ('  校正來源：即時視窗「' + $w.Title + '」（不會動視窗大小、不搶焦點）') -ForegroundColor Gray
     $full = Get-WindowImage -Top $w.Hwnd
     if (-not $full) { throw 'PrintWindow 截圖失敗。' }
@@ -4605,8 +4652,8 @@ $overlayFile = Join-Path $OutDir 'overlay.json'
 New-Item -ItemType Directory -Force -Path $files.LevelsDir | Out-Null
 [System.IO.File]::WriteAllText($files.Transitions, '# 跨樓層事件（轉場／岔路／樓層結算／樓層交界同幀事件）' + [Environment]::NewLine + '# 場次：backroom-' + $session + '　建立：' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss') + [Environment]::NewLine + '# 說明：各樓層自己的紀錄在 levels\ 底下；這裡只放「不屬於單一樓層」的事件' + [Environment]::NewLine, $utf8Bom)
 
-$win = Find-GameWindow -Hwnd $Hwnd -TitleMatch $TitleMatch
-if (-not $win) { throw '找不到瀏覽器視窗。請先把遊戲開在 Edge 裡，或用 -Hwnd <視窗代碼> 指定。' }
+$win = Find-GameWindow -Hwnd $Hwnd -TitleMatch $TitleMatch -AllowBrowser:$AllowBrowserWindow
+if (-not $win) { throw '找不到遊戲客戶端視窗。瀏覽器視窗不會被當成遊戲；請用 ExpeditionClient，或明確指定 -Hwnd。' }
 
 $lineDir = ''
 if ($SaveLineCrops) { $lineDir = Join-Path $sessionDir 'linecrops'; New-Item -ItemType Directory -Force -Path $lineDir | Out-Null }
@@ -5015,17 +5062,9 @@ try {
     $loopStart = [DateTime]::Now
     try {
       if (-not [BrWin]::IsWindow($win.Hwnd) -or -not [BrWin]::IsWindowVisible($win.Hwnd)) {
-        $newWin = Find-GameWindow -Hwnd 0 -TitleMatch $TitleMatch
-        if ($newWin) {
-          $win = $newWin
-          $state.WindowTitle = $newWin.Title
-          $state.WindowPid = $newWin.Pid
-          Write-Log $state ('重新鎖定視窗：' + $newWin.Title)
-          Add-Note $state ('重新鎖定視窗：' + $newWin.Title)
-        } else {
-          Start-Sleep -Milliseconds 1500
-          continue
-        }
+        # 視窗消失就等它回來；不要再用標題掃全機瀏覽器，否則會接到 Chrome/Firefox。
+        Start-Sleep -Milliseconds 1500
+        continue
       }
 
       $title = [BrWin]::Title($win.Hwnd)
