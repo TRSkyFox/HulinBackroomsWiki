@@ -22,7 +22,7 @@ class FontOcr
     {
         Console.OutputEncoding = Encoding.UTF8;
         if (args.Length < 2) { Console.Error.WriteLine("usage: font-ocr.exe <line.png> <ocrText> [fontPath]"); Environment.Exit(2); }
-        FontPath = args.Length > 2 ? args[2] : @"D:\BACKROOMS\客户端\fonts\NotoSansCJKtc-Regular.otf";
+        FontPath = args.Length > 2 ? args[2] : @"D:\Project\HulinBackroomsWiki\客户端\fonts\NotoSansCJKtc-Regular.otf";
         LoadFont(FontPath);
         var line = TextMask(args[0]);
         var res = Match(line, args[1]);

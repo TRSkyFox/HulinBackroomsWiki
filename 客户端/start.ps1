@@ -33,6 +33,15 @@ if ($copyFailed.Count -gt 0) {
   Write-Host ('客戶端檔案正在使用，這次跳過：' + ($copyFailed -join '、')) -ForegroundColor DarkGray
 }
 
+# 圓盤字型（Noto Sans TC）：第一次啟動複製到 app，之後跳過（字型檔較大）
+$fontSrc = Join-Path $src 'fonts\NotoSansCJKtc-Regular.otf'
+$fontDstDir = Join-Path $dst 'fonts'
+$fontDst = Join-Path $fontDstDir 'NotoSansCJKtc-Regular.otf'
+if ((Test-Path -LiteralPath $fontSrc) -and -not (Test-Path -LiteralPath $fontDst)) {
+  New-Item -ItemType Directory -Force $fontDstDir | Out-Null
+  try { Copy-Item -LiteralPath $fontSrc -Destination $fontDst -Force -ErrorAction Stop } catch { }
+}
+
 # 記錄器腳本的唯一來源在 Recorder。根目錄舊副本已移除，
 # 這裡直接從來源覆蓋 app，避免「改了來源、start 卻抄到舊副本」。
 foreach ($name in @('backroom-logger.ps1', 'palette-from-shots.ps1')) {
@@ -42,7 +51,7 @@ foreach ($name in @('backroom-logger.ps1', 'palette-from-shots.ps1')) {
   catch { $copyFailed += $name }
 }
 
-# logs 的實體位置：D:\BACKROOMS\客户端\Recorder\logs
+# logs 的實體位置：D:\Project\HulinBackroomsWiki\客户端\Recorder\logs
 $loggerRoot = Join-Path $PSScriptRoot 'Recorder'
 $logDir = Join-Path $loggerRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
@@ -74,4 +83,5 @@ if ($NoOverlay) { $argsList += '--no-overlay' }
 
 # 只啟動剛複製到本機的這一份（D:\ 的 exe 會被 Windows 擋）
 Start-Process -FilePath $exe -ArgumentList $argsList -WorkingDirectory $dst
+
 

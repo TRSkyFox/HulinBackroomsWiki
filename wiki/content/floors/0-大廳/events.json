@@ -1,7 +1,352 @@
 {
   "floorId": "0",
   "floorName": "大廳",
-  "junctions": [],
+  "junctions": [
+    {
+      "text": "一條長得不合理的走廊，盡頭的燈管一閃一閃。你們數了數兩旁的門——每數一次，數量都不一樣。",
+      "paths": [
+        {
+          "text": "往地毯比較干的地方走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "沿著牆上的插座走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進地毯顏色比較深的那一區",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          48
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "天花板低得必須彎著腰走。這裡的嗡鳴聲特別大，大到像是有人貼在耳邊哼歌，太陽穴跟著一抽一抽地痛",
+      "paths": [
+        {
+          "text": "走向牆上貼著紙的那個角落",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那一小塊亮光走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          73
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間空曠得過分的大房間，地毯上有一格一格的凹痕，像是這裡曾經擺過家具，但沒有人知道是什麼時候、是誰搬走的。",
+      "paths": [
+        {
+          "text": "跟著投幣的叮當聲走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向那扇可以上鎖的門",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向那扇半開的門",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          144
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "往燈管全部彎向同一邊的走廊走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進那條長得不太對勁的走廊",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          312
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走向那扇貼著便條的門",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那面敲起來聲音不一樣的牆走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "穿過那個低矮的門洞",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          366
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一條長得不合理的走廊，盡頭的燈管一閃一閃，你們數了數兩旁的門——每數一次，數量都不一樣。",
+      "paths": [
+        {
+          "text": "走向燈光特別穩定的小房間",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "找個安靜的角落",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          807
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "穿過燈管碎了一地的房間",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向燈光比較亮的那一邊",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          867
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "一間空曠得過分的大房間，地毯上有一格一格的凹痕，像是這裡曾經擺過家具，但沒有人知道是什麼時候、是誰搬走的。",
+      "paths": [
+        {
+          "text": "往燈管全部彎向同一邊的走廊走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走向那扇半開的門",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          881
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走進那條燈很暗的Y字形走廊",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "有一條走廊分成了Y字形，其中一邊的燈暗得不正常，還飄出一股霉味",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "循著牆里滴滴答答的漏水聲走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那台嚼嚼響的機器走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          899
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走進那條燈很暗的Y字形走廊",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "有一條走廊分成了Y字形，其中一邊的燈暗得不正常，還飄出一股霉味",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "循著牆里滴滴答答的漏水聲走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那台喻嚼響的機器走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          900
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走進那條燈很暗的Y字形走廊",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "有一條走廊分成了Y字形，其中一邊的燈暗得不正常，還飄出一股霉味",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "循著牆里滴滴答答的漏水聲走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那台嘴喻響的機器走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          904
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "壁紙上的圖案是箭頭和直線，一路重複到看不見的地方。看久了，那些箭頭好像都指向同一個方向——你們背後。",
+      "paths": [
+        {
+          "text": "走進地毯顏色比較深的那一區",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往耳朵會脹脹的那一邊走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          909
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "黃色的壁紙在日光燈下微微泛潮，地毯踩起來是濕的，空氣里有股舊地毯發霉的味道。牆上的插座整整齊齊排成一列，卻沒有一個有插東西。",
+      "paths": [
+        {
+          "text": "走向牆上那個亮著紅光的東西",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進燈管特別密的那一區",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          974
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
   "events": [
     {
       "name": "同路的流浪者",
@@ -120,6 +465,161 @@
         "session": "backroom-20261103-005544",
         "frame": 1880,
         "ts": "2026-11-03 01:26:27",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "馬尼拉房間",
+      "kind": "event",
+      "intro": "你們走進一個和其他地方都不一樣的房間。牆上是馬尼拉紙色的壁紙，點綴著細小的花紋；天花板上只有一盞燈，比外面暗很多，帶著溫暖的橘色。 一走進來，全身的緊繃好像都松開了，感官變得遲鈍，連嗡嗡鳴聲都聽不太清楚。 牆後面，隱約有很輕的丶像是有人在說悄悄話的聲音。你們隱約感覺到，四周的空間正在慢慢變化——再待下去，也許會被帶到別的地方。",
+      "actions": [
+        {
+          "text": "坐下來好好休息",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你們在橘色的燈光下坐了很久。沒有人說話，也不需要說話。",
+                "天狐手臂上的終端寫入了一筆：休息時整理好的資料。（信息+1，現在1點）",
+                "「傳送。」天狐對著手臂說，終端安靜了一下，跳出一行小字：無應答，他把那行字關掉，繼續走。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "待到房間把你們送走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "把耳耳耳耳耳朵貼在牆上聽",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "坐下來好好休息",
+      "results": [
+        "你們在橘色的燈光下坐了很久。沒有人說話，也不需要說話。",
+        "天狐手臂上的終端寫入了一筆：休息時整理好的資料。（信息+1，現在1點）",
+        "「傳送。」天狐對著手臂說，終端安靜了一下，跳出一行小字：無應答，他把那行字關掉，繼續走。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 825,
+        "ts": "2026-11-03 13:20:36",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "塌陷",
+      "kind": "event",
+      "intro": "腳下的地板突然往下一沉——整片地毯像被抽走一樣塌了下去，尖叫聲、碎裂聲、灰塵，每個人都抓住了自己能抓的東西。 回過神來的時候，你們已經被分開了——天狐在「被衝進旁邊的通風管」；你在「抓住斷掉的地板邊緣天狐：被衝進旁邊的通風管天狐被一陣氣流卷進了牆里的通風管，一路滑了好遠好遠。停下來的時候，四周完全黑暗，只有一點點光從前面透進來。",
+      "actions": [
+        {
+          "text": "朝著那點光爬",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "大聲喊，讓你知道自己在哪裡",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐的聲音在管道里回荡，很快就有人喊著回應了。",
+                "集合點天狐到了約好的地方。",
+                "你氣喘吁吁地出現在轉角。",
+                "兜了好大一圈，你們終於在一條走廊的轉角重新遇上。每個人身上都是灰，誰都沒有多說什麼——只是站得比平常更近了一點。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "大聲喊，讓你知道自己在哪裡",
+      "results": [
+        "天狐的聲音在管道里回荡，很快就有人喊著回應了。",
+        "集合點天狐到了約好的地方。",
+        "你氣喘吁吁地出現在轉角。",
+        "兜了好大一圈，你們終於在一條走廊的轉角重新遇上。每個人身上都是灰，誰都沒有多說什麼——只是站得比平常更近了一點。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 60,
+        "ts": "2026-11-03 13:10:28",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "整層都歪了",
+      "kind": "event",
+      "intro": "腳底下傳來一陣很低、很長的嘎吱聲，像一整棟樓在翻身。 每一條走廊同時歪了——你們在各自的走廊里，同時看到地板往一邊翻過去，前面的地毯裂開一道黑黑的縫。",
+      "actions": [
+        {
+          "text": "抓住門框！",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "趴低，貼著地板",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你整個人貼在地毯上，手指摳著地毯的縫，等它翻回來。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "趴低，貼著地板",
+      "results": [
+        "你整個人貼在地毯上，手指摳著地毯的縫，等它翻回來。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1089,
+        "ts": "2026-11-03 13:24:15",
         "confidence": 0.6,
         "rule": "event-clean@2026-10-29"
       }

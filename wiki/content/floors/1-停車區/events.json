@@ -1,0 +1,107 @@
+{
+  "floorId": "1",
+  "floorName": "停車區",
+  "junctions": [
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "往比較涼的地方走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "穿過那排水泥柱",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          403
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "地上的積水淹到了腳踝。水面平靜得出奇，散發著淡淡的杏仁香",
+      "paths": [
+        {
+          "text": "沿著坑坑疤疤的牆走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往比較涼的地方走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          495
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "掠奪者的廢墟",
+      "kind": "event",
+      "intro": "一片被燒得焦黑的營地，帳篷只剩骨架，鐵絲網倒在地上，牆上噴著「打倒大團體」、「物資屬於所有人」的標語。這是「掠奪者」的據點——一個曾經有七十幾個人、囤積大量物資的團體。 地上的痕跡說明了一切：這裡的人，一個也沒有活下來。",
+      "actions": [
+        {
+          "text": "搜尋他們藏起來的物資",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "天狐翻開一塊鐵板，下面是一排排整齊的墳墓，每一個墓碑上都畫著聖徒教團的符號。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "替他們收埋遺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "這裡不安全，快走",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "搜尋他們藏起來的物資",
+      "results": [
+        "天狐翻開一塊鐵板，下面是一排排整齊的墳墓，每一個墓碑上都畫著聖徒教團的符號。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 443,
+        "ts": "2026-11-03 13:15:10",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

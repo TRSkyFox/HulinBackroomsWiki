@@ -9,7 +9,7 @@ const CONTENT = path.join(ROOT, 'wiki', 'content');
 const read = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const dirs = p => fs.readdirSync(p, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name);
 
-const CATS = new Set(['bad', 'core', 'good', 'lost', 'extra']);
+const CATS = new Set(['bad', 'settle', 'neutral', 'lost', 'extra']);
 const DUP_ENTITY_PAIRS = [['河后', '河後'], ['冰湖底下的蛇', '冰湖裡的蛇'], ['有失控的礦車', '失控的礦車']];
 
 export function run() {
@@ -107,7 +107,7 @@ export function run() {
   const html = fs.existsSync(site) ? fs.readFileSync(site, 'utf8') : '';
   add('site:built', html.length > 1000000, html.length + ' bytes');
   add('site:floor-partial', /var FLOOR_PARTIAL = \{/.test(html), 'FLOOR_PARTIAL missing');
-  add('site:ending-arrays', /var END_DATA = \{"bad":\[/.test(html) && /"good":\[/.test(html), 'END_DATA not array');
+  add('site:ending-arrays', /var END_DATA = \{"bad":\[/.test(html) && /"neutral":\[/.test(html), 'END_DATA not array');
 
   return { ok: checks.every(c => c.ok), checks };
 }

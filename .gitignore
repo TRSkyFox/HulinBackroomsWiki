@@ -52,3 +52,6 @@ wiki/_backup/
 
 工具/*.exe.running-old*
 tools/*.exe.running-old*
+
+# OCR 服務執行時在 CWD 產生的設定
+rapid-primary-service.yaml

@@ -2753,6 +2753,14 @@ aside::-webkit-scrollbar{ width:9px; }
 #pageView .flpage th{background:var(--card2);color:var(--tx);white-space:nowrap}
 #pageView .flpage code{background:var(--card2);padding:.05rem .32rem;border-radius:3px;font-size:.92em}
 #pageView .flpage strong{color:var(--tx)}
+/* 出入口佔位（尚無資料；2026-11-03） */
+#pageView .flpage .io-note{color:var(--tx3);font-size:.9rem;margin:.5rem 0 .7rem}
+#pageView .flpage .io-ghost{
+  border:1px dashed var(--card2); border-radius:3px; padding:.7rem 1rem;
+  background:var(--card2); font-family:ui-monospace,Consolas,monospace;
+  line-height:2; color:var(--tx2);
+}
+#pageView .flpage .io-ghost b{color:var(--tx);font-weight:700;margin-right:.35rem}
 
 /* 角色／結局／技能瀏覽器標題列：完全照事件瀏覽器 .evb .hd 的樣式（點點＋直線＋終端機底） */
 #pageView .cpb-hd{
@@ -4090,6 +4098,19 @@ body{overflow:hidden}
   text-shadow:0 0 6px color-mix(in srgb,var(--t-acc) 40%,transparent);
 }
 .evmx-sw button[aria-selected="true"]::before{content:"▸ "; color:var(--t-acc)}
+/* 2026-11-03：事件／結局已拆成側欄兩個入口，框內切換鈕不再使用 */
+#pageView.mx .evmx-sw{display:none !important}
+/* 事件分類列（通用／角色／樓層） */
+.evb-cats{display:flex;align-items:center;gap:.3rem;padding:.15rem 0 .5rem;flex:none}
+.evb-cats button{
+  background:transparent; border:1px solid var(--t-line); border-radius:2px;
+  color:var(--t-dim); font-family:inherit; font-size:.88rem; letter-spacing:.04em;
+  padding:.2rem .6rem; cursor:pointer; line-height:1.5;
+}
+.evb-cats button .n{margin-left:.35rem; color:var(--t-dim); font-size:.82em}
+.evb-cats button:hover{color:var(--t-tx); border-color:var(--t-line2)}
+.evb-cats button.on{color:var(--t-acc); border-color:var(--t-line2); background:var(--t-head); font-weight:700}
+.evb-cats button.on .n{color:var(--t-acc2)}
 .evmx-end{display:none !important}
 #pageView.mx-ending .evmx-end{display:block !important; flex:1 1 auto; min-height:0}
 #pageView.mx-ending #evbWin,
@@ -7323,7 +7344,8 @@ html[data-pal="60"]{
       <a href="#" class="shItem" data-nav="items" data-view="items"><span class="ic">▣</span>物品<span class="en">ITEMS</span><span class="cnt">378</span></a>
       <a href="#" class="shItem" data-nav="chars" data-view="codex"><span class="ic">◈</span>角色<span class="en">CHARS</span><span class="cnt" id="shCharCnt">64</span></a>
       <a href="#" class="shItem" data-nav="ent" data-view="codex"><span class="ic">◆</span>實體<span class="en">ENTITIES</span><span class="cnt" id="shEntCnt">74</span></a>
-      <a href="#" class="shItem" data-nav="mixed" data-view="ending"><span class="ic">⌁</span>事件與結局<span class="en">EVENTS</span><span class="cnt">8</span></a>
+      <a href="#" class="shItem" data-nav="mixed" data-view="events"><span class="ic">⌁</span>事件<span class="en">EVENTS</span><span class="cnt" id="shEvCnt">0</span></a>
+      <a href="#" class="shItem" data-nav="endings" data-view="ending"><span class="ic">◇</span>結局<span class="en">ENDINGS</span><span class="cnt" id="shEndCnt">0</span></a>
       <a href="#" class="shItem" data-nav="about" data-page="license"><span class="ic">※</span>關於<span class="en">ABOUT</span></a>
       
     </nav>
@@ -7923,13 +7945,28 @@ function openFloorView(lv, name){
   var flItems = (info && info.items) ? info.items.filter(Boolean) : [];
   var tabsHTML = '<button type="button" role="tab" aria-selected="true" data-ftab="intro">介紹</button>'
     + (flItems.length ? '<button type="button" role="tab" aria-selected="false" data-ftab="items">物品</button>' : '')
-    + '<button type="button" role="tab" aria-selected="false" data-ftab="ev">事件</button>';
+    + '<button type="button" role="tab" aria-selected="false" data-ftab="ev">事件</button>'
+    + '<button type="button" role="tab" aria-selected="false" data-ftab="io">出入口</button>';
   var itemsHTML = flItems.length
     ? '<ul class="fl-items">' + flItems.map(function(x){ return '<li>' + cpEsc(x) + '</li>'; }).join('') + '</ul>'
     : '';
   var partialHTML = floorPartial(lv)
     ? '<p class="fl-partial">⚠ 這一層只記錄到一小角：介紹很短，可能是走得太快或畫面沒停夠久。事件是照實際走過的路徑記的，沒走到的分支不會出現（也收不齊）；出口進度條跟事件條數無關。尚未人工核對，可能有缺字。</p>'
     : '';
+  /* 出入口：目前沒有實際場次支撐 → 用站上既有的「亂碼遮蔽」樣式佔位（2026-11-03） */
+  var _ioPool = '▓▒░█▚▞▮▯';
+  var _ioBlk = function(n){
+    var o = '';
+    for(var q = 0; q < n; q++) o += _ioPool.charAt((Math.random() * _ioPool.length) | 0);
+    return '<span class="mask io-mask" data-n="' + n + '" title="已遮蔽">' + o + '</span>';
+  };
+  var ioHTML = '<h3 class="sub">出入口</h3>'
+    + '<p class="io-note">這一層還沒有實際場次支撐出入口資料，以下是佔位。</p>'
+    + '<div class="io-ghost">'
+    + '<p><b>出口</b>　' + _ioBlk(6) + ' → Level ' + _ioBlk(2) + '「' + _ioBlk(4) + '」</p>'
+    + '<p><b>入口</b>　' + _ioBlk(6) + ' → Level ' + _ioBlk(2) + '「' + _ioBlk(4) + '」</p>'
+    + '</div>'
+    + '<p class="io-note">（尚無資料）</p>';
   body.innerHTML =
     '<div class="flpage">'
     + '<h1>' + title + '</h1>' + partialHTML
@@ -7937,7 +7974,9 @@ function openFloorView(lv, name){
     + '<section class="pane on" data-fpane="intro">' + (introHTML || '<p style="color:var(--tx3)">這一層還沒有介紹。</p>') + '</section>'
     + (flItems.length ? '<section class="pane" data-fpane="items">' + itemsHTML + '</section>' : '')
     + '<section class="pane" data-fpane="ev">' + evHTML + '</section>'
+    + '<section class="pane" data-fpane="io">' + ioHTML + '</section>'
     + '</div>';
+  try{ ioGlitchStart(); }catch(e){}
   var tabs = document.getElementById('flTabs');
   if(tabs){ tabs.addEventListener('click', function(e){
     var b = e.target.closest('[data-ftab]'); if(!b) return;
@@ -8221,6 +8260,16 @@ function openEventView(){
 }
 /* ── 結局瀏覽器（資料取自 _data\endings\ending-卡在牆裡.md）── */
 var END_DATA = __WIKI_END_DATA__;
+/* 2026-11-03：事件／結局拆成兩個入口。結局數要數「條目」，不是數分類 key。 */
+function endingCount(){
+ var n = 0;
+ if(typeof END_DATA === 'undefined' || !END_DATA) return 0;
+ ['bad','settle','neutral','extra'].forEach(function(k){
+  if(Object.prototype.toString.call(END_DATA[k]) === '[object Array]') n += END_DATA[k].length;
+ });
+ if(END_DATA.lost && END_DATA.lost.variants) n += END_DATA.lost.variants.length;
+ return n;
+}
 
 function endFloorTag(str){
   var t = String(str||'');
@@ -8257,15 +8306,15 @@ function endingGroups(){
     });
   }
   g.push({ k:'bad', label:'壞結局', items:badItems });
-  var normalItems = [];
-  ['good','core'].forEach(function(k){
-    arrOf(k).forEach(function(d){ pushEnd(d, normalItems); });
-  });
+  var settleItems = [];
+  arrOf('settle').forEach(function(d){ pushEnd(d, settleItems); });
+  g.push({ k:'settle', label:'安頓下來', items:settleItems });
+  var neutralItems = [];
+  arrOf('neutral').forEach(function(d){ pushEnd(d, neutralItems); });
   if(Object.prototype.toString.call(END_DATA.extra) === '[object Array]'){
-    END_DATA.extra.forEach(function(d){ pushEnd(d, normalItems); });
+    END_DATA.extra.forEach(function(d){ pushEnd(d, neutralItems); });
   }
-  g.push({ k:'normal', label:'普通結局', items:normalItems });
-  g.push({ k:'good', label:'好結局', items:[], note:'' });
+  g.push({ k:'neutral', label:'中立結局', items:neutralItems });
   g.forEach(function(x){
     x.items.sort(function(a,b){
       if(a.num !== b.num) return a.num - b.num;
@@ -8640,7 +8689,7 @@ function openHomeView(){
     ['物品', ITEMS.length, 'items'],
     ['實體', CP_ENT.length, 'ent'],
     ['商店', SHOPS.length, 'shop'],
-    ['結局', (typeof END_DATA !== 'undefined' && END_DATA ? Object.keys(END_DATA).filter(function(k){ return END_DATA[k] && !END_DATA[k].empty; }).length : 0), 'ending']
+    ['結局', (typeof endingCount === 'function' ? endingCount() : 0), 'ending']
   ];
   var cards = [
     ['樓層總覽', 'Level 0 的黃牆紙，一路往下到深處。', 'home'],
@@ -10759,6 +10808,74 @@ var EVB = { mode:'junction', jid:'路口-轉角', eid:null, ai:-1, hint:'' };
     }
   }catch(e){}
 })();
+/* 通用／角色事件：不屬於任何樓層（2026-11-03）
+   資料來源：events/common/events.json、characters/<角色>/events.json */
+(function(){
+  try{
+    if(typeof EVENT_GRAPH === 'undefined' || !EVENT_GRAPH) return;
+    function addGroup(rootId, label, evs, cat, scopeText){
+      var list = (evs || []).filter(function(e){ return e && e.name && (e.intro || (e.actions && e.actions.length)); });
+      if(!list.length) return null;
+      var ids = [];
+      list.forEach(function(e, i){
+        var id = rootId + '-e' + i;
+        ids.push(id);
+        EVB_NODES[id] = { type:'event', kind:'事件', lv:'', name:e.name, scope:scopeText, cat:cat, st:'記錄',
+          text:(e.intro || ''),
+          actions:(e.actions || []).map(function(a){
+            var _ck = a.check && (a.check.attribute || a.check.hasCheck) ? a.check : null;
+            return { t:a.text, check:_ck ? (_ck.attribute || '') : (a.qte ? 'QTE' : ''), qte:!!a.qte,
+              checkRaw:_ck, outcome:(a.outcome || (_ck && _ck.outcome)) || '',
+              result:{ lines:(e.results || []).concat((e.effects || []).map(function(x){ return x.kind + ' ' + (x.amount > 0 ? '+' : '') + x.amount; })) } };
+          }) };
+        EVB_ALL.push(id);
+      });
+      EVB_NODES[rootId] = { type:'junction', isRoot:true, kind:'路口', lv:'', name:label, scope:scopeText, cat:cat, st:'記錄', text:'',
+        paths:list.map(function(e, i){ return { t:e.name, to:ids[i], kind:'事件' }; }) };
+      EVB_ALL.push(rootId);
+      return rootId;
+    }
+    addGroup('graph-common', '通用事件', EVENT_GRAPH.common || [], 'common', '通用');
+    var chars = EVENT_GRAPH.characters || {};
+    Object.keys(chars).forEach(function(name){
+      addGroup('graph-char-' + name, '角色：' + name, chars[name], 'char', name);
+    });
+  }catch(e){}
+})();
+/* 事件分類：通用／角色／樓層（2026-11-03） */
+function evbCatRoots(){
+  var out = { common:[], char:[], floor:[] };
+  EVB_ALL.forEach(function(id){
+    var n = EVB_NODES[id];
+    if(!n || !n.isRoot) return;
+    var c = n.cat === 'common' ? 'common' : n.cat === 'char' ? 'char' : 'floor';
+    out[c].push(id);
+  });
+  return out;
+}
+function evbCatGo(cat){
+  var roots = evbCatRoots()[cat] || [];
+  if(!roots.length){ if(typeof shellToast === 'function') shellToast('（尚無資料）'); return; }
+  try{ evbOpenJunction(roots[0], false); }catch(e){}
+  var bar = document.querySelector('.evb-cats');
+  if(bar) bar.querySelectorAll('button[data-cat]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cat') === cat); });
+}
+function evbCatsMount(){
+  var body = document.getElementById('viewBody'); if(!body) return;
+  var old = body.querySelector('.evb-cats'); if(old) old.parentNode.removeChild(old);
+  var roots = evbCatRoots();
+  var bar = document.createElement('div');
+  bar.className = 'evb-cats';
+  bar.setAttribute('role','tablist');
+  bar.innerHTML = ['common','char','floor'].map(function(c){
+    var label = c === 'common' ? '通用' : c === 'char' ? '角色' : '樓層';
+    return '<button type="button" role="tab" data-cat="' + c + '">' + label + '<span class="n">' + roots[c].length + '</span></button>';
+  }).join('');
+  body.insertBefore(bar, body.firstChild);
+  bar.addEventListener('click', function(e){ var b = e.target.closest('button[data-cat]'); if(b) evbCatGo(b.getAttribute('data-cat')); });
+  var first = roots.floor.length ? 'floor' : (roots.common.length ? 'common' : 'char');
+  bar.querySelectorAll('button[data-cat]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-cat') === first); });
+}
 /* 走過的路徑（①路口 → ②路徑 → ③事件 …）；每一項都可以點回去 */
 var EVB_TRAIL = [];
 var EVB_CIRC = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
@@ -11870,7 +11987,8 @@ function mixShow(which){
   if(end && !end.querySelector('.endwrap2')) mixMountEnding();
   if(nm){
    var gs = endingGroups();
-   nm.textContent = gs.length + ' 類：' + gs.map(function(g){ return g.label; }).join('／');
+   var _ec = (typeof endingCount === 'function') ? endingCount() : 0;
+   nm.textContent = _ec ? (gs.length + ' 類：' + gs.map(function(g){ return g.label; }).join('／')) : '（尚無資料）';
   }
  }else{
   if(nm) nm.textContent = '全部 ' + _evbCount() + ' 項';
@@ -11878,10 +11996,12 @@ function mixShow(which){
 }
 function openMixedPage(which){
  which = (which === 'ending') ? 'ending' : 'evb';
- openView('mixed', '事件與結局', '事件 ／ 結局');
+ var _isEnd = (which === 'ending');
+ openView('mixed', _isEnd ? '結局' : '事件', _isEnd ? '走出去的方法' : '岔路、抉擇，以及走進去的方法');
  var body = document.getElementById('viewBody'); if(!body) return;
  var f = mixPrep(); if(!f) return;
  body.appendChild(f);              /* 同一個節點搬家：事件瀏覽器的監聽全部還在 */
+ if(which === 'evb'){ try{ evbCatsMount(); }catch(e){} }
  var _mm = document.querySelector('#shMain main'); if(_mm){ _mm.classList.add('mx-fill'); }
  mixShow(which);
  shellInjectTabs('mixed', which);  /* 只清掉舊的頁內分頁列（合併頁不再有 .sh-ptabs） */
@@ -11926,7 +12046,7 @@ function shellMarkNav(tab){
   else if(kind === 'codex') key = 'codex';
   else if(kind === 'chars') key = 'chars';
   else if(kind === 'ent') key = 'ent';
-  else if(kind === 'mixed') key = 'mixed';
+  else if(kind === 'mixed') key = (tab.payload && tab.payload.which === 'ending') ? 'endings' : 'mixed';
   else if(kind === 'about') key = 'about';
   else if(kind === 'floors'){ var g0 = document.getElementById('shGrpFloor'); if(g0){ g0.classList.add('on'); g0.open = true; } }
   else if(kind === 'floor'){ var g = document.getElementById('shGrpFloor'); if(g) g.classList.add('on'); }
@@ -12110,6 +12230,7 @@ function shellHandleAside(e){
     else if(nav === 'chars') shellOpenFrom('chars', { tab:'chars' });
     else if(nav === 'ent') shellOpenFrom('ent', { tab:'ents' });
     else if(nav === 'mixed') shellOpenFrom('mixed', { which:'evb' });
+    else if(nav === 'endings') shellOpenFrom('mixed', { which:'ending' });
     else if(nav === 'about') shellOpenFrom('about');
     else if(nav === 'floors') shellOpenFrom('floors');
     return;
@@ -12454,6 +12575,22 @@ if(document.readyState === 'loading'){
     try{ if(typeof flEvFit === 'function') flEvFit(); }catch(e){}
   };
 })();
+/* 出入口佔位：亂碼每 260ms 重抽一次，做出「資料在跳」的效果 */
+var _IO_GLITCH = null;
+function ioGlitchStart(){
+  if(_IO_GLITCH) return;
+  var pool = '▓▒░█▚▞▮▯';
+  _IO_GLITCH = setInterval(function(){
+    var els = document.querySelectorAll('.io-mask');
+    if(!els.length){ clearInterval(_IO_GLITCH); _IO_GLITCH = null; return; }
+    for(var i = 0; i < els.length; i++){
+      var n = parseInt(els[i].getAttribute('data-n'), 10) || 4;
+      var s = '';
+      for(var q = 0; q < n; q++) s += pool.charAt((Math.random() * pool.length) | 0);
+      els[i].textContent = s;
+    }
+  }, 260);
+}
 /* ══ L0 事件分頁：事件瀏覽器撐滿「分頁列以下 → 內容區底部」════════════
    外殼 rem 固定 22px、分頁列高度又會隨字型／視窗改變，所以用量的：
    (main 的底 − 分頁列底)；不靠 100vh 硬扣（遲早多扣留白、或少扣溢出）。 */
@@ -13019,6 +13156,7 @@ function shellSyncSideCounts(){
       setCnt('codex', cc || null);
     }
     if(typeof EVB_ALL !== 'undefined') setCnt('mixed', EVB_ALL.length);
+    if(typeof endingCount === 'function') setCnt('endings', endingCount());
   }catch(e){}
 }
 

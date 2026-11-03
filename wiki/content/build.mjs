@@ -88,7 +88,7 @@ for (const d of dirs(path.join(HERE, 'shops'))) {
 }
 /* 結局：只讀各樓層資料夾的 endings.json。
    每一類都是「陣列」——以前 endings[cat] = e 是單槽，第二個壞結局會靜默蓋掉第一個。 */
-const endings = { bad: [], core: [], good: [] };
+const endings = { bad: [], settle: [], neutral: [] };
 const extraEndings = [];
 const lost = { label: '迷失', name: '迷失', status: '部分', variants: [] };
 for (const d of dirs(path.join(HERE, 'floors'))) {
@@ -163,6 +163,26 @@ for (const d of dirs(path.join(HERE, 'floors'))) {
     next.events = [...(prev.events || []), ...next.events];
   }
   EVENT_GRAPH.floors[fid] = next;
+}
+
+/* 通用／角色事件：不屬於任何樓層（2026-11-03）
+   樓層事件留在 floors/<id>/events.json；通用事件放 events/common/，
+   角色事件放 events/characters/<角色>/，兩者都只在「事件」頁出現。 */
+const EVENTS_ROOT = path.join(HERE, 'events');
+const eventList = p => {
+  try { const a = readJSON(p); return Array.isArray(a) ? a : (a && Array.isArray(a.events) ? a.events : []); }
+  catch (e) { throw new Error('事件檔壞了：' + p + ' :: ' + e.message); }
+};
+EVENT_GRAPH.common = [];
+const commonEventsPath = path.join(EVENTS_ROOT, 'common', 'events.json');
+if (has(commonEventsPath)) EVENT_GRAPH.common = eventList(commonEventsPath).map(e => ({ ...e, scope: 'common' }));
+EVENT_GRAPH.characters = {};
+/* 角色事件放在該角色自己的資料夾：characters/<角色>/events.json */
+for (const d of dirs(path.join(HERE, 'characters'))) {
+  const ep = path.join(HERE, 'characters', d, 'events.json');
+  if (!has(ep)) continue;
+  const list = eventList(ep).map(e => ({ ...e, scope: 'character', character: d }));
+  if (list.length) EVENT_GRAPH.characters[d] = list;
 }
 
 /* 覆蓋率：2026-10-30 移除「用 progress.total 比事件數」那套。

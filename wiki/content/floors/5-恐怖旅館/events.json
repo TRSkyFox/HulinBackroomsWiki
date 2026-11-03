@@ -1,0 +1,166 @@
+{
+  "floorId": "5",
+  "floorName": "恐怖旅館",
+  "junctions": [
+    {
+      "text": "一張天鵝絨沙發擋在走廊正中間，推不動丶搬不動，像是長在地毯上一樣。你們只好從旁邊擠過去。",
+      "paths": [
+        {
+          "text": "走上一段鋪著地毯的樓梯",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那個讓人起雞皮疙瘩的方向走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          1159
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走到兩條走廊分岔的地方",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進那個所有人都在跳華爾滋的舞廳",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "推開那扇寫著「員工專用的門，走進鍋爐房",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          1321
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "走到兩條走廊分岔的地方",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "走進那個所有人都在跳華爾滋的舞廳",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "推開那扇寫著T員工專用的門，走進鍋爐房",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          1350
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    },
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "從擋路的沙發旁邊擠過去",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往那座有大吊燈的宴會廳走",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          1805
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "當鋪的老闆",
+      "kind": "event",
+      "intro": "老闆把懷表放進絨布盒里，看了很久。他說：「三點十五分。我太太走的時間。」 他沒有把表收起來，反而推回給你們。",
+      "actions": [
+        {
+          "text": "收下懷表",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "還是留給老闆吧",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "得到了你們把表推了回去。老闆愣了一下，點點頭，把懷表掛在自己的急救包好的一件東西拿給你們。",
+                "所有人：各得到20硬幣消耗品天狐：得到「急救包」",
+                "你們把表推了回去。老闆愣了一下，點點頭，把懷表掛在自己的脖子上。他付了雙倍的錢，還把櫃/30老闆把懷等級加成：體力、理智上限+2，命中、傷害+2背包裡8/13格他沒有把耐久19/19算力7/17構造體：不會餓、不會渴勘探隊探索裝置（耐久10/128）",
+                "道具你們把表攻擊右手1d2+2鈍擊/左手1d4+5揮砍|防禦12部署現實穩定場的裝置（用膠帶這類東西修，不先攻+1|逃跑-2好的一件補給用合金塊消耗品所有人：各構造體用的補給：耐久+6。（只有天狐用得上）",
+                "天狐把「急救包」交給了你。",
+                "你把「羊毛襪」交給了天狐。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "還是留給老闆吧",
+      "results": [
+        "得到了你們把表推了回去。老闆愣了一下，點點頭，把懷表掛在自己的急救包好的一件東西拿給你們。",
+        "所有人：各得到20硬幣消耗品天狐：得到「急救包」",
+        "你們把表推了回去。老闆愣了一下，點點頭，把懷表掛在自己的脖子上。他付了雙倍的錢，還把櫃/30老闆把懷等級加成：體力、理智上限+2，命中、傷害+2背包裡8/13格他沒有把耐久19/19算力7/17構造體：不會餓、不會渴勘探隊探索裝置（耐久10/128）",
+        "道具你們把表攻擊右手1d2+2鈍擊/左手1d4+5揮砍|防禦12部署現實穩定場的裝置（用膠帶這類東西修，不先攻+1|逃跑-2好的一件補給用合金塊消耗品所有人：各構造體用的補給：耐久+6。（只有天狐用得上）",
+        "天狐把「急救包」交給了你。",
+        "你把「羊毛襪」交給了天狐。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1762,
+        "ts": "2026-11-03 13:36:14",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

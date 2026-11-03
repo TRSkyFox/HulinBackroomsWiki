@@ -23,7 +23,7 @@ class FontMatch
         Console.OutputEncoding = Encoding.UTF8;
         if (args.Length < 2) { Console.Error.WriteLine("usage: font-match.exe <line.png> <ocrText> [font.otf]"); Environment.Exit(2); }
         string img = args[0], ocr = args[1];
-        string font = args.Length > 2 ? args[2] : @"D:\BACKROOMS\客户端\fonts\NotoSansCJKtc-Regular.otf";
+        string font = args.Length > 2 ? args[2] : @"D:\Project\HulinBackroomsWiki\客户端\fonts\NotoSansCJKtc-Regular.otf";
         LoadFont(font);
         LoadCharset();
         var res = Match(img, ocr);
@@ -39,7 +39,7 @@ class FontMatch
 
     static void LoadCharset()
     {
-        string meta = @"D:\BACKROOMS\客户端\fonts\atlas-32.json";
+        string meta = @"D:\Project\HulinBackroomsWiki\客户端\fonts\atlas-32.json";
         if (!File.Exists(meta)) return;
         try
         {

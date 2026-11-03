@@ -1,0 +1,205 @@
+{
+  "floorId": "6",
+  "floorName": "熄燈",
+  "junctions": [
+    {
+      "text": "全隊投票：要走哪條路",
+      "paths": [
+        {
+          "text": "沿著一排摸得到的巨石走",
+          "perception": false,
+          "selected": false
+        },
+        {
+          "text": "往有滴答聲的那邊摸過去",
+          "perception": false,
+          "selected": false
+        }
+      ],
+      "selected": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frames": [
+          1568
+        ],
+        "rule": "junction@2026-10-29"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "多出來的呼吸聲",
+      "kind": "event",
+      "intro": "你們停下來數人數。一個一個報名字，數完了——人數是對的。 可是在一片安靜里，天狐聽到了一個多出來的呼吸聲。 很近，就在你們中間。",
+      "actions": [
+        {
+          "text": "閉上眼睛，只相信牽著的那只手",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "閉上眼晴，牽緊手。多出來的呼吸聲在你們中間繞了一圈，慢慢遠去了。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "閉上眼睛，只相信牽著的那只手",
+      "results": [
+        "閉上眼晴，牽緊手。多出來的呼吸聲在你們中間繞了一圈，慢慢遠去了。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1745,
+        "ts": "2026-11-03 13:35:52",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "長滿霉的走廊",
+      "kind": "event",
+      "intro": "地底的走廊長滿了霉菌——牆上、地上、天花板上，軟軟的、毛毛的，一碰就揚起一陣孢子。空氣又濕又厚，吸一口就想咳嗽。 這是這一層唯一「活著」的東西。",
+      "actions": [
+        {
+          "text": "早就在咳了，知道怎麼用衣服過濾",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你教大家把衣服沾濕、折三層捂住口鼻。「我就是太晚才學會。」大家跟著做，一個都沒咳。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "早就在咳了，知道怎麼用衣服過濾",
+      "results": [
+        "你教大家把衣服沾濕、折三層捂住口鼻。「我就是太晚才學會。」大家跟著做，一個都沒咳。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1585,
+        "ts": "2026-11-03 13:32:28",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "塌陷",
+      "kind": "event",
+      "intro": "腳下的地突然往下一沉。你大叫一聲——地面正在塌陷，一大片土石往下滑，滑進一個看不見底的坑里你們站的地方，正在跟著一起往下滑。",
+      "actions": [
+        {
+          "text": "往后跳，抓住還站得住的地方",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "你往后一撲，抓住了一叢枯草的根，爬了回來。"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        },
+        {
+          "text": "不跑了——順著塌下去的土滑下去",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        },
+        {
+          "text": "說出來",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": false
+        }
+      ],
+      "selected": "往后跳，抓住還站得住的地方",
+      "results": [
+        "你往后一撲，抓住了一叢枯草的根，爬了回來。"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1570,
+        "ts": "2026-11-03 13:32:07",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    },
+    {
+      "name": "避風的大石頭",
+      "kind": "event",
+      "intro": "一塊巨大的石頭擋住了風。石頭後面的地是干的，還有人堆過的石圈——以前有人在這裡紮營過。 在完全的黑暗裡，你們擠在一起，決定輪流睡一下。",
+      "actions": [
+        {
+          "text": "擠在一起，輪流睡覺",
+          "check": null,
+          "perception": false,
+          "hint": "",
+          "selected": true,
+          "variants": [
+            {
+              "lines": [
+                "睡到一半，每個人都做了同一個夢：一片很亮很亮的海。醒來的時候，有人在哭，有人在笑。",
+                "你：耐天狐手臂上的終端寫入了一筆：休息時整理好的資料。（信息+1，現在22點）",
+                "天狐在你旁邊坐下，把終端上的一段紀錄念給你聽：「你剛才判斷的方向是對的，我記下來了。」"
+              ],
+              "effects": [],
+              "count": 1
+            }
+          ],
+          "variantTotal": 1
+        }
+      ],
+      "selected": "擠在一起，輪流睡覺",
+      "results": [
+        "睡到一半，每個人都做了同一個夢：一片很亮很亮的海。醒來的時候，有人在哭，有人在笑。",
+        "你：耐天狐手臂上的終端寫入了一筆：休息時整理好的資料。（信息+1，現在22點）",
+        "天狐在你旁邊坐下，把終端上的一段紀錄念給你聽：「你剛才判斷的方向是對的，我記下來了。」"
+      ],
+      "check": null,
+      "effects": [],
+      "progress": null,
+      "combat": null,
+      "_src": {
+        "session": "backroom-20261103-130944",
+        "frame": 1579,
+        "ts": "2026-11-03 13:32:20",
+        "confidence": 0.6,
+        "rule": "event-clean@2026-10-29"
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /* 前端冒烟：用 headless Edge 開站，依序點側欄 7 個入口，檢查頁面有沒有渲染、Console 有沒有錯。
    2026-10-30：這一天我兩次把前端改壞（一次是刪掉 #evbPath 的監聽目標、一次是刪掉示範頁的掛載點），
    兩次都是「整站初始化中斷 → 頁面空白」，但 339 項驗收全過、完全抓不到。
@@ -30,7 +30,7 @@ if (!browser) { console.error('找不到 Edge/Chrome，跳過冒煙測試'); pro
 if (!fs.existsSync(IDX)) { console.error('找不到 site/index.html，先跑 build'); process.exit(1); }
 
 /* ── 注入探針 ── */
-const NAVS = ['home', 'floors', 'items', 'chars', 'ent', 'mixed', 'about'];
+const NAVS = ['home', 'floors', 'items', 'chars', 'ent', 'mixed', 'endings', 'about'];
 const probe = `
 <script>
 window.__SMOKE = { errors: [], steps: [] };
@@ -139,7 +139,7 @@ if (problems.length) {
   console.log('\n✗ 發現 ' + problems.length + ' 個問題：');
   for (const p of problems.slice(0, 12)) console.log('  - ' + p);
 } else {
-  console.log('\n✓ 7 個入口全部有內容、Console 無錯誤');
+  console.log('\n✓ ' + NAVS.length + ' 個入口全部有內容、Console 無錯誤');
 }
 
 if (!process.argv.includes('--keep')) {
@@ -148,3 +148,4 @@ if (!process.argv.includes('--keep')) {
   console.log('\n（--keep：保留 ' + PROBE + ' 與 ' + tmpDir + '）');
 }
 process.exit(problems.length ? 1 : 0);
+

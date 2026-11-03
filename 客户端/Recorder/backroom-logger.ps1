@@ -1374,12 +1374,12 @@ function Get-FontMatchFix {
   $exeCands = @(
     (Join-Path $PSScriptRoot 'structured\font-match.exe'),
     (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\font-match.exe'),
-    'D:\BACKROOMS\客户端\font-match.exe'
+    'D:\Project\HulinBackroomsWiki\客户端\font-match.exe'
   )
   $fontCands = @(
     (Join-Path (Split-Path $PSScriptRoot -Parent) '客户端\fonts\NotoSansCJKtc-Regular.otf'),
     (Join-Path $PSScriptRoot 'fonts\NotoSansCJKtc-Regular.otf'),
-    'D:\BACKROOMS\客户端\fonts\NotoSansCJKtc-Regular.otf'
+    'D:\Project\HulinBackroomsWiki\客户端\fonts\NotoSansCJKtc-Regular.otf'
   )
   $exe = $exeCands | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
   $font = $fontCands | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
@@ -2660,7 +2660,7 @@ $script:RxFloorHead = '(?i)leve[l1i]*\s*[\[\(\|｜·\-「『《〈<{（]{0,2}\s*
 
 # 唯一來源（Wiki 的實測配色表）；找不到就用空快取，不影響錄影
 function Get-FloorColorTablePath {
-  # 2026-10-17 搬家後：logger\ 與 wiki\ 同為 D:\BACKROOMS\ 的子目錄。
+  # 2026-10-17 搬家後：logger\ 與 wiki\ 同為 D:\Project\HulinBackroomsWiki\ 的子目錄。
   $cand = @(
     (Join-Path (Split-Path $PSScriptRoot -Parent) 'wiki\_data\_floor-colors.md')
   )

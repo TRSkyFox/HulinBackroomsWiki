@@ -24,8 +24,9 @@ if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（ExpeditionPlayer）' }
 $panelSrc = Join-Path $root 'ExpeditionRecorder.cs'
 $panelOut = Join-Path $app 'ExpeditionRecorder.exe'
 & $csc /nologo /target:winexe /platform:x64 /out:$panelOut `
-  /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll $panelSrc
+  /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll $panelSrc
 if ($LASTEXITCODE -ne 0) { throw 'csc 編譯失敗（ExpeditionRecorder）' }
+
 
 # 遊戲客戶端：client-only 模式；獨立檔名，才能在客戶端執行時更新面板。
 try {

@@ -1,6 +1,6 @@
 ﻿param(
-  [string]$Font = 'D:\BACKROOMS\客户端\fonts\NotoSansCJKtc-Regular.otf',
-  [string]$OutDir = 'D:\BACKROOMS\客户端\fonts',
+  [string]$Font = 'D:\Project\HulinBackroomsWiki\客户端\fonts\NotoSansCJKtc-Regular.otf',
+  [string]$OutDir = 'D:\Project\HulinBackroomsWiki\客户端\fonts',
   [int]$Size = 32
 )
 $ErrorActionPreference = 'Stop'
