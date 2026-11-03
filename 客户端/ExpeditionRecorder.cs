@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.IO.Compression;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -544,61 +545,158 @@ namespace ExpeditionRecorder
         }
     }
 
+    /* ══ 輸入框聚焦狀態 ══════════════════════════════════════
+       客戶端（含 Google 登入 popup）的注入腳本會偵測 focusin／focusout，
+       把「現在是否在文字輸入框裡」寫進共享記憶體的一個 byte。
+       鉤子讀這個旗標：true 就把 Q／E／Esc 原樣放行給頁面，
+       不然使用者在遊戲的登入框打 q／e 會變成開記錄模式。 */
+    static class TypingState
+    {
+        const string MapName = "Local\\ExpeditionTyping";
+        static readonly object Sync = new object();
+        static MemoryMappedFile _map;
+        static MemoryMappedViewAccessor _view;
+        static bool _failed;
+
+        public static bool IsEditing
+        {
+            get
+            {
+                if (_failed) return false;
+                try
+                {
+                    lock (Sync)
+                    {
+                        if (_view == null)
+                        {
+                            _map = MemoryMappedFile.CreateOrOpen(MapName, 8);
+                            _view = _map.CreateViewAccessor();
+                        }
+                        if (_view.ReadByte(0) != 1) return false;
+                        /* 客戶端在輸入框聚焦期間每 500ms 會刷新心跳（offset 4）；
+                           超過 4 秒沒更新就當作已經離開輸入框——頁面跳轉、popup
+                           被關、客戶端崩潰都不會補送 focusout，沒有這個保險，
+                           旗標會卡在 1，Q／E 就永遠沒反應。 */
+                        int beat = _view.ReadInt32(4);
+                        int age = unchecked(Environment.TickCount - beat);
+                        return age >= 0 && age < 4000;
+                    }
+                }
+                catch { _failed = true; return false; }
+            }
+        }
+
+        /* 客戶端關掉時旗標會停在最後一次的值（記錄器仍握著映射，
+           所以區段不會消失）。接上／脫離客戶端時清零，否則下次
+           開客戶端前 Q／E 會被自己擋掉。 */
+        public static void Clear()
+        {
+            try { lock (Sync) { if (_view != null) _view.Write(0, (byte)0); } }
+            catch { }
+        }
+    }
+
     /* ══ 低級鍵盤鉤子：只在遊戲視窗是前景時吃掉 ` 與 Q ═══════ */
     class KeyboardHook
     {
         IntPtr _hook;
         Native.HookProc _proc;
         int _downVk;
+        int _downTick;
+        int _installedTick;
         public Func<IntPtr> GetGame;
         public Func<int> GetGamePid;
         public int ModeVk = 0x51, StepVk = 0x45;
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
         public Func<bool> EscapeHandler;
+        /* 回呼超過 100ms 就代表這次拖慢了鉤子。Windows 會在使用者沒按鍵的
+           空檔把反應太慢的低級鉤子悄悄移除，而且不通知任何人——移除之後
+           Q／E 就完全沒反應，看起來就像「有時候鍵盤不聽了」。 */
+        public bool Slow;
+        public bool Installed { get { return _hook != IntPtr.Zero; } }
+        public int InstalledTick { get { return _installedTick; } }
 
         public bool Install()
         {
             _proc = Hook;
             _hook = Native.SetWindowsHookEx(13, _proc, Native.GetModuleHandle(null), 0);
+            _installedTick = Environment.TickCount;
             return _hook != IntPtr.Zero;
         }
 
         public void Uninstall()
         {
             if (_hook != IntPtr.Zero) { Native.UnhookWindowsHookEx(_hook); _hook = IntPtr.Zero; }
+            _downVk = 0;
+        }
+
+        /* 重掛。Windows 移除鉤子不發通知，只能靠定期重掛當保險。 */
+        public bool Reinstall()
+        {
+            Uninstall();
+            return Install();
+        }
+
+        /* 漏接 keyup 時把卡住的按鍵放掉，否則下一次按同一個鍵會被
+           「_downVk 還是它」擋掉，永遠不觸發。 */
+        public void ClearStuckDown(int ms)
+        {
+            if (_downVk != 0 && unchecked(Environment.TickCount - _downTick) > ms) _downVk = 0;
         }
 
         IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0)
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+            try
             {
-                int msg = wParam.ToInt32();
-                bool down = msg == 0x0100 || msg == 0x0104;
-                bool up = msg == 0x0101 || msg == 0x0105;
-                if (down || up)
+                if (nCode >= 0)
                 {
-                    int vk = Marshal.ReadInt32(lParam);
-                    if (down && vk == 0x1B && EscapeHandler != null && EscapeHandler()) return (IntPtr)1;
-                    if ((vk == ModeVk || vk == StepVk) && GetGame != null)
+                    int msg = wParam.ToInt32();
+                    bool down = msg == 0x0100 || msg == 0x0104;
+                    bool up = msg == 0x0101 || msg == 0x0105;
+                    if (down || up)
                     {
-                        IntPtr game = GetGame();
-                        IntPtr fg = Native.GetForegroundWindow();
-                        uint fpid = 0;
-                        Native.GetWindowThreadProcessId(fg, out fpid);
-                        int gpid = GetGamePid != null ? GetGamePid() : 0;
-                        IntPtr root = Native.GetAncestor(fg, 2);
-                        bool focused = game != IntPtr.Zero && (fg == game || root == game || Native.IsChild(game, fg) || (gpid != 0 && (int)fpid == gpid));
-                        bool ctrl = (Native.GetAsyncKeyState(0x11) & 0x8000) != 0;
-                        bool alt = (Native.GetAsyncKeyState(0x12) & 0x8000) != 0;
-                        if (focused && !ctrl && !alt)
+                        int vk = Marshal.ReadInt32(lParam);
+                        if (down && vk == 0x1B && EscapeHandler != null && !TypingState.IsEditing && EscapeHandler()) return (IntPtr)1;
+                        if (vk == ModeVk || vk == StepVk)
                         {
-                            if (down && _downVk != vk) { _downVk = vk; if (OnTrigger != null) OnTrigger(vk); }
-                            if (up && _downVk == vk) { _downVk = 0; if (OnRelease != null) OnRelease(vk); }
-                            return (IntPtr)1;
+                            /* keyup：只有真的被我們吃掉的 keydown 才吃 keyup。
+                               以前只要「當下前景是遊戲」就吃，選單一開（前景
+                               變成 RadialForm）keyup 就被跳過，_downVk 卡在 Q，
+                               下一次按 Q 完全沒反應。 */
+                            if (up)
+                            {
+                                if (_downVk != vk) return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+                                _downVk = 0;
+                                if (OnRelease != null) OnRelease(vk);
+                                return (IntPtr)1;
+                            }
+                            IntPtr game = GetGame != null ? GetGame() : IntPtr.Zero;
+                            IntPtr fg = Native.GetForegroundWindow();
+                            uint fpid = 0;
+                            Native.GetWindowThreadProcessId(fg, out fpid);
+                            int gpid = GetGamePid != null ? GetGamePid() : 0;
+                            IntPtr root = Native.GetAncestor(fg, 2);
+                            bool focused = game != IntPtr.Zero && (fg == game || root == game || Native.IsChild(game, fg) || (gpid != 0 && (int)fpid == gpid));
+                            bool ctrl = (Native.GetAsyncKeyState(0x11) & 0x8000) != 0;
+                            bool alt = (Native.GetAsyncKeyState(0x12) & 0x8000) != 0;
+                            bool typing = TypingState.IsEditing;
+                            if (focused && !typing && !ctrl && !alt && _downVk != vk)
+                            {
+                                _downVk = vk;
+                                _downTick = Environment.TickCount;
+                                if (OnTrigger != null) OnTrigger(vk);
+                                return (IntPtr)1;
+                            }
                         }
                     }
                 }
+            }
+            catch { }
+            finally
+            {
+                if (System.Diagnostics.Stopwatch.GetTimestamp() - t0 > System.Diagnostics.Stopwatch.Frequency / 10) Slow = true;
             }
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
         }
@@ -3038,7 +3136,10 @@ namespace ExpeditionRecorder
                 {
                     if (Mode == "")
                     {
-                        if (Picker == null) ShowPicker();
+                        /* 不在鉤子回呼裡直接開窗：建立 RadialForm 可能要上百毫秒，
+                           超過 LowLevelHooksTimeout 的話 Windows 會把鉤子移除。 */
+                        if (Picker == null && ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed)
+                            ControlWindow.BeginInvoke((Action)delegate { if (Picker == null && !OverlayOpen) ShowPicker(); });
                     }
                     else if (ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed)
                         ControlWindow.BeginInvoke((Action)delegate { FinishEvent(); });
@@ -3064,7 +3165,7 @@ namespace ExpeditionRecorder
 
             UiTimer = new System.Windows.Forms.Timer();
             UiTimer.Interval = 500;
-            UiTimer.Tick += delegate { RefreshStatus(); };
+            UiTimer.Tick += delegate { RefreshStatus(); HookWatchdog(); };
             UiTimer.Start();
         }
 
@@ -3113,6 +3214,7 @@ namespace ExpeditionRecorder
                 {
                     GameHwnd = IntPtr.Zero;
                     Client = null;
+                    TypingState.Clear();
                 }
                 if (Mode == "")
                     StateLabel.Text = GameHwnd != IntPtr.Zero ? "狀態：客戶端已開，按 " + VkName(ModeVk) + " 開始" : "狀態：客戶端未接上（點「開啟客戶端」可接上）";
@@ -3124,7 +3226,7 @@ namespace ExpeditionRecorder
                     foreach (var f in Directory.GetFiles(DataDir(), "*.jsonl"))
                     {
                         string fn = Path.GetFileName(f);
-                        int c = File.ReadAllLines(f).Length;
+                        int c = CountCached(f);
                         if (fn.StartsWith("pending-")) p += c;
                         else if (!fn.StartsWith("draft-")) n += c;
                     }
@@ -3132,6 +3234,63 @@ namespace ExpeditionRecorder
                 catch { }
                 if (RecordsBtn != null) RecordsBtn.Text = "已記錄 " + n;
                 if (PendingBtn != null) PendingBtn.Text = "待處理 " + p;
+            }
+            catch { }
+        }
+
+        /* 每 500ms 重讀所有 jsonl 會把 UI 執行緒卡住，鉤子跟著漏按鍵。
+           檔案長度與寫入時間沒變就直接用上次的結果。 */
+        static readonly Dictionary<string, long> CountKey = new Dictionary<string, long>();
+        static readonly Dictionary<string, int> CountVal = new Dictionary<string, int>();
+
+        static int CountCached(string path)
+        {
+            try
+            {
+                FileInfo fi = new FileInfo(path);
+                long key = fi.Length * 1000003L + fi.LastWriteTimeUtc.Ticks % 1000003L;
+                long cachedKey;
+                int cachedVal;
+                if (CountKey.TryGetValue(path, out cachedKey) && cachedKey == key && CountVal.TryGetValue(path, out cachedVal)) return cachedVal;
+                int c = File.ReadAllLines(path).Length;
+                CountKey[path] = key;
+                CountVal[path] = c;
+                return c;
+            }
+            catch { return 0; }
+        }
+
+        /* 低級鉤子的保險絲：
+           1) 回呼太慢時 Windows 會靜默移除鉤子 → 立刻重掛；
+           2) 每 10 分鐘重掛一次，擋掉任何原因造成的「再也收不到按鍵」；
+           3) 漏接 keyup 卡住的按鍵，超過 3 秒放掉。 */
+        static void HookWatchdog()
+        {
+            try
+            {
+                if (Keys == null) return;
+                if (Keys.Slow || !Keys.Installed)
+                {
+                    bool ok = Keys.Reinstall();
+                    LogDiag("hook reinstalled slow=" + Keys.Slow + " ok=" + ok);
+                    Keys.Slow = false;
+                }
+                else if (unchecked(Environment.TickCount - Keys.InstalledTick) > 600000)
+                {
+                    Keys.Reinstall();
+                    LogDiag("hook periodic reinstall");
+                }
+                Keys.ClearStuckDown(3000);
+            }
+            catch (Exception ex) { LogDiag("hook watchdog failed: " + ex.Message); }
+        }
+
+        static void LogDiag(string line)
+        {
+            try
+            {
+                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hook-watchdog.log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " " + line + "\r\n", new UTF8Encoding(false));
             }
             catch { }
         }
@@ -3179,6 +3338,7 @@ namespace ExpeditionRecorder
                 if (h == IntPtr.Zero || !Native.IsWindow(h)) return false;
                 Client = p;
                 GameHwnd = h;
+                TypingState.Clear();
                 ClientOwned = false;
                 SetState("狀態：已接上客戶端");
                 return true;

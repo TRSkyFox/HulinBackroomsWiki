@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -175,6 +176,15 @@ namespace ExpeditionPlayer
         static readonly object InputLock = new object();
         static readonly System.Collections.Generic.List<string> InputBuffer = new System.Collections.Generic.List<string>();
         static readonly System.Collections.Generic.List<Form> LoginPopups = new System.Collections.Generic.List<Form>();
+        /* 輸入框聚焦時要讓 Q/E 回到頁面，不能再被記錄器的鉤子吃掉。
+           兩個行程（客戶端／記錄器）沒有現成 IPC，所以用共享記憶體傳一個 byte：
+           1 = 有文字輸入框聚焦，0 = 沒有。頁面那邊由注入腳本回報 focusin／focusout。 */
+        const string TypingMapName = "Local\\ExpeditionTyping";
+        static readonly object TypingLock = new object();
+        static readonly System.Collections.Generic.Dictionary<string, bool> TypingSources = new System.Collections.Generic.Dictionary<string, bool>();
+        static MemoryMappedFile TypingMap;
+        static MemoryMappedViewAccessor TypingView;
+        static bool TypingOn;
 
         [STAThread]
         static int Main(string[] args)
@@ -333,6 +343,7 @@ namespace ExpeditionPlayer
                     {
                         var deferral = e3.GetDeferral();
                         Form popup = null;
+                        string popupSrc = "popup-" + Guid.NewGuid().ToString("N").Substring(0, 8);
                         try
                         {
                             e3.Handled = true;
@@ -349,12 +360,20 @@ namespace ExpeditionPlayer
                             pv.DefaultBackgroundColor = Color.White;
                             popup.Controls.Add(pv);
                             LoginPopups.Add(popup);
-                            popup.FormClosed += delegate { try { LoginPopups.Remove(popup); } catch { } };
+                            popup.FormClosed += delegate { try { LoginPopups.Remove(popup); } catch { } ReportTyping(popupSrc, false); };
                             popup.Show(Window);
                             await pv.EnsureCoreWebView2Async(WebEnv);
                             pv.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
                             pv.CoreWebView2.Settings.IsStatusBarEnabled = false;
                             pv.CoreWebView2.WindowCloseRequested += delegate { try { popup.Close(); } catch { } };
+                            /* 登入 popup（Google 帳號）也在同一個行程裡，同樣要回報輸入框聚焦，
+                               否則在密碼欄打 q／e 還是會觸發記錄器。 */
+                            try
+                            {
+                                pv.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+                                await pv.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync("window.__expeditionSrc='" + popupSrc + "';" + InputCaptureScript);
+                            }
+                            catch (Exception pex) { Log("popup 輸入捕捉注入失敗：" + pex.Message); }
                             e3.NewWindow = pv.CoreWebView2;
                         }
                         catch (Exception ex)
@@ -370,7 +389,7 @@ namespace ExpeditionPlayer
                     try
                     {
                         View.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
-                        await View.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(InputCaptureScript);
+                        await View.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync("window.__expeditionSrc='main';" + InputCaptureScript);
                         Log("輸入捕捉腳本已注入");
                     }
                     catch (Exception iex) { Log("輸入捕捉注入失敗：" + iex.Message); }
@@ -1366,6 +1385,36 @@ namespace ExpeditionPlayer
       window.chrome.webview.postMessage(o);
     } catch(e) {}
   }
+  var SRC = window.__expeditionSrc || 'main';
+  function editableOf(t){
+    try {
+      if(!t || t.nodeType !== 1) return false;
+      var n = (t.tagName || '').toUpperCase();
+      if(n === 'INPUT' || n === 'TEXTAREA' || n === 'SELECT') return true;
+      if(t.isContentEditable) return true;
+      var r = t.getAttribute ? (t.getAttribute('role') || '') : '';
+      return r === 'textbox' || r === 'searchbox' || r === 'combobox';
+    } catch(x){ return false; }
+  }
+  function typingNow(){
+    try {
+      if(!document.hasFocus()) return false;
+      return editableOf(document.activeElement);
+    } catch(x){ return false; }
+  }
+  function reportTyping(beat){
+    var on = typingNow();
+    if(window.__expeditionTyping === on && !(on && beat)) return;
+    window.__expeditionTyping = on;
+    post({expedition:true,type:'typing',editable:on,src:SRC});
+  }
+  addEventListener('focusin', function(){ setTimeout(reportTyping, 0); }, true);
+  addEventListener('focusout', function(){ setTimeout(reportTyping, 0); }, true);
+  addEventListener('focus', function(){ setTimeout(reportTyping, 0); }, true);
+  addEventListener('blur', function(){ setTimeout(reportTyping, 0); }, true);
+  /* 聚焦期間每 500ms 送一次心跳：記錄器用「有沒有持續收到」判斷狀態，
+     頁面被關、崩潰、或導航走都不會補送 focusout，沒心跳就會卡在暫停。 */
+  setInterval(function(){ reportTyping(true); }, 500);
   addEventListener('keydown', function(e){
     post({type:'keydown',key:e.key,code:e.code,keyCode:e.keyCode,repeat:!!e.repeat,target:targetName(e)});
   }, true);
@@ -1391,6 +1440,7 @@ namespace ExpeditionPlayer
   }, {capture:true, passive:true});
   addEventListener('blur', function(){ post({type:'blur'}); }, true);
   addEventListener('focus', function(){ post({type:'focus'}); }, true);
+  reportTyping();
 })();
 ";
 
@@ -1400,6 +1450,19 @@ namespace ExpeditionPlayer
             {
                 string json = e.WebMessageAsJson;
                 if (string.IsNullOrEmpty(json)) return;
+                string compact = json.Replace(" ", "");
+                if (compact.IndexOf("\"expedition\":true", StringComparison.Ordinal) >= 0)
+                {
+                    string src = "main";
+                    int si = compact.IndexOf("\"src\":\"", StringComparison.Ordinal);
+                    if (si >= 0)
+                    {
+                        int s2 = compact.IndexOf('"', si + 7);
+                        if (s2 > si) src = compact.Substring(si + 7, s2 - si - 7);
+                    }
+                    ReportTyping(src, compact.IndexOf("\"editable\":true", StringComparison.Ordinal) >= 0);
+                    return;
+                }
                 lock (InputLock)
                 {
                     InputCount++;
@@ -1419,6 +1482,36 @@ namespace ExpeditionPlayer
                 }
             }
             catch (Exception ex) { Log("input message failed: " + ex.Message); }
+        }
+
+        /* 頁面回報「有沒有文字輸入框聚焦」。主視窗與登入 popup 共用同一個旗標：
+           任何一個來源在輸入框裡，Q/E 就必須留給頁面。 */
+        static void ReportTyping(string src, bool on)
+        {
+            try
+            {
+                bool any, changed;
+                lock (TypingLock)
+                {
+                    if (string.IsNullOrEmpty(src)) src = "main";
+                    if (on) TypingSources[src] = true; else TypingSources.Remove(src);
+                    any = TypingSources.Count > 0;
+                    changed = any != TypingOn;
+                    TypingOn = any;
+                    if (TypingView == null)
+                    {
+                        TypingMap = MemoryMappedFile.CreateOrOpen(TypingMapName, 8);
+                        TypingView = TypingMap.CreateViewAccessor();
+                    }
+                    TypingView.Write(0, any ? (byte)1 : (byte)0);
+                    /* offset 4 是心跳時間：記錄器超過 4 秒沒看到更新就當作已經
+                       離開輸入框（頁面導航、popup 被關、客戶端崩潰都不會補送
+                       focusout；少了這個保險，旗標會卡在 1，Q／E 永遠沒反應）。 */
+                    TypingView.Write(4, Environment.TickCount);
+                }
+                if (changed) Log(any ? "輸入框聚焦：快捷鍵暫停" : "輸入框失焦：快捷鍵恢復");
+            }
+            catch (Exception ex) { Log("typing flag failed: " + ex.Message); }
         }
 
         static void AppendInput(string session, string json)

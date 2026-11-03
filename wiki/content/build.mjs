@@ -217,8 +217,11 @@ if (i < 0 || j < 0) throw new Error('找不到 FLOOR-DESIGN 區塊');
 const block = begin + '\n\n' + floorCss.join('\n') + '\n' + end;
 html = html.slice(0, i) + block + html.slice(j + end.length);
 
-if (!has(path.join(ROOT, 'site/index.backup-before-content.html'))) {
-  fs.copyFileSync(SITE, path.join(ROOT, 'site/index.backup-before-content.html'));
+/* 只有「已經有舊產物」才備份；全新 clone 沒有 site/，要先建目錄 */
+const SITE_BACKUP = path.join(ROOT, 'site/index.backup-before-content.html');
+fs.mkdirSync(path.dirname(SITE), { recursive: true });
+if (has(SITE) && !has(SITE_BACKUP)) {
+  fs.copyFileSync(SITE, SITE_BACKUP);
 }
 fs.writeFileSync(SITE, html, 'utf8');
 console.log(JSON.stringify({
