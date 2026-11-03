@@ -91,12 +91,25 @@ const seen = new Set();
 const NOT_AN_EVENT = /^(?:商店|商店街|接下委託|接受委託|戰鬥|戰鬥結束)$|防禦\s*\d+\s*$|^(?:獲得|得到)道具?$/;
 let importDone = 0;
 let junkSkipped = 0;
+const reviewRows = [];
 for (const r of records) {
   report(session, '事件審核', ++importDone, records.length, r.name ? ('事件：' + r.name) : ('第 ' + importDone + ' 筆'));
-  if (r.type !== 'event' || !r.name || badName(r.name)) continue;
-  if (NOT_AN_EVENT.test(String(r.name).trim())) { junkSkipped++; continue; }
+  if (r.type !== 'event') continue;
+  const review = {
+    name: r.name || '',
+    floor: r.floor || '',
+    frame: (r.source && r.source.frame) || r.startFrame || null,
+    actions: (r.actions || []).map(a => a && a.text).filter(Boolean),
+    selected: r.selected ? r.selected.text : null,
+    results: (r.results || []).length,
+    accepted: false,
+    reason: ''
+  };
+  reviewRows.push(review);
+  if (!r.name || badName(r.name)) { review.reason = 'bad-name'; continue; }
+  if (NOT_AN_EVENT.test(String(r.name).trim())) { junkSkipped++; review.reason = 'ui-name'; continue; }
   const fid = String(r.floor || '');
-  if (!fid || !floorNames.has(fid)) continue; // 不把事件塞進未知/未建立樓層
+  if (!fid || !floorNames.has(fid)) { review.reason = 'unknown-floor'; continue; }
   const actions = (r.actions || []).filter(a => a && a.text && !badName(a.text)).map(a => ({
     text: ACTION_FIX.get(a.text) || a.text,
     check: a.check || null,
@@ -104,10 +117,10 @@ for (const r of records) {
     hint: a.hint || '',
     selected: !!a.selected
   }));
-  if (!r.intro && !actions.length) continue;
-  if (!actions.length && (r.kind || 'event') !== 'ending') continue;
+  if (!r.intro && !actions.length) { review.reason = 'no-intro-or-actions'; continue; }
+  if (!actions.length && (r.kind || 'event') !== 'ending') { review.reason = 'no-actions'; continue; }
   const key = fid + '|' + keyName(r.name);
-  if (seen.has(key)) continue;
+  if (seen.has(key)) { review.reason = 'same-name-this-session'; continue; }
   seen.add(key);
   if (!byFloor.has(fid)) byFloor.set(fid, []);
   const evIntro = text(r.intro || '');
@@ -138,8 +151,10 @@ for (const r of records) {
     bound: !!r.inputBound
   };
   const cleaned = cleanEvent(ev);
-  if (!cleaned) continue;
+  if (!cleaned) { review.reason = 'clean-rejected'; continue; }
   byFloor.get(fid).push(cleaned);
+  review.accepted = true;
+  review.reason = 'accepted';
 }
 
 /* 2026-11-01：事件與結果對不上 —— 實測結果裡常混進「樓層介紹」的句子
@@ -247,12 +262,19 @@ for (const [fid, bucket] of junctionsByFloor) {
 }
 for (const f of Object.values(staging.floors)) if (!f.junctions) f.junctions = [];
 fs.writeFileSync(outPath, JSON.stringify(staging, null, 2) + '\n', 'utf8');
+/* 不放棄任何觀測：所有事件候選都留一份 review，讓人看得到「這場跑了什麼、哪些被擋」。
+   正式 events.json 仍只收 eligible 的；review 不是正式內容。 */
+try {
+  fs.writeFileSync(path.join(session, 'structured', 'events-review.jsonl'), reviewRows.map(x => JSON.stringify(x)).join('\n') + (reviewRows.length ? '\n' : ''), 'utf8');
+} catch (e) {}
 
 if (!apply) {
   console.log(JSON.stringify({
     staging: outPath,
     floors: Object.keys(staging.floors),
     events: Object.values(staging.floors).reduce((n, f) => n + f.events.length, 0),
+    reviewed: reviewRows.length,
+    acceptedReview: reviewRows.filter(x => x.accepted).length,
     junctions: Object.values(staging.floors).reduce((n, f) => n + (f.junctions || []).length, 0),
     junkSkipped, applied: false
   }, null, 2));
@@ -272,8 +294,8 @@ function eligible(e) {
   if (!e.selected) return false;
   if (e.selected && !acts.some(a => norm(a.text) === norm(e.selected))) return false;
   if (!e.intro || e.intro.length < (autoMode ? 16 : 8) || dirty.test(e.intro)) return false;
-  /* 自動匯入沒有結果的事件會讓 Wiki 只剩標題與選項；先留 staging 給人工看。 */
-  if (autoMode && !(Array.isArray(e.results) && e.results.length)) return false;
+  /* 沒有結果的事件仍然保留；它至少提供標題／選項／已選，之後可由 review 補結果。
+     不再因為結果空就直接丟掉，避免一場跑完只剩少數事件。 */
   if (!autoMode && (!e.bound || e.confidence < 0.9)) return false;
   return true;
 }
@@ -425,7 +447,7 @@ for (const [fid, f] of Object.entries(staging.floors)) {
   if (existed && addedHere === 0 && updatedHere === 0 && junctionsHere === 0) continue;
   fs.writeFileSync(eventPath, JSON.stringify(target, null, 2) + '\n', 'utf8');
 }
-const result = { staging: outPath, applied: true, added, updated, skipped, rejected, endings: endingsWritten, junctions: junctionsAdded, junkSkipped, floors: Object.keys(staging.floors) };
+const result = { staging: outPath, applied: true, added, updated, skipped, rejected, endings: endingsWritten, junctions: junctionsAdded, junkSkipped, reviewed: reviewRows.length, acceptedReview: reviewRows.filter(x => x.accepted).length, floors: Object.keys(staging.floors) };
 /* 同時寫檔：run.mjs 以前靠 stdout 管道讀結果，沙箱／CI 會因為 EPERM 拿不到，
    整段自動匯入就被誤判成失敗。寫檔比管道可靠。 */
 try { fs.writeFileSync(path.join(session, 'structured', 'event-import.json'), JSON.stringify(result, null, 2) + '\n', 'utf8'); } catch (e) {}

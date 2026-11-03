@@ -90,6 +90,8 @@
 
 - `客户端\Recorder\structured` 是**唯一來源**。
 - `客户端\structured`、`客户端\dist\Expedition\structured` 是 `sync.mjs` 的同步副本，不要手改。
+- `event-import` 會把**所有看到的事件候選**寫到 `structured\events-review.jsonl`；正式 `events.json` 只收通過的。沒有通過的不會消失，會留在 review 看得到原因。
+- 沒有結果的事件仍可保留標題／選項／已選，之後再補結果；不再用「0 結果」整則丟掉。
 - 改完管線：
 
 ```powershell

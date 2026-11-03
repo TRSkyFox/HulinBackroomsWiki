@@ -1,4 +1,4 @@
-﻿import { spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { WIKI, INCOMING } from './paths.mjs';
@@ -146,13 +146,21 @@ if (portable) {
   let review = null;
   try {
     const v = JSON.parse(fs.readFileSync(path.join(staging, 'validation.json'), 'utf8'));
-    const er = path.join(staging, 'events-review.jsonl');
-    const ev = fs.existsSync(er) ? fs.readFileSync(er, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse) : [];
+    const candidates = [
+      path.join(session, 'structured', 'events-review.jsonl'),
+      path.join(staging, 'events-review.jsonl')
+    ];
+    const er = candidates.find(p => fs.existsSync(p));
+    const ev = er ? fs.readFileSync(er, 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse) : [];
     review = {
       validation: { errors: (v.errors || []).length, warnings: (v.warnings || []).length },
       floors: (v.floors || []).length,
       entities: (v.entities || []).length,
-      events: { total: ev.length, accepted: ev.filter(x => x.accepted).length, rejected: ev.filter(x => !x.accepted).length }
+      events: {
+        total: ev.length,
+        accepted: ev.filter(x => x.accepted).length,
+        rejected: ev.filter(x => !x.accepted).length
+      }
     };
   } catch { }
 
@@ -163,7 +171,7 @@ if (portable) {
       '',
       '── 尚未寫入正式 Wiki（這是預設行為）──',
       '1) 先看：' + path.join(staging, 'validation.json'),
-      '         ' + path.join(staging, 'events-review.jsonl'),
+      '         ' + path.join(session, 'structured', 'events-review.jsonl'),
       '         ' + path.join(staging, 'merge-final-report.json'),
       '2) 要把事件寫進樓層 events.json：',
       '   node "' + path.join(here, 'event-import.mjs') + '" "' + session + '" --apply',
