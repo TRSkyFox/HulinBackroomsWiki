@@ -12,12 +12,18 @@ namespace ExpeditionArchive
     static class Program
     {
         static string RepoRoot;
+        static string StartupPackage;
+        static bool StartupCheck;
 
         [STAThread]
         static void Main(string[] args)
         {
             for (int i = 0; i < args.Length; i++)
+            {
                 if (args[i] == "--repo" && i + 1 < args.Length) RepoRoot = args[++i];
+                else if (args[i] == "--package" && i + 1 < args.Length) StartupPackage = args[++i];
+                else if (args[i] == "--check") StartupCheck = true;
+            }
             if (string.IsNullOrEmpty(RepoRoot))
             {
                 string p = AppDomain.CurrentDomain.BaseDirectory;
@@ -29,7 +35,21 @@ namespace ExpeditionArchive
             }
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += delegate (object s, System.Threading.ThreadExceptionEventArgs e) { LogCrash(e.Exception); };
+            AppDomain.CurrentDomain.UnhandledException += delegate (object s, UnhandledExceptionEventArgs e) { LogCrash(e.ExceptionObject as Exception); };
             Application.Run(new ImportForm());
+        }
+
+        static void LogCrash(Exception ex)
+        {
+            try
+            {
+                string p = Path.Combine(Path.GetTempPath(), "ExpeditionArchive-error.log");
+                File.WriteAllText(p, (ex == null ? "unknown" : ex.ToString()) + Environment.NewLine, Encoding.UTF8);
+            }
+            catch { }
+            MessageBox.Show(ex == null ? "未知錯誤" : ex.ToString(), "Expedition Archive 錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         class ImportForm : Form
@@ -74,13 +94,13 @@ namespace ExpeditionArchive
                 CheckBtn = new Button();
                 CheckBtn.Text = "只匯入並檢查";
                 CheckBtn.SetBounds(14, 50, 150, 32);
-                CheckBtn.Click += delegate { Run(false); };
+                CheckBtn.Click += delegate { RunSafe(false); };
                 Controls.Add(CheckBtn);
 
                 ApplyBtn = new Button();
                 ApplyBtn.Text = "整合進 Wiki";
                 ApplyBtn.SetBounds(176, 50, 150, 32);
-                ApplyBtn.Click += delegate { Run(true); };
+                ApplyBtn.Click += delegate { RunSafe(true); };
                 Controls.Add(ApplyBtn);
 
                 var open = new Button();
@@ -122,6 +142,12 @@ namespace ExpeditionArchive
                 WireDrop(this);
                 WireDrop(Package);
                 WireDrop(Output);
+
+                if (!string.IsNullOrEmpty(StartupPackage))
+                {
+                    Package.Text = CleanPath(StartupPackage);
+                    Shown += delegate { RunSafe(!StartupCheck); };
+                }
             }
 
             void WireDrop(Control c)
@@ -142,17 +168,35 @@ namespace ExpeditionArchive
 
             void AcceptPackage(string path)
             {
-                Package.Text = path ?? "";
-                if (!ValidatePackage(Package.Text.Trim().Trim('"'))) return;
+                Package.Text = CleanPath(path);
+                if (!ValidatePackage(Package.Text)) return;
                 Status.ForeColor = Color.FromArgb(60, 60, 64);
                 Status.Text = "已拖入紀錄包，開始匯入檢查…";
-                Run(false);
+                RunSafe(false);
+            }
+
+            static string CleanPath(string path)
+            {
+                string s = (path ?? "").Trim().Trim('"').Trim();
+                var sb = new StringBuilder(s.Length);
+                foreach (char c in s)
+                {
+                    if (!char.IsControl(c)) sb.Append(c);
+                }
+                return sb.ToString();
+            }
+
+            void RunSafe(bool apply)
+            {
+                try { Run(apply); }
+                catch (Exception ex) { LogCrash(ex); }
             }
 
             bool ValidatePackage(string path)
             {
                 try
                 {
+                    path = CleanPath(path);
                     if (string.IsNullOrEmpty(path) || !File.Exists(path))
                         throw new Exception("找不到紀錄包：" + path);
                     if (!path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -178,6 +222,18 @@ namespace ExpeditionArchive
             string FirstError(string log)
             {
                 if (string.IsNullOrEmpty(log)) return "沒有輸出";
+                /* PowerShell 的 NativeCommandError 會整段包成 CLIXML；直接顯示 XML 對使用者沒用。
+                   抽出 <S S="Error">…</S> 的正文，沒有就退回第一行。 */
+                if (log.IndexOf("CLIXML", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    var matches = System.Text.RegularExpressions.Regex.Matches(log, "<S S=\"Error\">(.*?)</S>", System.Text.RegularExpressions.RegexOptions.Singleline);
+                    if (matches.Count > 0)
+                    {
+                        string m = matches[0].Groups[1].Value.Replace("_x000D_", "").Replace("_x000A_", " ").Trim();
+                        if (m.Length > 180) m = m.Substring(0, 180);
+                        if (m.Length > 0) return m;
+                    }
+                }
                 foreach (string line in log.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string t = line.Trim();
@@ -228,7 +284,7 @@ namespace ExpeditionArchive
                 }
                 string ps1 = Path.Combine(root, "wiki", "import-package.ps1");
                 if (!File.Exists(ps1)) { Status.Text = "找不到 import-package.ps1。"; return; }
-                string pkg = Package.Text.Trim().Trim('"');
+                string pkg = CleanPath(Package.Text);
                 string latest = LatestStaging(root);
                 if (apply)
                 {

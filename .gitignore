@@ -49,3 +49,6 @@ tools/*.exe
 wiki/_backup/
 
 客户端/exports/
+
+工具/*.exe.running-old*
+tools/*.exe.running-old*
