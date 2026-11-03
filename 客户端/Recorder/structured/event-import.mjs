@@ -272,6 +272,8 @@ function eligible(e) {
   if (!e.selected) return false;
   if (e.selected && !acts.some(a => norm(a.text) === norm(e.selected))) return false;
   if (!e.intro || e.intro.length < (autoMode ? 16 : 8) || dirty.test(e.intro)) return false;
+  /* 自動匯入沒有結果的事件會讓 Wiki 只剩標題與選項；先留 staging 給人工看。 */
+  if (autoMode && !(Array.isArray(e.results) && e.results.length)) return false;
   if (!autoMode && (!e.bound || e.confidence < 0.9)) return false;
   return true;
 }

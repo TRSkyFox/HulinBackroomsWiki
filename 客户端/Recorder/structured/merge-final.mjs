@@ -32,6 +32,16 @@ function read(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 function write(p, o) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, JSON.stringify(o, null, 2) + '\n', 'utf8'); }
 function uniq(a) { return [...new Set((a || []).filter(Boolean))]; }
 
+/* 樓層介紹的截斷防線：OCR 最後一行可能被畫面／裁切吃掉。
+   只有真的有句末標點才允許覆蓋正式 doc；不完整的先留 staging，避免把正式頁改短。 */
+function docPlain(doc) {
+  return String(doc || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').replace(/\s+/g, '').trim();
+}
+function docComplete(doc) {
+  const t = docPlain(doc);
+  return t.length >= 20 && /[。！？…」』）)!?]$/.test(t);
+}
+
 /* 配色必須「能用」才寫進正式庫。
    2026-10-29 21:22 那場：自動截圖取到的是角色建立畫面（白底），
    大廳的配色被寫成 bg=#FCFCFC、tx=#FCFCFC —— 白底白字，頁面直接看不見。
@@ -136,6 +146,7 @@ for (const d of fs.readdirSync(path.join(staging, 'floors'), { withFileTypes: tr
        以前的版本連 0.55 的單幀 OCR 都會直接建成正式頁（Level 0.22 就是這樣來的）。 */
     if (conf < 0.8) { report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'new floor confidence ' + conf + ' < 0.8' }); continue; }
     if (!s.doc || String(s.doc).length < 40) { report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'new floor has no intro' }); continue; }
+    if (!docComplete(s.doc)) { report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'new floor intro incomplete (kept in staging)' }); continue; }
     const meta = dataFloorMeta(s.id);
     /* 名字只走 floorName()：括號、引號、尾標點都不該進 key 跟目錄名。
        `1-停車區]` 就是這樣來的——站點的 id|name 對不上，樓層明明打過卻顯示鎖住。 */
@@ -167,10 +178,14 @@ for (const d of fs.readdirSync(path.join(staging, 'floors'), { withFileTypes: tr
   const oldDoc = String(after.doc || '');
   const newDoc = String(s.doc || '');
   if (newDoc) {
-    /* 使用者 2026-11-03：樓層介紹以新匯入的 staging 為準。
-       舊版怕 OCR 截斷而永遠不覆蓋，結果 Level 2 一直顯示上一層的舊介紹。 */
-    after.doc = newDoc;
-    delete after._docCandidate;
+    if (!docComplete(newDoc)) {
+      report.skipped.push({ type: 'floor', name: s.name || s.id, reason: 'intro incomplete; formal doc kept' });
+    } else {
+      /* 使用者 2026-11-03：樓層介紹以新匯入的 staging 為準。
+         舊版怕 OCR 截斷而永遠不覆蓋，結果 Level 2 一直顯示上一層的舊介紹。 */
+      after.doc = newDoc;
+      delete after._docCandidate;
+    }
   }
   const palOk = !docsOnly && s.palette && ['bg', 'card', 'line', 'acc', 'tx'].every(k => s.palette[k]) && usablePalette(s.palette);
   if (palOk && conf >= 0.8 && (!after.palette || after._staging)) after.palette = s.palette;
