@@ -1,175 +1,197 @@
-# 狐霖的後室 RPG — ExpeditionRecorder ＋ ExpeditionClient
+# 狐霖的后室 RPG — ExpeditionRecorder ＋ ExpeditionClient
 
-這個資料夾是 Windows 控制台／WebView2 客戶端與 OCR 記錄器。
-
-- **ExpeditionRecorder.exe**：控制台、OCR 浮層、整理流程。
-- **ExpeditionClient.exe**：只負責 WebView2 遊戲視窗。
-
-兩者是獨立 process。更新面板或 `backroom-logger.ps1` 不需要關遊戲，只要重開控制台。
+> 2026-11-04 更新。记录器已改成**人工辅助**流程（Q／E、六种模式）。
+> 项目总结、目前状态与完整导入流程看根目录 `README.md`；本文件只讲 `客户端/` 怎么跑、怎么编、文件放哪。
 
 ---
 
-## 啟動
+## 1. 两个 process
 
-雙擊專案根目錄的：
+| 可执行文件 | 作用 |
+|---|---|
+| `ExpeditionRecorder.exe` | 控制台、OCR 服务、人工记录器、待处理浮窗、导出 |
+| `ExpeditionClient.exe` | 只负责 WebView2 游戏窗口（`--client-only`） |
 
-```text
-启动记录器.bat
-```
+两者是独立 process：
 
-或直接跑：
+- 关掉控制台只退出 panel，**不会关游戏**。
+- 更新 `ExpeditionRecorder.exe`／记录器脚本不需要重开游戏，只要重开控制台。
+- 只有更新 `ExpeditionClient.exe` 或 WebView2 DLL 才需要关游戏 client。
+
+---
+
+## 2. 启动
+
+双击：
 
 ```text
 客户端\啟動.bat
 ```
 
-`start.ps1` 會：
+或：
 
-1. 把 `客户端` 的執行檔、DLL、`structured` 同步副本複製到 `%LOCALAPPDATA%\Expedition\app`；
-2. 從 `客户端\Recorder` 直接覆蓋 `backroom-logger.ps1`、`palette-from-shots.ps1`，避免舊副本；
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
+```
+
+`start.ps1` 会：
+
+1. 把 `客户端` 的可执行文件、DLL、`structured` 同步副本复制到 `%LOCALAPPDATA%\Expedition\app`；
+2. 从 `客户端\Recorder` 覆盖 `backroom-logger.ps1`、`palette-from-shots.ps1`；
 3. 把 `app\logs` 接成 `客户端\Recorder\logs` 的 junction；
-4. 啟動本機那份 `ExpeditionRecorder.exe`；
-5. 控制台再啟動 `ExpeditionClient.exe`；遊戲視窗就緒後才開始記錄。
+4. 启动本机那份 `ExpeditionRecorder.exe`；
+5. 控制台再启动 `ExpeditionClient.exe`。
 
-客戶端已經開著時，控制台會接上現有視窗，不會再開第二個客戶端。瀏覽器開著同一個遊戲頁面不會被誤認。
-
-更新面板時如果客戶端還在跑，`start.ps1` 會跳過被鎖住的 `ExpeditionClient.exe`／WebView DLL，只更新面板；之後重開控制台即可。
+客户端已经开著时，控制台会接上现有窗口，不会再开第二个。浏览器开同一个游戏页面不会被误认。
 
 ---
 
-## 停止／生命週期
+## 3. 记录流程（默认 Q／E）
 
-- **關閉控制台（X）**：只關 `ExpeditionRecorder.exe`；客戶端繼續跑。重新開控制台會接上現有客戶端。
-- **停止記錄**：只停記錄器，客戶端繼續；再按「開始記錄」會續錄同一場。
-- **停止並整理**：停止記錄器並跑 `客户端\Recorder\structured\run.mjs`；不會關客戶端。
-- **關閉客戶端**：才關遊戲視窗；記錄器在背景快速停止，不跑整理。
+- **Q**：按住出现圆盘；滑向模式后放开即选。再按 Q 结束当前记录。
+- **E**：框选／记录下一步。
+- 圆盘六种模式：**事件／物品／楼层介绍／出口／结局／商店**。
+- 按键可在面板“按键设置”改，设置写在 app 目录的 `hotkeys.json`。
 
----
+事件模式：
 
-## 控制窗口
+1. 第 1 步：框事件名＋介绍＋这一屏的选项。
+2. 第 2 步以后：框选择、结果、检定、战斗、跳层。
+3. 没有后续就再按 Q 结束；结束窗可选楼层（事件发生地）与结果分类。
 
-- **開啟／關閉客戶端**：啟動或關閉 `ExpeditionClient.exe`。
-- **開始／停止記錄**：只控制記錄器。
-- **OCR 浮層**：透明框線＋右側 OCR 讀取面板；面板可拖曳調整寬度。
-- **停止並整理**：跑 parse／event／import／validate／merge／build。
-- **開啟 logs**
-
-手動截圖是暫存素材；確認文字已轉錄後請自行刪除，不要放進 Wiki。
-
----
-
-## OCR 覆蓋層（除錯用）
-
-啟動客戶端後會多兩個不影響操作視窗：
-
-- **透明框線**：畫出這一幀實際使用的 `title／enemy／main／opts／char` 區塊，只畫邊、滑鼠可穿透。
-- **OCR 讀取面板**：顯示 frame、區塊座標、OCR 行、`measured` 自動校正邊界。
-- 虛線橘框 = 自動量到的邊界；實線 = 真正送進 OCR 的邊界。
-
-記錄器每幀寫 `客户端\Recorder\logs\overlay.json`，這是除錯資料。
-
-關閉覆蓋層：
+输出（JSONL，一行一笔）：
 
 ```text
-啟動.bat -NoOverlay
+客户端\Recorder\logs\manual\
+  events-YYYYMMDD.jsonl
+  items-YYYYMMDD.jsonl
+  floors-YYYYMMDD.jsonl
+  exits-YYYYMMDD.jsonl
+  endings-YYYYMMDD.jsonl
+  shops-YYYYMMDD.jsonl
+  pending-YYYYMMDD.jsonl
+  draft-YYYYMMDD.jsonl
+```
+
+面板：
+
+- **已记录**：依事件／物品／楼层／出口／结局／商店分类查看。
+- **待处理**：固定右侧浮窗，可直接改。
+- **导出**：生成 `記錄-YYYYMMDD-HHMM.zip`（`記錄.json`＋`記錄.md`），默认在 `导出\`。
+
+导入本机：
+
+```powershell
+node 客户端\Recorder\structured\import-manual.mjs
+# 看 dry-run 报告；确认后：
+node 客户端\Recorder\structured\import-manual.mjs --confirm
+```
+
+> 目前 `import-manual.mjs` 支持 events／items／floors／exits／endings，**还不支持 shops**。
+
+---
+
+## 4. 生命周期
+
+- **关闭控制台（X）**：只关 `ExpeditionRecorder.exe`；客户端继续跑。
+- **取消这次记录**：清掉当前 draft，不写正式 JSONL。
+- **关闭客户端**：才关游戏窗口。
+- 背景 OCR 服务由 `ExpeditionRecorder` 管理，关 panel 时一起停。
+
+参数：
+
+```powershell
+客户端\啟動.bat -NoRecord                 # 只开游戏，不录
+客户端\啟動.bat -NoOverlay                # 不显示旧 OCR 覆盖层
+客户端\啟動.bat -Preset 1600x900          # 1280x720 / 1600x900 / 1920x1080 / 2400x1350
+客户端\啟動.bat -Url https://...          # 换测试网址
 ```
 
 ---
 
-## 結構化管線
+## 5. 编译
 
-```text
-客户端\Recorder\logs\backroom-<時間>\structured.jsonl
-  → 客户端\Recorder\structured\run.mjs
-  → parse / event-parse / input-bind
-  → event-import
-  → import-wiki → wiki\_incoming\<session>\
-  → validate → merge-final
-  → wiki\content\ → build.mjs → wiki\site\index.html
+```powershell
+powershell -ExecutionPolicy Bypass -File 客户端\build.ps1
 ```
 
-- `客户端\Recorder\structured` 是**唯一來源**。
-- `客户端\structured`、`客户端\dist\Expedition\structured` 是 `sync.mjs` 的同步副本，不要手改。
-- `event-import` 會把**所有看到的事件候選**寫到 `structured\events-review.jsonl`；正式 `events.json` 只收通過的。沒有通過的不會消失，會留在 review 看得到原因。
-- 沒有結果的事件仍可保留標題／選項／已選，之後再補結果；不再用「0 結果」整則丟掉。
-- 改完管線：
+需要：
+
+- `%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`
+- WebView2 DLL：`Microsoft.Web.WebView2.Core.dll`、`Microsoft.Web.WebView2.WinForms.dll`、`WebView2Loader.dll`
+  - 优先从 `客户端\dist\Expedition` 取；没有就用手上 `客户端` 内已有的副本。
+
+`build.ps1` 会：
+
+- 编译 `ExpeditionPlayer.cs` → `ExpeditionPlayer.exe`，再复制成 `ExpeditionClient.exe`；
+- 编译 `ExpeditionRecorder.cs` → `ExpeditionRecorder.exe`；
+- 复制 WebView2 DLL、`Recorder\backroom-logger.ps1`、`Recorder\palette-from-shots.ps1`、`Recorder\structured\*`。
+
+客户端正在跑时，被锁住的 exe／DLL 会跳过，只更新面板；之后重开控制台即可。
+
+---
+
+## 6. 旧 OCR 管线
+
+`Recorder\backroom-logger.ps1` 与 `Recorder\structured\run.mjs` 仍保留，用来处理既有 logs：
+
+```powershell
+node 客户端\Recorder\structured\run.mjs <sessionDir>
+node 客户端\Recorder\structured\run.mjs <sessionDir> --auto
+```
+
+- 默认只生成 staging，不写正式 Wiki。
+- 这条管线 OCR 错误率偏高；新资料请用第 3 节的人工记录器＋`import-manual.mjs`。
+- `Recorder\structured\` 是唯一来源；`客户端\structured\` 与 `dist\Expedition\structured\` 是同步副本，不要手改。
+- 同步：
 
 ```powershell
 node 客户端\Recorder\structured\sync.mjs
 node 客户端\Recorder\structured\sync.mjs --check
 ```
 
-- 事件只寫各樓層的 `floors\<id-name>\events.json`；判定結果與事件邊界由 `event-extract.mjs`／`event-parse.mjs` 處理。
+---
+
+## 7. Logs
+
+```text
+客户端\Recorder\logs\backroom-YYYYMMDD-HHMMSS\   旧 OCR 场次（只读）
+客户端\Recorder\logs\manual\                     新人工记录 JSONL
+%LOCALAPPDATA%\Expedition\app\logs                → junction 到上面
+```
+
+旧场次文件：`wiki.md`、`wiki.jsonl`、`structured.jsonl`、`ocr-raw.log`、`levels\`、`floor-colors.log`、`logger.log`。
+
+原始 logs 只读；要清旧场次先确认没有要回溯的出处行号。
 
 ---
 
-## 給別人的可攜版
+## 8. 文件
 
-傳：
-
-```text
-客户端\dist\Expedition.zip
-```
-
-對方解壓後雙擊裡面的 `啟動記錄器.bat`。不需要安裝 Node，可攜版已內建 `node.exe`。
-
-Wiki 主人收到 `.expedition.zip` 後，拖到：
-
-```text
-wiki\匯入紀錄.bat
-```
-
-預設只展開、驗證、產生 staging，不會自動合併。確認後再跑：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File D:\BACKROOMS\wiki\import-package.ps1 -Staging <展開後的資料夾> -Apply
-```
-
----
-
-## Logs 位置
-
-```text
-D:\BACKROOMS\客户端\Recorder\logs\backroom-YYYYMMDD-HHMMSS\
-```
-
-`%LOCALAPPDATA%\Expedition\app\logs` 是指向這裡的 junction。
-
-| 檔案 | 內容 |
+| 文件 | 用途 |
 |---|---|
-| `wiki.md` | 逐字稿：樓層／旁白／決定／選項／檢定／狀態／道具 |
-| `wiki.jsonl` | 同事件流，一行一事件 |
-| `structured.jsonl` | OCR 結構化幀，管線輸入 |
-| `ocr-raw.log` | 未過濾 OCR 全文 |
-| `levels\NN-樓層名.log` | 依樓層拆檔 |
-| `floor-colors.log` | 各樓層介面配色 |
-| `logger.log` | 記錄器運行記錄 |
-
-原始 logs 只讀；要清舊場次先確認沒有要回溯的出處行號。
-
----
-
-## 參數
-
-```powershell
-啟動.bat -NoRecord                 # 只開遊戲，不錄
-啟動.bat -NoOverlay                # 不顯示 OCR 覆蓋層／讀取面板
-啟動.bat -Preset 1600x900          # 1280x720 / 1600x900 / 1920x1080
-啟動.bat -Url https://...          # 換測試網址
-```
+| `ExpeditionPlayer.cs` | WebView2 游戏客户端源代码 |
+| `ExpeditionRecorder.cs` | 控制台＋OCR＋人工记录器源代码（唯一来源） |
+| `Recorder\backroom-logger.ps1` | 旧 OCR 记录器本体 |
+| `Recorder\structured\` | 管线唯一来源 |
+| `Recorder\characters.json` | 角色称号对照 |
+| `Recorder\s2t.json` | 简→繁转换表 |
+| `build.ps1` | 重新编译 |
+| `start.ps1`／`啟動.bat` | 复制到 `%LOCALAPPDATA%` 并启动 |
+| `volume-watch.ps1` | 音量记录 |
+| `fonts\` | 字体（不进 git） |
+| `dist\Expedition\` | 便携版成品（不进 git） |
 
 ---
 
-## 開發
+## 9. 注意
+
+- 这个 repo **不包含** OCR 服务、字体、WebView2 DLL、便携版；fresh clone 需要另外取得 assets，详见根目录 `README.md` 第 10 节。
+- 不要对用户的游戏窗口抢焦点，也不要用程序名称批量关程序。
+- 不要直接改 `客户端\structured\` 或 `dist\...\structured\`。
+- 改完面板：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File 客户端\build.ps1
+node 客户端\Recorder\structured\sync.mjs --check
 ```
-
-`build.ps1` 會從 `ExpeditionPlayer.cs` 重新編譯，並把 WebView2、記錄器腳本放進 `客户端` 與 sync 目標。
-
-- `ExpeditionPlayer.cs`：WebView2 客戶端＋啟動記錄器
-- `ExpeditionRecorder.cs`：控制台／OCR 浮層
-- `Recorder\backroom-logger.ps1`：OCR 記錄器唯一來源
-- `Recorder\structured\`：管線唯一來源
-- `start.ps1`／`啟動.bat`：複製到 `%LOCALAPPDATA%\Expedition\app` 並啟動

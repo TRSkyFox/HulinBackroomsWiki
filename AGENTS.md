@@ -1,269 +1,286 @@
-# 工作約定（AGENTS.md）
+# 工作约定（AGENTS.md）
 
-> 2026-11-01 全面重寫。工作區：`D:\BACKROOMS`。
-> 這份只留「現在仍然有效」的規則；歷史事故、舊路徑、舊管線已移到
-> `文档/报告/` 與 `备份/legacy-wiki-20261101.zip`。
+> 2026-11-01 全面重写。工作区：`D:\Project\HulinBackroomsWiki`。
+> 这份只留“现在仍然有效”的规则；历史事故、旧路径、旧管线已移到
+> `文档/报告/` 与 `备份/legacy-wiki-20261101.zip`。
 >
-> 有衝突時，優先順序：
-> **使用者當下指示 → 本檔 → `文档/AGENT-接手.md` → `文档/要求文档.md` → 舊文件。**
+> 有冲突时，优先顺序：
+> **用户当下指示 → 本文件 → `文档/AGENT-接手.md` → `文档/要求文档.md` → 旧文件。**
+>
+> **2026-11-04 迁移**：工作区已搬到 `D:\Project\HulinBackroomsWiki`。
+> 项目总结、现行统计与新记录器流程见根目录 `README.md`；本文件第 2、3、6 节已同步为搬迁后的现况。
 
 ---
 
-## 1. 這個專案是什麼
+## 1. 这个项目是什么
 
-《狐霖的後室 RPG｜Hulin Backrooms RPG》的**非官方 Wiki ＋ OCR 記錄器 ＋ 玩家客戶端**。
+《狐霖的后室 RPG｜Hulin Backrooms RPG》的**非官方 Wiki ＋ OCR 记录器 ＋ 玩家客户端**。
 
-- 遊戲是 Unity WebGL，`#game` 是 `<canvas>`，DOM／無障礙樹讀不到內容，只能靠 OCR。
-- 三條產品線：
-  1. `wiki/`：內容與離線單檔網站。
-  2. `客户端/Recorder/`：OCR 記錄器與 staging 管線。
-  3. `客户端/`：ExpeditionRecorder 控制台＋ExpeditionClient 遊戲客戶端，附帶 logs 記錄與可攜版。
-- **不做自動玩**。遊戲作者不允許，任何 `auto/`、`quark/`、`sessions/`、自動玩入口都不要恢復。
+- 游戏是 Unity WebGL，`#game` 是 `<canvas>`，DOM／无障碍树读不到内容，只能靠 OCR。
+- 三条产品线：
+  1. `wiki/`：内容与离线单档网站。
+  2. `客户端/Recorder/`：OCR 记录器与 staging 管线。
+  3. `客户端/`：ExpeditionRecorder 控制台＋ExpeditionClient 游戏客户端，附带 logs 记录与便携版。
+- **不做自动玩**。游戏作者不允许，任何 `auto/`、`quark/`、`sessions/`、自动玩入口都不要恢复。
 
 ---
 
-## 2. 根目錄結構（現行）
+## 2. 根目录结构（现行）
 
 ```text
-D:\BACKROOMS\
-  AGENTS.md                 本檔：現行規則
-  启动记录器.bat             啟動記錄器
+D:\Project\HulinBackroomsWiki\
+  AGENTS.md                 本文件：现行规则
+  README.md                 项目总结、现况、新开发者上手
+  Expedition Archive.bat    玩家资料包导入工具入口
+  tools\
+    ExpeditionArchive.cs    玩家资料包导入工具源代码
+    build-import.ps1        编译脚本
   客户端\
     Recorder\
-      backroom-logger.ps1   OCR 記錄器本體（唯一來源）
-      structured\           管線唯一來源（parse／event／import／merge／tests）
-      logs\                 各場次原始 logs（只讀）
-      說明.md               記錄器手冊
-    ExpeditionPlayer.cs       遊戲客戶端原始碼（client-only 由 ExpeditionClient 啟動）
-    ExpeditionRecorder.cs     獨立控制台／記錄器面板原始碼
-    backroom-logger.ps1       app 同步副本（由 sync.mjs 從 Recorder 更新）
-    palette-from-shots.ps1    app 同步副本（由 sync.mjs 從 Recorder 更新）
-    structured\               app 同步副本；只由 sync.mjs 更新，不要手改
-    dist\Expedition\          可攜版成品（sync 目標）
-    dist\Expedition.zip       給別人的可攜版壓縮檔
-    start.ps1／啟動.bat       複製到 %LOCALAPPDATA% 後啟動 ExpeditionRecorder
-    build.ps1                 重新編譯 panel＋client
-    volume-watch.ps1          音量記錄
-    fonts\                    字型與字型圖集
+      backroom-logger.ps1   旧 OCR 记录器本体（唯一来源）
+      structured\           管线唯一来源（parse／event／import／merge／tests）
+      logs\                 原始 logs＋manual 记录（只读；不进 git）
+      characters.json       角色称号对照（新记录器用）
+      s2t.json              简→繁转换表
+      說明.md               旧记录器手册
+    ExpeditionPlayer.cs     游戏客户端源代码（client-only 由 ExpeditionClient 启动）
+    ExpeditionRecorder.cs   控制台＋OCR 浮层＋人工记录器源代码
+    structured\             app 同步副本；只由 sync.mjs 更新，不要手改
+    dist\Expedition\        便携版成品（sync 目标）
+    dist\Expedition.zip     给别人的便携版压缩包
+    start.ps1／啟動.bat     复制到 %LOCALAPPDATA% 后启动 ExpeditionRecorder
+    build.ps1               重新编译 panel＋client
+    volume-watch.ps1        音量记录
+    fonts\                  字体与字体图集
   wiki\
-    content\                 ★ Wiki 唯一內容來源
-    site\index.html          建置產物（雙擊即開；不要手改）
-    _incoming\               每次收工的 staging（不進正式庫）
-    smoke.mjs                前端冒煙測試
-    import-package.ps1       匯入別人的 .expedition.zip（預設只 staging）
-    匯入紀錄.bat             拖 zip 的入口
-  文档\                      AGENT-接手、要求文档、事件规范、背景设定、报告
-  备份\                      legacy 壓縮檔與站點備份
+    content\                ★ Wiki 唯一内容来源
+    site\index.html         建置产物（双击即开；不要手改）
+    _incoming\              每次收工的 staging（不进正式库）
+    smoke.mjs               前端冒烟测试
+    import-package.ps1      导入 .expedition.zip（默认只 staging）
+    匯入紀錄.bat            拖 zip 的入口
+  文档\                     AGENT-接手、要求文档、事件结构规范、背景设定、报告
+  例子截图\                 参考截图（不进 wiki）
+  备份\                     legacy 压缩包与站点备份
+  导出\                     记录器默认导出目录（不进 git）
 ```
 
-已歸檔／移除：
+已归档／移除：
 
 - `wiki/_data`、`wiki/_drafts`、`wiki/_backup`、`wiki/_gen`、`wiki/_i18n`、
   `wiki/build-site.ps1`、`wiki/lib-*.ps1`、`wiki/sync-floor-colors.ps1`、`wiki/ui-smoke.mjs`、
   `wiki/README.md`、`wiki/ARCHITECTURE.md`、`文档/交接.md` → `备份/legacy-wiki-20261101.zip`。
-- `wiki/頁面` → `备份/legacy-wiki-pages-20261101.zip`。
-- `wiki/_design`、2026-10-29 的 failed-run 備份 → `备份/20261029-old-runs-and-design.zip`。
-- `客户端/Recorder/player/`（舊 ExpeditionPlayer 副本與 135.8 MB 測試 profile）已移除；
+- `wiki/页面` → `备份/legacy-wiki-pages-20261101.zip`。
+- `wiki/_design`、2026-10-29 的 failed-run 备份 → `备份/20261029-old-runs-and-design.zip`。
+- `客户端/Recorder/player/`（旧 ExpeditionPlayer 副本与 135.8 MB 测试 profile）已移除；
   `客户端/build.ps1` 改用 `客户端/dist/Expedition` 的 WebView2 DLL。
 
 ---
 
-## 3. 資料流
+## 3. 资料流
 
 ```text
 ExpeditionRecorder（控制台）
-  → ExpeditionClient（WebView 遊戲）
-  → 客户端/Recorder/backroom-logger.ps1
-  → 客户端/Recorder/logs/backroom-<時間>/structured.jsonl
-  → 客户端/Recorder/structured（font-correct → clean-levels → parse／event-parse／input-bind
-                       → event-import → import-wiki → validate → merge-final）
-  → wiki/_incoming/<session>/            staging（預設不寫正式庫）
-  → wiki/content/                       正式內容
-  → node wiki/content/build.mjs
-  → wiki/site/index.html
+  ├─ 新：人工辅助记录（现行方向）
+  │   → Q 选模式／E 框选
+  │   → 客户端/Recorder/logs/manual/*.jsonl
+  │   → 客户端/Recorder/structured/import-manual.mjs
+  │   → wiki/content/
+  │
+  └─ 旧：自动 OCR 管线（既有 logs／兼容）
+      → ExpeditionClient（WebView 游戏）
+      → 客户端/Recorder/backroom-logger.ps1
+      → 客户端/Recorder/logs/backroom-<时间>/structured.jsonl
+      → 客户端/Recorder/structured（font-correct → clean-levels → parse／event-parse／input-bind
+                           → event-import → import-wiki → validate → merge-final）
+      → wiki/_incoming/<session>/        staging（默认不写正式库）
+      → wiki/content/
+
+wiki/content/ → node wiki/content/build.mjs → wiki/site/index.html
 ```
 
-- `客户端/Recorder/structured/` 是**管線唯一來源**。
-- `客户端/structured/` 與 `客户端/dist/Expedition/structured/` 是同步副本；
-  **不要手改副本**，改來源後跑 `node 客户端/Recorder/structured/sync.mjs`。
-- 客户端/volume-watch.ps1 是音量記錄；
-  `sync.mjs` 會把它們複製到 app／dist。
-- 除錯覆蓋層：記錄器每幀寫 `客户端/Recorder/logs/overlay.json`；ExpeditionRecorder 讀它，畫透明區塊框
-  與右側 OCR 讀取面板。框線只畫邊、滑鼠穿透，不遮遊戲；`--no-overlay` 可關。
-- 事件分段：`event-parse.mjs` 會用「大空隙」（> max(2.5×行距, 50px)）切斷 intro／results；普通段落 35px 不會被切。沒有標題的事件不會自動生成。
+- `客户端/Recorder/structured/` 是**管线唯一来源**。
+- `客户端/structured/` 与 `客户端/dist/Expedition/structured/` 是同步副本；
+  **不要手改副本**，改来源后跑 `node 客户端/Recorder/structured/sync.mjs`。
+- 新记录器的六种模式：事件／物品／楼层介绍／出口／结局／商店；输出在 `logs/manual/`。
+- 旧管线仍可处理历史 logs；新资料优先走 `import-manual.mjs`，避免两条管线同时写正式 content。
+- 客户端/volume-watch.ps1 是音量记录；
+  `sync.mjs` 会把它们复制到 app／dist。
+- 旧调试覆盖层：记录器每帧写 `客户端/Recorder/logs/overlay.json`；`--no-overlay` 可关。
+- 事件分段：`event-parse.mjs` 会用“大空隙”（> max(2.5×行距, 50px)）切断 intro／results；普通段落 35px 不会被切。没有标题的事件不会自动生成。
 
 ---
 
-## 4. 內容來源與 schema
+## 4. 内容来源与 schema
 
-`wiki/content/` 是 Wiki 唯一來源。詳細欄位見 `wiki/content/README.md`。
+`wiki/content/` 是 Wiki 唯一来源。详细字段见 `wiki/content/README.md`。
 
 ```text
 characters/<角色>/character.json     角色
-characters/_meta.json               順序、永久能力、狀態表
-characters/_skills.json             戰鬥技能表
-characters/_extra.json              角色額外資料
-entities/<實體>/entity.json         實體
-items/<分類>/<物品>/item.json       物品（weapon／armor／accessory／tool／consumable／ammo）
-floors/<id-name>/floor.json         樓層資料與正文
-floors/<id-name>/events.json        該層事件／岔路（唯一來源）
-floors/<id-name>/endings.json       該層結局（唯一來源）
-floors/<id-name>/design.css         該層專屬樣式
-floors/_names.json                  樓層 id → 名稱
+characters/_meta.json               顺序、永久能力、状态表
+characters/_skills.json             战斗技能表
+characters/_extra.json              角色额外资料
+entities/<实体>/entity.json         实体
+items/<分类>/<物品>/item.json       物品（weapon／armor／accessory／tool／consumable／ammo）
+floors/<id-name>/floor.json         楼层资料与正文
+floors/<id-name>/events.json        该层事件／岔路（唯一来源）
+floors/<id-name>/endings.json       该层结局（唯一来源）
+floors/<id-name>/design.css         该层专属样式
+floors/_names.json                  楼层 id → 名称
 shops/<商店>/shop.json              商店
-pages/pages.json                    關於頁等靜態頁
+pages/pages.json                    关于页等静态页
 recipes/recipes.json                合成表
-enhancements/enhancements.json      強化表
+enhancements/enhancements.json      强化表
 ```
 
-硬規則：
+硬规则：
 
-- **事件與結局只能放該樓層資料夾**；不要再用全域 `content/events.json` 或 `content/endings/`。
-- 樓層 key 一律 `id|name`；`1/7/9` 共用 id，不要只用 id 判斷解鎖或配色。
-- `_status: 'name-only' | 'id-only'` 只給「只有名字／只有編號」的占位樓層；有正文就不要留這個欄位。
-- 樓層 `doc` 只放頁面會顯示的「環境」引言 HTML；不要混事件、商店、戰鬥流水。
-- 不要把截圖放進 `wiki/content`；截圖只拿來讀字，讀完刪。
-- 玩家帳號名 `狐天`／`狐夭` 不進正文，一律換成「你」；`天狐` 是遊戲角色，保留。
-- 內容 JSON 不要寫入 `D:\BACKROOMS\...` 這類絕對路徑；用相對路徑或只留 session 名。
+- **事件与结局只能放该楼层文件夹**；不要再用全域 `content/events.json` 或 `content/endings/`。
+- 楼层 key 一律 `id|name`；`1/7/9` 共用 id，不要只用 id 判断解锁或配色。
+- `_status: 'name-only' | 'id-only'` 只给“只有名字／只有编号”的占位楼层；有正文就不要留这个字段。
+- 楼层 `doc` 只放页面会显示的“环境”引言 HTML；不要混事件、商店、战斗流水。
+- 不要把截图放进 `wiki/content`；截图只拿来读字，读完删。
+- 玩家账号名 `狐天`／`狐夭` 不进正文，一律换成“你”；`天狐` 是游戏角色，保留。
+- 内容 JSON 不要写入 `D:\Project\HulinBackroomsWiki\...` 这类绝对路径；用相对路径或只留 session 名。
 
 ---
 
 ## 5. 指令
 
 ```powershell
-# 建置網站（產物：wiki/site/index.html）
-node D:\BACKROOMS\wiki\content\build.mjs
+# 建置网站（产物：wiki/site/index.html）
+node D:\Project\HulinBackroomsWiki\wiki\content\build.mjs
 
-# 管線同步／檢查
-node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs
-node D:\BACKROOMS\客户端\Recorder\structured\sync.mjs --check
+# 管线同步／检查
+node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\sync.mjs
+node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\sync.mjs --check
 
-# 完整驗收（目前 824 項；項數會變，以輸出 summary 為準）
-node D:\BACKROOMS\客户端\Recorder\structured\tests\verify-final.mjs
+# 完整验收（目前 845 项；项数会变，以输出 summary 为准）
+node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\verify-final.mjs
 
-# 內容引用完整性（verify-final 也會跑；可單獨執行）
-node D:\BACKROOMS\客户端\Recorder\structured\validate-content.mjs
+# 内容引用完整性（verify-final 也会跑；可单独执行）
+node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\validate-content.mjs
 
-# 前端冒煙（改 template／前端必跑）
-node D:\BACKROOMS\wiki\smoke.mjs
+# 前端冒烟（改 template／前端必跑）
+node D:\Project\HulinBackroomsWiki\wiki\smoke.mjs
 
 # 端到端 fixture
-node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
+node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\run-tests.mjs
 ```
 
-- `verify-final` 的 `root` 由腳本位置推算，不再寫死 `D:/BACKROOMS`。
-- `font.test` 與 `smoke` 使用系統暫存目錄，不往倉庫裡寫測試檔。
-- 建置完成後用瀏覽器實際開 `wiki/site/index.html` 看一次；不要只看 exit code。
+- `verify-final` 的 `root` 由脚本位置推算，不再写死 `D:/Project/HulinBackroomsWiki`。
+- `font.test` 与 `smoke` 使用系统暂存目录，不往仓库里写测试档。
+- 建置完成后用浏览器实际开 `wiki/site/index.html` 看一次；不要只看 exit code。
 
 ---
 
-## 6. 目前狀態（2026-11-03）
+## 6. 目前状态（2026-11-04）
 
-> 數字會變；下面是這次交接時的實測，不是永久保證。要現在的值就重跑指令。
+> 数字会变；下面是这次整理时的实测，不是永久保证。要现在的值就重跑指令。
 
-- 樓層：**96 層**（含 `name-only`／`id-only` 占位；以 `verify-final` 輸出為準）。
-- 事件檔：13 個樓層有 `events.json`；結局檔：4 個。
-- 角色 98、實體 71、物品 455、商店 17。
-- 驗收：`verify-final` **824 / 824**（warnings 5）；`smoke` **7 / 7**；`sync --check` **82 項對齊**。
-- 已知內容債：
-  - 455 件物品中約 261 件沒有 `desc`；**多數是使用者尚未截圖，先不要代寫**，等他自己補。
-  - 116 處角色／實體／商店／配方引用找不到對應物品（含 OCR 雜訊與真缺條目）。
-  - 54 個 JSON 仍含 `D:\BACKROOMS\...` 絕對路徑（多在 `_staging`／`_observations`）。
-  - 9 個樓層仍是 `id-only`（0.41、1.1、154.1、188、21、372、399.1、6.2、87），舊資料沒有可恢復的名字，不要編造。
-  - `212-發光深淵` 缺完整介紹；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
-  - `Get-PageRect` 已改成遞迴找 `Chrome_RenderWidgetHostHWND`；crop 現在是真正的 render **1600×900**（以前只掃直接子視窗，失敗就退回整個視窗 1606×929，造成 3×26px 偏移與縮放）。
-  - 1600×900 normal 已加專用分區：`title 9,0,656,66`、`main 20,80,1005,529`、`opts 20,609,1005,278`、`enemy 9,42,121,48`、`char 1030,66,565,84`。戰鬥時先 OCR 選項區判斷 `攻擊／技能／防禦／逃跑／右手…`，改用 `enemy 15,70,175,125`、`main 20,200,1005,409`（主區從敵人卡下方開始）。此尺寸不要開 AutoRegion：measured main 會量到 x≈990（實際面板右緣 1025）。
-  - 管線路徑已集中到 `客户端/Recorder/structured/paths.mjs`；新腳本不要再寫死 `D:/BACKROOMS`。
-- 已做的清理：
-  - 移除 `客户端/Recorder/player/`（136.6 MB）。
-  - 舊 Wiki 管線與舊 handover 壓進 `备份/legacy-wiki-20261101.zip`（約 7.9 MB）。
-  - `verify-final`／`font.test`／`smoke` 已改為可攜、暫存目錄。
-  - ExpeditionRecorder／ExpeditionClient 增加 OCR 覆蓋層：透明區塊框＋右側讀取面板；記錄器寫 `logs/overlay.json`，`--no-overlay` 可關；勾選框即時開關兩者。
-  - 客戶端／記錄器生命週期已解耦：`ExpeditionRecorder.exe` 是獨立控制台；`ExpeditionClient.exe --client-only` 才是遊戲 client。關控制台只退出 panel、不關 client；「關閉客戶端」才送 WM_CLOSE。更新 `ExpeditionRecorder.exe`／記錄器 script 不需要重開遊戲；只有更新 `ExpeditionClient.exe` 才要重開遊戲。
-  - 記錄器不再用全機視窗標題掃描來認遊戲；只認已知 client process／同安裝資料夾的 legacy client，並排除瀏覽器。
-  - `git` 已初始化；`.gitignore` 排除 logs、app／dist、字型、OCR binary、備份與 staging。
+- 楼层：**96 层**（38 一般、41 `name-only`、17 `id-only`）。
+- 有 `events.json` 的楼层：**16**；有 `endings.json`：**0**；有 doc：**37**；有 palette：**36**；有 `design.css`：**2**。
+- 角色 **99**、实体 **71**、物品 **455**、商店 **17**。
+- 验收：`verify-final` **845 / 845**（failed 0、warnings 5）；`smoke` **8 / 8**；`sync --check` **84 项对齐**；`build` exit 0。
+- 已知内容债：
+  - 455 件物品中 261 件没有 `desc`、101 件 `eff` 空、26 件没有 `eff` 字段；**多数是用户尚未截图，先不要代写**。
+  - 116 处角色／实体／商店／配方引用找不到对应物品（含 OCR 杂讯与真缺条目）。
+  - 54 个 JSON 仍含 `D:\Project\HulinBackroomsWiki\...` 绝对路径（多在 `_staging`／`_observations`）。
+  - 17 个 `id-only` 楼层没有可恢复的名字（其中 9 个是 `▒▒▒▒▒`），不要编造。
+  - `212-發光深淵` 缺完整介绍；`14-冷漠病院`、`40-有害的衰敗` 缺配色，`1-停車區` 只有底色。
+- 新记录器（2026-11-03 起）：
+  - `ExpeditionRecorder.cs` 约 4,921 行；六种模式（事件／物品／楼层介绍／出口／结局／商店）、圆盘、待处理浮窗、导出 ZIP、导入工具。
+  - 输出在 `客户端/Recorder/logs/manual/*.jsonl`；`import-manual.mjs` 已支持 events／items／floors／exits／endings，**尚未支持 shops**。
+  - 最后一份真实 manual 记录仍有 step 1 `floorId`／`title` 空白、结果断行；大量记录前先重测。
+- 客户端／记录器生命周期：
+  - `ExpeditionRecorder.exe` 是独立控制台；`ExpeditionClient.exe --client-only` 才是游戏 client。
+  - 关控制台只退出 panel、不关 client；更新面板不需要重开游戏；只有更新 `ExpeditionClient.exe` 才要重开游戏。
+  - 记录器不再用全机窗口标题扫描认游戏；只认已知 client process／同安装文件夹的 legacy client，并排除浏览器。
+  - OCR 分区按 1600×900 设计坐标定义，依实际窗口比例换算后裁切；**像素不缩放**。事件／楼层／出口／结局／商店扫左侧内容区，物品扫右侧详情，队伍条单独扫。
+- Git：搬迁前 108 commits、887 个 tracked files、约 8.2 MB；`.gitignore` 排除 logs、dist、fonts、OCR binary、备份、staging、`site/index.html`。
+- 本机完整工作区约 1.8 GB（dist 825 MB、备份 172 MB、logs 51 MB、incoming 50 MB）。
 
 ---
 
-## 7. 硬規則
+## 7. 硬规则
 
-1. **不要關使用者正在用的程式或視窗。**
+1. **不要关用户正在用的程序或窗口。**
    - 禁止 `Stop-Process -Name`、`taskkill /IM`、`Get-Process xxx | Stop-Process`。
-   - 只關自己 `Start-Process -PassThru` 記下 PID 的程序。
-   - 不要對使用者的遊戲／瀏覽器 `bring_to_front`，也不要用會搶焦點的輸入。
-   - 驗證用瀏覽器一律獨立 profile；不確定是不是使用者的程序 → 先問。
+   - 只关自己 `Start-Process -PassThru` 记下 PID 的程序。
+   - 不要对用户的游戏／浏览器 `bring_to_front`，也不要用会抢焦点的输入。
+   - 验证用浏览器一律独立 profile；不确定是不是用户的程序 → 先问。
 
-2. **不做自動玩。**
-   - 不建立／恢復 `auto/`、`quark/`、`sessions/`、`Wiki探索者.exe` 等自動玩產物。
+2. **不做自动玩。**
+   - 不建立／恢复 `auto/`、`quark/`、`sessions/`、`Wiki探索者.exe` 等自动玩产物。
 
-3. **正常匯入流程不依賴 AI。**
-   - 規則、校驗、staging、確認流程必須能獨立跑。
-   - AI 可以協助分析，但不能是正式匯入的必需步驟。
+3. **正常导入流程不依赖 AI。**
+   - 规则、校验、staging、确认流程必须能独立跑。
+   - AI 可以协助分析，但不能是正式导入的必需步骤。
 
-4. **不編造。**
-   - 事件、路徑、戰鬥、結局、配色、物品效果都不能猜。
-   - 不確定就進 `wiki/_incoming/<session>` staging，不覆蓋正式 content。
-   - 低於 0.8 信心的候選不合併；沒有實際截圖就不生成配色。
+4. **不编造。**
+   - 事件、路径、战斗、结局、配色、物品效果都不能猜。
+   - 不确定就进 `wiki/_incoming/<session>` staging，不覆盖正式 content。
+   - 低于 0.8 信心的候选不合并；没有实际截图就不生成配色。
 
-5. **截圖是暫存素材。**
-   - 只拿來讀文字；讀完刪。不要放進 `wiki/content` 或 `wiki/site`。
-   - 只刪自己讀過的那幾張；不要用萬用字元掃整個資料夾。
+5. **截图是暂存素材。**
+   - 只拿来读文字；读完删。不要放进 `wiki/content` 或 `wiki/site`。
+   - 只删自己读过的那几张；不要用万用字元扫整个文件夹。
 
-6. **玩家名與角色名分開。**
-   - `狐天`／`狐夭` 是玩家帳號名 → 正文換「你」。
+6. **玩家名与角色名分开。**
+   - `狐天`／`狐夭` 是玩家账号名 → 正文换“你”。
    - `天狐`、`小猦`、`呐豆` 等是角色名 → 保留。
-   - 不確定這一局操作的是哪個角色 → 先問。
+   - 不确定这一局操作的是哪个角色 → 先问。
 
-7. **語言。**
-   - 跟使用者對話：簡體中文。
-   - Wiki 正文：繁體中文。
-   - 專案文件與腳本註解：維持原本語言（多為繁中）。
+7. **语言。**
+   - 跟用户对话：简体中文。
+   - Wiki 正文：繁体中文（游戏原文照抄）。
+   - 项目文件、说明文档与脚本注释：简体中文。
 
 8. **PowerShell 5.1 陷阱。**
-   - 含中文的 `.ps1` 必須是 **UTF-8 with BOM**。
-   - 不要用 PowerShell 對中文檔做多行字串替換；用 `read` + `edit` 或 node 腳本。
-   - 不要用 `$pid`、`$home`、`$host` 等唯讀自動變數。
-   - 需要跨幀保存狀態時用 `[pscustomobject]`，不要用 `[ordered]@{}` 查自訂 key。
+   - 含中文的 `.ps1` 必须是 **UTF-8 with BOM**。
+   - 不要用 PowerShell 对中文档做多行字串替换；用 `read` + `edit` 或 node 脚本。
+   - 不要用 `$pid`、`$home`、`$host` 等唯读自动变数。
+   - 需要跨帧保存状态时用 `[pscustomobject]`，不要用 `[ordered]@{}` 查自订 key。
 
-9. **內容與產物分開。**
+9. **内容与产物分开。**
    - 只改 `wiki/content/`；不要直接改 `wiki/site/index.html`。
    - 重建一律跑 `node wiki/content/build.mjs`。
 
-10. **管線只有一份來源。**
+10. **管线只有一份来源。**
     - 只改 `客户端/Recorder/structured/`；改完跑 `sync.mjs`。
     - 不要手改 `客户端/structured` 或 `客户端/dist/Expedition/structured`。
-    - `sync.mjs --check` 有漂移就 exit 1；漂移沒修好之前不要說「驗收全過」。
+    - `sync.mjs --check` 有漂移就 exit 1；漂移没修好之前不要说“验收全过”。
 
-11. **事件／結局按樓層。**
-    - 只寫 `floors/<樓層>/events.json`、`floors/<樓層>/endings.json`。
-    - 多樓層共用的結局要拆到各層，不要用全域檔。
-    - 事件瀏覽器只讀當前樓層；虛擬根節點不列入清單。
+11. **事件／结局按楼层。**
+    - 只写 `floors/<楼层>/events.json`、`floors/<楼层>/endings.json`。
+    - 多楼层共用的结局要拆到各层，不要用全域档。
+    - 事件浏览器只读当前楼层；虚拟根节点不列入清单。
 
-12. **樓層 key 與占位。**
+12. **楼层 key 与占位。**
     - key 一律 `id|name`；`1/7/9` 共用 id。
-    - `name-only`／`id-only` 不要留 `events.json`，否則 `events:non-empty` 會掛。
-    - 有正文的樓層不要留 `_status: 'name-only'`。
+    - `name-only`／`id-only` 不要留 `events.json`，否则 `events:non-empty` 会挂。
+    - 有正文的楼层不要留 `_status: 'name-only'`。
 
-13. **原始 logs 只讀。**
-    - `客户端/Recorder/logs/backroom-*/` 的 `structured.jsonl`、`wiki.md`、`ocr-raw.log` 不要刪、不要覆蓋。
-    - `levels/` 只允許 `clean-levels.mjs` 刪假樓層檔；`floor-shots/` 只允許配色腳本取樣後刪。
-    - 要清舊場次，先確認沒有要回溯的出處行號，再問使用者。
+13. **原始 logs 只读。**
+    - `客户端/Recorder/logs/backroom-*/` 的 `structured.jsonl`、`wiki.md`、`ocr-raw.log` 不要删、不要覆盖。
+    - `levels/` 只允许 `clean-levels.mjs` 删假楼层档；`floor-shots/` 只允许配色脚本取样后删。
+    - 要清旧场次，先确认没有要回溯的出处行号，再问用户。
 
-14. **合併前備份。**
-    - `merge-final` 預設 dry-run；`--confirm` 只在看過 `validation.json`／`merge-final-report.json` 後使用。
-    - 沒有備份不要 `--confirm`／`--apply`。
+14. **合并前备份。**
+    - `merge-final` 默认 dry-run；`--confirm` 只在看过 `validation.json`／`merge-final-report.json` 后使用。
+    - 没有备份不要 `--confirm`／`--apply`。
 
-15. **改完要驗。**
-    - 內容：`build.mjs` → `smoke.mjs` → `verify-final`。
-    - 管線：`sync.mjs` → `verify-final`。
+15. **改完要验。**
+    - 内容：`build.mjs` → `smoke.mjs` → `verify-final`。
+    - 管线：`sync.mjs` → `verify-final`。
     - 前端：`smoke.mjs`。
-    - 沒實際跑過，不要說通過。
+    - 没实际跑过，不要说通过。
 
 ---
 
 ## 8. 修改流程
 
-### 8.1 改 Wiki 內容
+### 8.1 改 Wiki 内容
 
 ```text
 改 wiki/content/**/*.json
@@ -273,7 +290,7 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 → git diff／commit
 ```
 
-### 8.2 改管線
+### 8.2 改管线
 
 ```text
 改 客户端/Recorder/structured/*.mjs
@@ -283,44 +300,44 @@ node D:\BACKROOMS\客户端\Recorder\structured\tests\run-tests.mjs
 → git diff／commit
 ```
 
-### 8.3 改客戶端／記錄器腳本
+### 8.3 改客户端／记录器脚本
 
 ```text
-改 客户端/ExpeditionRecorder.cs（控制台／OCR 浮層）或 ExpeditionPlayer.cs（client-only 遊戲）
+改 客户端/ExpeditionRecorder.cs（控制台／OCR 浮层）或 ExpeditionPlayer.cs（client-only 游戏）
 → powershell -ExecutionPolicy Bypass -File 客户端/build.ps1
-→ 用 start.ps1 重開 ExpeditionRecorder；ExpeditionClient 可保持開啟
+→ 用 start.ps1 重开 ExpeditionRecorder；ExpeditionClient 可保持开启
 ```
 
-- 只改 `ExpeditionRecorder.exe` 或 `backroom-logger.ps1`：關掉控制台、重新 `start.ps1` 即可，**不用關遊戲**。
-- 只有改到 `ExpeditionPlayer.cs` / `ExpeditionClient.exe`（WebView 遊戲本身）才需要關遊戲 client。
-- `start.ps1` 會跳過被 client 鎖住的 exe／DLL；更新面板不會強關客戶端。
+- 只改 `ExpeditionRecorder.exe` 或 `backroom-logger.ps1`：关掉控制台、重新 `start.ps1` 即可，**不用关游戏**。
+- 只有改到 `ExpeditionPlayer.cs` / `ExpeditionClient.exe`（WebView 游戏本身）才需要关游戏 client。
+- `start.ps1` 会跳过被 client 锁住的 exe／DLL；更新面板不会强关客户端。
 
 ---
 
-## 9. 清理、備份、版本控制
+## 9. 清理、备份、版本控制
 
 - `git` 已初始化（2026-11-01）。`.gitignore` 排除：
-  `客户端/Recorder/logs/`、`客户端/Recorder/player/`、`客户端/Recorder/structured/bin/`、`客户端/Recorder/structured/*.otf`、
-  `客户端/app/`、`客户端/dist/`、`客户端/fonts/`、`备份/`、`wiki/_incoming/`、
-  `wiki/site/index.html`、`wiki/site/index.backup-before-content.html`。
-- 內容變更用 commit 記錄；不要用「複製整個資料夾」當版本控制。
-- `备份/legacy-wiki-20261101.zip` 是舊 Wiki 管線與舊 handover 的封存；不要沒事解開覆蓋現行檔案。
-- `客户端/Recorder/logs/` 是原始資料，體積大；要清舊場次先問，不要用批次刪除。
-- `客户端/dist/Expedition/` 是 sync 目標；`Expedition.zip` 是給別人的成品。兩個都保留。
-- `客户端/app/` 是 build.ps1 產物；要重新產生就跑 `build.ps1`。
+  `客户端/Recorder/logs/`、`客户端/Recorder/structured/bin/`、`客户端/Recorder/structured/rapid-primary-service/`、`客户端/Recorder/structured/*.otf`、
+  `客户端/app/`、`客户端/dist/`、`客户端/fonts/`、`客户端/structured/`、`客户端/*.exe`、`客户端/*.dll`、`tools/*.exe`、
+  `备份/`、`wiki/_incoming/`、`wiki/site/index.html`、`wiki/site/index.backup-before-content.html`。
+- 内容变更用 commit 记录；不要用“复制整个文件夹”当版本控制。
+- `备份/legacy-wiki-20261101.zip` 是旧 Wiki 管线与旧 handover 的封存；不要没事解开覆盖现行文件。
+- `客户端/Recorder/logs/` 是原始资料，体积大；要清旧场次先问，不要用批量删除。
+- `客户端/dist/Expedition/` 是 sync 目标；`Expedition.zip` 是给别人的成品。两个都保留。
+- `客户端/app/` 是 build.ps1 产物；要重新生成就跑 `build.ps1`。
 
 ---
 
 ## 10. 不要做
 
-- 不要恢復自動玩。
-- 不要用程序名稱批次關程式。
-- 不要把截圖放進 Wiki。
-- 不要寫玩家名（`狐天`／`狐夭`）；`天狐` 是角色。
+- 不要恢复自动玩。
+- 不要用程序名称批量关程序。
+- 不要把截图放进 Wiki。
+- 不要写玩家名（`狐天`／`狐夭`）；`天狐` 是角色。
 - 不要直接改 `wiki/site/index.html`。
-- 不要只改 `客户端/structured` 或 `dist/.../structured`（會被 sync 覆蓋）。
+- 不要只改 `客户端/structured` 或 `dist/.../structured`（会被 sync 覆盖）。
 - 不要用全域 `content/events.json` 或 `content/endings/`。
-- 不要自己生成樓層配色。
-- 不要在沒有備份的情況下 `--confirm`／`--apply`。
-- 不要在新程式裡寫死 `D:/BACKROOMS`；用 `import.meta.url` 或參數。
-- 不要把 `客户端/Recorder/logs`、`备份`、字型、OCR binary 加進 git。
+- 不要自己生成楼层配色。
+- 不要在没有备份的情况下 `--confirm`／`--apply`。
+- 不要在新程序里写死 `D:/Project/HulinBackroomsWiki`；用 `import.meta.url` 或参数。
+- 不要把 `客户端/Recorder/logs`、`备份`、字体、OCR binary 加进 git。
