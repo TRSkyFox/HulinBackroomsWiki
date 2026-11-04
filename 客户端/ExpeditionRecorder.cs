@@ -2665,8 +2665,20 @@ namespace ExpeditionRecorder
             if (_dragging)
             {
                 var r = NormRect(_down, _cur);
-                using (var fill = new SolidBrush(Color.FromArgb(55, 90, 170, 255)))
-                    g.FillRectangle(fill, r);
+                using (var band = new SolidBrush(Color.FromArgb(45, 90, 170, 255)))
+                    g.FillRectangle(band, r);
+                /* 只按 Y 轴判断：横坐标完全不参与，竖着拖也能选中同高度的整行。 */
+                using (var fill = new SolidBrush(Color.FromArgb(34, 90, 170, 255)))
+                using (var pen = new Pen(Color.FromArgb(235, 90, 170, 255), 1.5f))
+                {
+                    foreach (var l in _lines)
+                    {
+                        if (!IsSelectable(l) || !InYBand(l, r)) continue;
+                        var box = Rectangle.Inflate(l.Rect, 2, 2);
+                        g.FillRectangle(fill, box);
+                        g.DrawRectangle(pen, box);
+                    }
+                }
                 using (var pen = new Pen(Color.FromArgb(220, 255, 255, 255), 2))
                 {
                     pen.DashStyle = DashStyle.Dash;
@@ -2777,6 +2789,17 @@ namespace ExpeditionRecorder
             return new Rectangle(x, y, Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
         }
 
+        bool IsSelectable(OcrLine l)
+        {
+            return l != null && !l.IsChrome && !l.IsOption && !l.IsCondition && l.OptionGroup != -2;
+        }
+
+        /* 框選只看垂直帶：同一高度的文字，不管 X 多遠都算選中。 */
+        bool InYBand(OcrLine l, Rectangle r)
+        {
+            return l != null && l.CenterY >= r.Top && l.CenterY <= r.Bottom;
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
@@ -2801,14 +2824,12 @@ namespace ExpeditionRecorder
                 _dragging = false;
                 _cur = e.Location;
                 var r = NormRect(_down, _cur);
-                if (r.Width < 8 && r.Height < 8) { Render(); base.OnMouseUp(e); return; }
+                if (r.Height < 8) { Render(); base.OnMouseUp(e); return; }
 
                 var sel = new List<OcrLine>();
                 foreach (var l in _lines)
                 {
-                    if (l.IsChrome || l.IsOption || l.IsCondition || l.OptionGroup == -2) continue;
-                    if (l.CenterY < r.Top || l.CenterY > r.Bottom) continue;
-                    if (r.Width >= 60 && (l.CenterX < r.Left - 60 || l.CenterX > r.Right + 60)) continue;
+                    if (!IsSelectable(l) || !InYBand(l, r)) continue;
                     sel.Add(l);
                 }
                 sel.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });

@@ -11,6 +11,7 @@
 - 修复事件写入后“已记录”不显示：`Dictionary[]` 强转 `ArrayList` 导致事件合并丢失。
 - 自动修复 `%LOCALAPPDATA%\Expedition\app\logs` 断掉的 junction，避免记录写不进去。
 - 事件框选支持彩色标注：`樓層名`、`事件名`、`選項N`、`選項N條件`。
+- 拖动框选改为只按 Y 轴判断：横向不限制，拖动时高亮所有同高度的目标行。
 - 特殊选项按**金色文字或 `★`**识别，写入 `special`、`specialReason`（属性／物品／角色／技能／状态／前置事件）和 `conditionText`。
 - 自由事件（`各自选一个去做`）写 `eventKind: "free"`；同一条事件内可记录多个玩家分支。
 - 岔路事件（`各自选一条路`）写 `eventKind: "junction"`，事件描述与分支照常记录。
