@@ -696,7 +696,7 @@ namespace ExpeditionRecorder
         int _downTick;
         int _installedTick;
         public Func<IntPtr> GetGame;
-        public int ModeVk = 0x51, StepVk = 0x45;
+        public int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
         public Func<bool> EscapeHandler;
@@ -779,7 +779,7 @@ namespace ExpeditionRecorder
                             IntPtr efg = Native.GetForegroundWindow();
                             if ((IsGameFocused(efg) || IsOwnProcessWindow(efg)) && EscapeHandler()) return (IntPtr)1;
                         }
-                        if (vk == ModeVk || vk == StepVk)
+                        if (vk == ModeVk || vk == StepVk || vk == CancelVk)
                         {
                             /* keyup：只有真的被我們吃掉的 keydown 才吃 keyup。
                                Q 圆盘打开后前景会变成记录器浮层，不能在这里再要求
@@ -1484,13 +1484,13 @@ namespace ExpeditionRecorder
     /* ══ 按鍵設定 ═══════════════════════════════════════════ */
     class KeysForm : Form
     {
-        Button _mode, _step;
+        Button _mode, _step, _cancel;
         int _cap = 0;
 
         public KeysForm()
         {
             Text = "按鍵設定";
-            ClientSize = new Size(380, 190);
+            ClientSize = new Size(380, 236);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -1508,16 +1508,19 @@ namespace ExpeditionRecorder
             _mode.Click += delegate { _cap = 1; RefreshText(); };
             _step = MkBtn(20, 82);
             _step.Click += delegate { _cap = 2; RefreshText(); };
+            _cancel = MkBtn(20, 128);
+            _cancel.Click += delegate { _cap = 3; RefreshText(); };
 
             var save = new Button();
             save.Text = "保存";
-            save.SetBounds(20, 130, 100, 30);
+            save.SetBounds(20, 176, 100, 30);
             save.FlatStyle = FlatStyle.Flat;
             save.BackColor = Color.FromArgb(44, 44, 47);
             save.ForeColor = Color.White;
             save.Click += delegate
             {
-                if (Program.ModeVk == Program.StepVk) { MessageBox.Show("兩個鍵不能相同"); return; }
+                if (Program.ModeVk == Program.StepVk || Program.ModeVk == Program.CancelVk || Program.StepVk == Program.CancelVk)
+                { MessageBox.Show("三個鍵不能相同"); return; }
                 Program.SaveHotkeys();
                 Program.ApplyHotkeys();
                 Close();
@@ -1526,7 +1529,7 @@ namespace ExpeditionRecorder
 
             var cancel = new Button();
             cancel.Text = "取消";
-            cancel.SetBounds(132, 130, 100, 30);
+            cancel.SetBounds(132, 176, 100, 30);
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.BackColor = Color.FromArgb(44, 44, 47);
             cancel.ForeColor = Color.White;
@@ -1552,6 +1555,7 @@ namespace ExpeditionRecorder
         {
             _mode.Text = _cap == 1 ? "按下新鍵…（Esc 取消）" : "模式鍵：" + Program.VkName(Program.ModeVk);
             _step.Text = _cap == 2 ? "按下新鍵…（Esc 取消）" : "記錄鍵：" + Program.VkName(Program.StepVk);
+            _cancel.Text = _cap == 3 ? "按下新鍵…（Esc 取消）" : "取消鍵：" + Program.VkName(Program.CancelVk);
         }
 
         protected override void OnKeyDown(KeyEventArgs e)
@@ -1560,7 +1564,9 @@ namespace ExpeditionRecorder
             if (e.KeyCode == Keys.Escape) { _cap = 0; RefreshText(); return; }
             if (e.KeyCode == Keys.ShiftKey || e.KeyCode == Keys.ControlKey || e.KeyCode == Keys.Menu) return;
             int vk = (int)e.KeyCode;
-            if (_cap == 1) Program.ModeVk = vk; else Program.StepVk = vk;
+            if (_cap == 1) Program.ModeVk = vk;
+            else if (_cap == 2) Program.StepVk = vk;
+            else Program.CancelVk = vk;
             _cap = 0;
             RefreshText();
             e.Handled = true;
@@ -2695,6 +2701,7 @@ namespace ExpeditionRecorder
             else if (Kind == "ending2") hint = "拖框選「後日談」　鬆手即存　Esc 取消";
             else if (Step == 1) hint = "第 1 步：拖框選「事件名＋介紹」　鬆手即存　Esc 取消";
             else hint = "第 " + Step + " 步：拖框選「你決定＋結果」　鬆手即存　Esc 取消";
+            hint = hint.Replace("Esc", Program.VkName(Program.CancelVk));
             var font = new Font("Microsoft JhengHei UI", 9F);
             var sz = g.MeasureString(hint, font);
             int hx = Math.Max(8, Width - (int)sz.Width - 24);
@@ -2850,7 +2857,12 @@ namespace ExpeditionRecorder
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
+            /* 扫描/框选中的取消键：只关闭当前这一步，不结束整条记录。 */
+            if ((int)e.KeyCode == Program.CancelVk || e.KeyCode == Keys.Escape)
+            {
+                DialogResult = DialogResult.Cancel;
+                Close();
+            }
             base.OnKeyDown(e);
         }
 
@@ -3705,7 +3717,7 @@ namespace ExpeditionRecorder
         static Button RecordsBtn, PendingBtn;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
-        public static int ModeVk = 0x51, StepVk = 0x45;
+        public static int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
 
         static OcrService Ocr = new OcrService();
         static BusyForm _busy;
@@ -3874,10 +3886,17 @@ namespace ExpeditionRecorder
             StepLabel.Text = "按 " + VkName(ModeVk) + " 開始記錄";
             recGroup.Controls.Add(StepLabel);
 
-            var cancelBtn = Btn("取消這次記錄", 14, 70, 140, 26);
+            /* Q／E 的 GUI 对应按钮；和「取消這次記錄」放在同一排。 */
+            var qBtn = Btn(VkName(ModeVk) + " 開始／結束", 14, 70, 88, 26);
+            qBtn.Click += delegate { OnHotkey(1); };
+            recGroup.Controls.Add(qBtn);
+            var eBtn = Btn(VkName(StepVk) + " 記錄下一步", 108, 70, 88, 26);
+            eBtn.Click += delegate { OnHotkey(2); };
+            recGroup.Controls.Add(eBtn);
+            var cancelBtn = Btn("取消這次記錄", 202, 70, 112, 26);
             cancelBtn.Click += delegate { CancelRecording(); };
             recGroup.Controls.Add(cancelBtn);
-            var helpBtn = Btn("說明", 170, 70, 100, 26);
+            var helpBtn = Btn("說明", 320, 70, 72, 26);
             helpBtn.Click += delegate { new HelpForm().ShowDialog(); };
             recGroup.Controls.Add(helpBtn);
 
@@ -3908,6 +3927,7 @@ namespace ExpeditionRecorder
             Keys = new KeyboardHook();
             Keys.ModeVk = ModeVk;
             Keys.StepVk = StepVk;
+            Keys.CancelVk = CancelVk;
             Keys.GetGame = delegate { return GameHwnd; };
             Keys.OnTrigger = delegate (int vk)
             {
@@ -3922,6 +3942,12 @@ namespace ExpeditionRecorder
                     }
                     else if (ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed)
                         ControlWindow.BeginInvoke((Action)delegate { FinishEvent(); });
+                    return;
+                }
+                if (vk == CancelVk)
+                {
+                    if (ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed)
+                        ControlWindow.BeginInvoke((Action)delegate { OnHotkey(3); });
                     return;
                 }
                 if (ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed)
@@ -4268,6 +4294,7 @@ namespace ExpeditionRecorder
         static void OnHotkey(int id)
         {
             if (OverlayOpen) return;
+            if (id == 3) { CancelRecording(); return; }
             if (id == 1)
             {
                 if (Mode == "") { if (Picker == null) ShowPicker(); }
@@ -5263,6 +5290,7 @@ namespace ExpeditionRecorder
                 var d = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(HotkeyFile()));
                 if (d != null && d.ContainsKey("mode")) ModeVk = Convert.ToInt32(d["mode"]);
                 if (d != null && d.ContainsKey("step")) StepVk = Convert.ToInt32(d["step"]);
+                if (d != null && d.ContainsKey("cancel")) CancelVk = Convert.ToInt32(d["cancel"]);
             }
             catch { }
         }
@@ -5274,6 +5302,7 @@ namespace ExpeditionRecorder
                 var d = new Dictionary<string, object>();
                 d["mode"] = ModeVk;
                 d["step"] = StepVk;
+                d["cancel"] = CancelVk;
                 File.WriteAllText(HotkeyFile(), new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }
@@ -5292,15 +5321,15 @@ namespace ExpeditionRecorder
 
         public static void ApplyHotkeys()
         {
-            if (Keys != null) { Keys.ModeVk = ModeVk; Keys.StepVk = StepVk; }
+            if (Keys != null) { Keys.ModeVk = ModeVk; Keys.StepVk = StepVk; Keys.CancelVk = CancelVk; }
             UpdateHint();
         }
 
         public static string HelpText()
         {
-            string mk = VkName(ModeVk), sk = VkName(StepVk);
+            string mk = VkName(ModeVk), sk = VkName(StepVk), ck = VkName(CancelVk);
             var sb = new StringBuilder();
-            sb.AppendLine("模式鍵：" + mk + "　　記錄鍵：" + sk);
+            sb.AppendLine("模式鍵：" + mk + "　　記錄鍵：" + sk + "　　取消鍵：" + ck);
             sb.AppendLine();
             sb.AppendLine(mk + " 按一下或按住 → 圓盤；移到模式上鬆開 = 選擇；沒選會留在畫面");
             sb.AppendLine();
@@ -5324,8 +5353,8 @@ namespace ExpeditionRecorder
             sb.AppendLine("【結局】");
             sb.AppendLine("  " + sk + " 結局名＋通用介紹；" + sk + " 後日談；" + mk + " 選分類");
             sb.AppendLine();
-            sb.AppendLine("框選：從上往下拖一條直線，鬆手即存");
-            sb.AppendLine("取消：Esc 或右鍵；面板「取消這次記錄」放棄整條");
+            sb.AppendLine("框選：只按 Y 軸，垂直帶覆蓋到的整行都會選中；鬆手即存");
+            sb.AppendLine("取消：" + ck + " 掃描中取消這一步；再按一次放棄整條記錄；Esc 或右鍵也可取消當前框選");
             sb.AppendLine("按鍵可在「按鍵設定」改，改完這裡和狀態文字會同步更新");
             return sb.ToString();
         }
