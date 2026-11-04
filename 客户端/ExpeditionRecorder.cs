@@ -696,8 +696,6 @@ namespace ExpeditionRecorder
         int _downTick;
         int _installedTick;
         public Func<IntPtr> GetGame;
-        public Func<int> GetGamePid;
-        public Func<IntPtr> GetOwnWindow;
         public int ModeVk = 0x51, StepVk = 0x45;
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
@@ -744,6 +742,23 @@ namespace ExpeditionRecorder
             _downVk = 0;
         }
 
+        bool IsGameFocused(IntPtr fg)
+        {
+            IntPtr game = GetGame != null ? GetGame() : IntPtr.Zero;
+            if (game == IntPtr.Zero || fg == IntPtr.Zero) return false;
+            if (fg == game) return true;
+            IntPtr root = Native.GetAncestor(fg, 2);
+            return root == game || Native.IsChild(game, fg);
+        }
+
+        bool IsOwnProcessWindow(IntPtr fg)
+        {
+            if (fg == IntPtr.Zero) return false;
+            uint pid = 0;
+            Native.GetWindowThreadProcessId(fg, out pid);
+            return (int)pid == System.Diagnostics.Process.GetCurrentProcess().Id;
+        }
+
         IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
         {
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -757,13 +772,18 @@ namespace ExpeditionRecorder
                     if (down || up)
                     {
                         int vk = Marshal.ReadInt32(lParam);
-                        if (down && vk == 0x1B && EscapeHandler != null && !TypingState.IsEditing && EscapeHandler()) return (IntPtr)1;
+                        /* Esc 只在游戏窗口，或记录器自己的浮层（Q 圆盘）上处理；
+                           其他程序一律放行。 */
+                        if (down && vk == 0x1B && EscapeHandler != null && !TypingState.IsEditing)
+                        {
+                            IntPtr efg = Native.GetForegroundWindow();
+                            if ((IsGameFocused(efg) || IsOwnProcessWindow(efg)) && EscapeHandler()) return (IntPtr)1;
+                        }
                         if (vk == ModeVk || vk == StepVk)
                         {
                             /* keyup：只有真的被我們吃掉的 keydown 才吃 keyup。
-                               以前只要「當下前景是遊戲」就吃，選單一開（前景
-                               變成 RadialForm）keyup 就被跳過，_downVk 卡在 Q，
-                               下一次按 Q 完全沒反應。 */
+                               Q 圆盘打开后前景会变成记录器浮层，不能在这里再要求
+                               前景是游戏，否则 _downVk 会卡在 Q，下一次按 Q 没反应。 */
                             if (up)
                             {
                                 if (_downVk != vk) return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
@@ -771,21 +791,13 @@ namespace ExpeditionRecorder
                                 if (OnRelease != null) OnRelease(vk);
                                 return (IntPtr)1;
                             }
-                            IntPtr game = GetGame != null ? GetGame() : IntPtr.Zero;
-                            IntPtr fg = Native.GetForegroundWindow();
-                            uint fpid = 0;
-                            Native.GetWindowThreadProcessId(fg, out fpid);
-                            int gpid = GetGamePid != null ? GetGamePid() : 0;
-                            IntPtr root = Native.GetAncestor(fg, 2);
-                            IntPtr own = GetOwnWindow != null ? GetOwnWindow() : IntPtr.Zero;
-                            /* 面板本身是前景时也接受 Q／E：用户点过面板后常直接按 E，
-                               以前会因为没有回到游戏窗口而完全没反应。 */
-                            bool focused = game != IntPtr.Zero && (fg == game || root == game || Native.IsChild(game, fg) || (gpid != 0 && (int)fpid == gpid))
-                                || (own != IntPtr.Zero && fg == own);
+                            /* 只认当前游戏 client 窗口（或其子窗口）。记录器面板、
+                               浏览器、其他程序都不再触发 Q／E。 */
+                            if (!IsGameFocused(Native.GetForegroundWindow())) return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
                             bool ctrl = (Native.GetAsyncKeyState(0x11) & 0x8000) != 0;
                             bool alt = (Native.GetAsyncKeyState(0x12) & 0x8000) != 0;
                             bool typing = TypingState.IsEditing;
-                            if (focused && !typing && !ctrl && !alt && _downVk != vk)
+                            if (!typing && !ctrl && !alt && _downVk != vk)
                             {
                                 _downVk = vk;
                                 _downTick = Environment.TickCount;
@@ -3876,12 +3888,6 @@ namespace ExpeditionRecorder
             Keys.ModeVk = ModeVk;
             Keys.StepVk = StepVk;
             Keys.GetGame = delegate { return GameHwnd; };
-            Keys.GetGamePid = delegate { return Client != null ? Client.Id : 0; };
-            Keys.GetOwnWindow = delegate
-            {
-                return ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed
-                    ? ControlWindow.Handle : IntPtr.Zero;
-            };
             Keys.OnTrigger = delegate (int vk)
             {
                 if (vk == ModeVk)
