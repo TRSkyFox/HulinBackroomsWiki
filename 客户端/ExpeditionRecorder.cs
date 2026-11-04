@@ -4010,21 +4010,28 @@ namespace ExpeditionRecorder
             catch { }
         }
 
+        static int _lastFindClientTick;
         static void RefreshStatus()
         {
             try
             {
-                if (GameHwnd == IntPtr.Zero) { try { FindClient(); } catch { } }
+                /* 没接上 client 时不要每 500ms 枚举全部进程：
+                   FindClient 会读 MainModule，UI 线程会被拖到 100% CPU。 */
+                if (GameHwnd == IntPtr.Zero && unchecked(Environment.TickCount - _lastFindClientTick) > 5000)
+                {
+                    _lastFindClientTick = Environment.TickCount;
+                    try { FindClient(); } catch { }
+                }
                 if (GameHwnd != IntPtr.Zero && !Native.IsWindow(GameHwnd))
                 {
                     GameHwnd = IntPtr.Zero;
                     Client = null;
                     TypingState.Clear();
                 }
-                if (Mode == "")
-                    StateLabel.Text = GameHwnd != IntPtr.Zero ? "狀態：客戶端已開，按 " + VkName(ModeVk) + " 開始" : "狀態：客戶端未接上（點「開啟客戶端」可接上）";
-                else
-                    StateLabel.Text = "狀態：事件模式（已記 " + Step + " 步）";
+                string state = Mode == ""
+                    ? (GameHwnd != IntPtr.Zero ? "狀態：客戶端已開，按 " + VkName(ModeVk) + " 開始" : "狀態：客戶端未接上（點「開啟客戶端」可接上）")
+                    : "狀態：事件模式（已記 " + Step + " 步）";
+                if (StateLabel.Text != state) StateLabel.Text = state;
                 int n = 0, p = 0;
                 try
                 {
@@ -4037,8 +4044,9 @@ namespace ExpeditionRecorder
                     }
                 }
                 catch { }
-                if (RecordsBtn != null) RecordsBtn.Text = "已記錄 " + n;
-                if (PendingBtn != null) PendingBtn.Text = "待處理 " + p;
+                string recText = "已記錄 " + n, pendText = "待處理 " + p;
+                if (RecordsBtn != null && RecordsBtn.Text != recText) RecordsBtn.Text = recText;
+                if (PendingBtn != null && PendingBtn.Text != pendText) PendingBtn.Text = pendText;
             }
             catch { }
         }
@@ -4185,6 +4193,7 @@ namespace ExpeditionRecorder
             catch { return false; }
         }
 
+        static int _lastDeepFindClientTick;
         static bool FindClient()
         {
             try
@@ -4195,16 +4204,20 @@ namespace ExpeditionRecorder
                     foreach (var p in Process.GetProcessesByName(n))
                         if (AttachClient(p)) return true;
                 }
+                /* 全进程扫描读 MainModule，代价很高；最多 10 秒一次。 */
+                if (unchecked(Environment.TickCount - _lastDeepFindClientTick) < 10000) return false;
+                _lastDeepFindClientTick = Environment.TickCount;
+                int myPid = Process.GetCurrentProcess().Id;
                 foreach (var p in Process.GetProcesses())
                 {
                     try
                     {
-                        if (p.Id == Process.GetCurrentProcess().Id) continue;
-                        if (!IsLikelyClientProcess(p)) continue;
+                        if (p.Id == myPid) continue;
                         string title = p.MainWindowTitle ?? "";
                         if (title.IndexOf("後室", StringComparison.Ordinal) < 0 &&
                             title.IndexOf("Backrooms", StringComparison.OrdinalIgnoreCase) < 0 &&
                             title.IndexOf("狐霖", StringComparison.Ordinal) < 0) continue;
+                        if (!IsLikelyClientProcess(p)) continue;
                         if (AttachClient(p)) return true;
                     }
                     catch { }
