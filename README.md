@@ -205,10 +205,13 @@ node 客户端\Recorder\structured\tests\verify-final.mjs
 
 ```text
 客户端\啟動.bat
-  → start.ps1 复制到 %LOCALAPPDATA%\Expedition\app
+  → start.ps1 先编译（build.ps1）
+  → 复制到 %LOCALAPPDATA%\Expedition\app
   → ExpeditionRecorder.exe（控制台）
   → 按“开启客户端”启动 ExpeditionClient.exe
 ```
+
+默认每次启动都会先编译；加 `-NoBuild` 可跳过编译，只启动现有 exe。运行前先关闭旧的记录器面板，否则面板 exe 被占用时会提示并停止。
 
 操作（默认键，可在“按键设置”改）：
 

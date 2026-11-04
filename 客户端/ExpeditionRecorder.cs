@@ -73,9 +73,11 @@ namespace ExpeditionRecorder
     {
         public string Text;
         public double Score;
+        public Color TextColor = Color.Empty;
         public int X, Y, W, H;
-        public bool IsFloor, IsTitle, IsOption, IsChrome, Selected;
+        public bool IsFloor, IsTitle, IsOption, IsChrome, IsCondition, IsSpecial, Selected;
         public string Check = "";
+        public string Condition = "";
         public string Requirement = "";
         public string Desc = "";
         public string ReqType = "";
@@ -83,6 +85,7 @@ namespace ExpeditionRecorder
         public bool ReqConsume = false;
         public int ReqMin = 0;
         public int OptionGroup = -1;
+        public int ConditionFor = -1;
         public int CenterX { get { return X + W / 2; } }
         public int CenterY { get { return Y + H / 2; } }
         public Rectangle Rect { get { return new Rectangle(X, Y, W, H); } }
@@ -217,7 +220,10 @@ namespace ExpeditionRecorder
                         if (x > maxX) maxX = x;
                         if (y > maxY) maxY = y;
                     }
-                    list.Add(new OcrLine { Text = text, Score = score, X = minX, Y = minY, W = Math.Max(1, maxX - minX), H = Math.Max(1, maxY - minY) });
+                    int rw = Math.Max(1, maxX - minX);
+                    int rh = Math.Max(1, maxY - minY);
+                    Color tc = SampleTextColor(bmp, new Rectangle(minX, minY, rw, rh));
+                    list.Add(new OcrLine { Text = text, Score = score, X = minX, Y = minY, W = rw, H = rh, TextColor = tc });
                 }
             }
             catch
@@ -227,6 +233,49 @@ namespace ExpeditionRecorder
                 _stream = null;
             }
             return list;
+        }
+
+        /* 取这一行的文字主色：先找出现最多的背景色，再取与背景差最大的
+           一小部分像素平均。用来区分选项（白/米白）与底部金色“继续”提示、
+           灰色“人看完了”计数，避免把它们当成选项。 */
+        static Color SampleTextColor(Bitmap bmp, Rectangle r)
+        {
+            r = Rectangle.Intersect(r, new Rectangle(0, 0, bmp.Width, bmp.Height));
+            if (r.Width < 2 || r.Height < 2) return Color.Empty;
+            var counts = new Dictionary<int, int>();
+            int sx = Math.Max(1, r.Width / 80);
+            int sy = Math.Max(1, r.Height / 8);
+            for (int y = r.Top; y < r.Bottom; y += sy)
+            {
+                for (int x = r.Left; x < r.Right; x += sx)
+                {
+                    Color c = bmp.GetPixel(x, y);
+                    int key = ((c.R >> 4) << 8) | ((c.G >> 4) << 4) | (c.B >> 4);
+                    int n;
+                    counts.TryGetValue(key, out n);
+                    counts[key] = n + 1;
+                }
+            }
+            int best = -1, bestKey = 0;
+            foreach (var kv in counts) if (kv.Value > best) { best = kv.Value; bestKey = kv.Key; }
+            Color bg = Color.FromArgb(((bestKey >> 8) & 0xF) * 17, ((bestKey >> 4) & 0xF) * 17, (bestKey & 0xF) * 17);
+
+            var pixels = new List<int[]>();
+            for (int y = r.Top; y < r.Bottom; y += sy)
+            {
+                for (int x = r.Left; x < r.Right; x += sx)
+                {
+                    Color c = bmp.GetPixel(x, y);
+                    int d = Math.Abs(c.R - bg.R) + Math.Abs(c.G - bg.G) + Math.Abs(c.B - bg.B);
+                    if (d > 45) pixels.Add(new int[] { d, c.R, c.G, c.B });
+                }
+            }
+            if (pixels.Count == 0) return bg;
+            pixels.Sort(delegate (int[] a, int[] b) { return b[0].CompareTo(a[0]); });
+            int take = Math.Max(1, pixels.Count / 8);
+            long rr = 0, gg = 0, bb = 0;
+            for (int i = 0; i < take; i++) { rr += pixels[i][1]; gg += pixels[i][2]; bb += pixels[i][3]; }
+            return Color.FromArgb((int)(rr / take), (int)(gg / take), (int)(bb / take));
         }
 
         public void Stop()
@@ -288,7 +337,8 @@ namespace ExpeditionRecorder
         {
             double sx = cw / 1600.0, sy = ch / 900.0;
             Rectangle r;
-            if (kind == "party") r = new Rectangle(1000, 55, 600, 130);
+            /* 4 人队伍时头像列会占到 y≈420；只截 130 高会漏掉后两名。 */
+            if (kind == "party") r = new Rectangle(1000, 55, 600, 380);
             else if (kind == "item") r = new Rectangle(1000, 150, 600, 700);
             else r = new Rectangle(0, 0, 1030, 890);
             var rr = new Rectangle((int)(r.X * sx), (int)(r.Y * sy), (int)(r.Width * sx), (int)(r.Height * sy));
@@ -397,8 +447,40 @@ namespace ExpeditionRecorder
                 || c.StartsWith("要怎麽做") || c.StartsWith("要怎做")
                 || c.StartsWith("跟隨多數") || c.StartsWith("跟随多数")
                 || c.StartsWith("要走哪條路") || c.StartsWith("要走哪条路")
+                || c.StartsWith("各自选") || c.StartsWith("各自選")
+                || c.StartsWith("全队投票") || c.StartsWith("全隊投票")
                 || c == "繼續" || c == "继续" || c.StartsWith("繼續探索") || c.StartsWith("继续探索")
                 || c == "說出來" || c == "说出来";
+        }
+
+        static bool IsGoldText(Color c)
+        {
+            if (c.A == 0) return false;
+            int max = Math.Max(c.R, Math.Max(c.G, c.B));
+            int min = Math.Min(c.R, Math.Min(c.G, c.B));
+            return max > 150 && c.R >= c.G && c.G >= c.B && (c.R - c.B) > 45 && (max - min) > 35;
+        }
+
+        static bool IsGrayText(Color c)
+        {
+            if (c.A == 0) return false;
+            return Math.Abs(c.R - c.G) < 26 && Math.Abs(c.G - c.B) < 26 && c.R > 100;
+        }
+
+        /* 事件底部不是选项：
+           “看完之后按「继续」”是金色提示，“(0/1 人看完了)”是灰色计数。
+           先看位置和文字，再看 OCR 行取到的文字颜色。 */
+        static bool IsFooterLine(OcrLine l, string text, int imgH)
+        {
+            string c = System.Text.RegularExpressions.Regex.Replace(text ?? "", @"[\s\u3000]+", "");
+            if (c.Length == 0 || l.Y < imgH * 0.5) return false;
+            if (c.StartsWith("看完之后按") || c.StartsWith("看完之後按")) return true;
+            if (c.IndexOf("人看完了") >= 0) return true;
+            bool hasContinue = c.IndexOf("继续") >= 0 || c.IndexOf("繼續") >= 0;
+            if (hasContinue && (c.IndexOf("看完") >= 0 || IsGoldText(l.TextColor))) return true;
+            if (IsGoldText(l.TextColor) && c.IndexOf("看完") >= 0) return true;
+            if (IsGrayText(l.TextColor) && c.IndexOf("人看完") >= 0) return true;
+            return false;
         }
 
         public static void Classify(List<OcrLine> lines, int imgH)
@@ -406,15 +488,17 @@ namespace ExpeditionRecorder
             FloorId = ""; FloorName = "";
             foreach (var l in lines)
             {
-                l.IsFloor = l.IsTitle = l.IsOption = l.IsChrome = false;
+                l.IsFloor = l.IsTitle = l.IsOption = l.IsChrome = l.IsCondition = l.IsSpecial = false;
                 l.Selected = false;
-                l.Check = ""; l.Requirement = "";
+                l.Check = ""; l.Condition = ""; l.Requirement = "";
                 l.OptionGroup = -1;
+                l.ConditionFor = -1;
             }
             foreach (var l in lines)
             {
                 string t = (l.Text ?? "").Trim();
-                if (IsChrome(t)) { l.IsChrome = true; continue; }
+                if (IsChrome(t) || IsFooterLine(l, t, imgH)) { l.IsChrome = true; continue; }
+                if (IsGoldText(l.TextColor) || t.TrimStart().StartsWith("★")) l.IsSpecial = true;
                 var mf = System.Text.RegularExpressions.Regex.Match(t, @"Level\s*([0-9A-Za-z.]+)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
                 if (mf.Success && l.Y < imgH * 0.16)
                 {
@@ -431,6 +515,10 @@ namespace ExpeditionRecorder
             var opts = lines.FindAll(delegate (OcrLine l) { return l.IsOption; });
             opts.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
             int g = 0;
+            /* opts 里同时有“选项”和“条件”行；条件行不增加 g，所以不能再用
+               opts[g-1] 找上一条选项，否则第二条条件会挂到第一条条件/选项上。
+               单独维护 lastOption，条件永远归属最近一条真正选项。 */
+            OcrLine lastOption = null;
             foreach (var l in opts)
             {
                 bool sub = false;
@@ -440,9 +528,9 @@ namespace ExpeditionRecorder
                     { sub = true; break; }
                 }
                 if (l.Text.TrimStart().StartsWith("★") || l.Text.TrimStart().StartsWith("「")) sub = true;
-                if (sub && g > 0)
+                if (sub && lastOption != null)
                 {
-                    var prev = opts[g - 1];
+                    var prev = lastOption;
                     if (l.Y - (prev.Y + prev.H) < 40)
                     {
                         string t = l.Text.Trim();
@@ -472,23 +560,26 @@ namespace ExpeditionRecorder
                             var mi2 = System.Text.RegularExpressions.Regex.Match(subText, "「([^」]+)」");
                             if (mi2.Success) { prev.ReqType = "item"; prev.ReqName = mi2.Groups[1].Value; prev.ReqConsume = consumed; }
                         }
+                        prev.Condition = (prev.Condition + " " + t).Trim();
+                        l.IsCondition = true;
+                        l.ConditionFor = prev.OptionGroup;
                         l.IsOption = false;
                     }
                 }
                 if (l.IsOption)
                 {
-                    if (g > 0)
+                    if (lastOption != null)
                     {
-                        var prev = opts[g - 1];
-                        if (l.Y - (prev.Y + prev.H) < 48 && l.Text.Trim().Length > 22)
+                        if (l.Y - (lastOption.Y + lastOption.H) < 48 && l.Text.Trim().Length > 22)
                         {
-                            prev.Desc = (prev.Desc == "" ? "" : prev.Desc + " ") + l.Text.Trim();
+                            lastOption.Desc = (lastOption.Desc == "" ? "" : lastOption.Desc + " ") + l.Text.Trim();
                             l.OptionGroup = -2;
                             l.IsOption = false;
                             continue;
                         }
                     }
                     l.OptionGroup = g++;
+                    lastOption = l;
                 }
             }
         }
@@ -496,7 +587,7 @@ namespace ExpeditionRecorder
         public static bool TryParseCheck(string t, out string attr, out string dc, out string roll, out string outcome, out string player)
         {
             attr = dc = roll = outcome = player = "";
-            var m = System.Text.RegularExpressions.Regex.Match(t, @"[（(]\s*(力量|敏捷|體質|体质|感知|智力|魅力)\s*(?:難度|难度)\s*([0-9Xx]+)\s*[）)\]]");
+            var m = System.Text.RegularExpressions.Regex.Match(t, @"[（(\[〔]\s*(力量|敏捷|體質|体质|感知|智力|魅力)\s*(?:難度|难度)\s*([0-9Xx]+)\s*[）)\]〕]");
             if (!m.Success) return false;
             attr = m.Groups[1].Value;
             dc = m.Groups[2].Value;
@@ -606,6 +697,7 @@ namespace ExpeditionRecorder
         int _installedTick;
         public Func<IntPtr> GetGame;
         public Func<int> GetGamePid;
+        public Func<IntPtr> GetOwnWindow;
         public int ModeVk = 0x51, StepVk = 0x45;
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
@@ -645,6 +737,13 @@ namespace ExpeditionRecorder
             if (_downVk != 0 && unchecked(Environment.TickCount - _downTick) > ms) _downVk = 0;
         }
 
+        /* 框選/對話框關閉後主動放掉按鍵狀態，避免漏接 keyup 後
+           下一次按 E 被「_downVk 還是它」擋掉。 */
+        public void ResetDown()
+        {
+            _downVk = 0;
+        }
+
         IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
         {
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -678,7 +777,11 @@ namespace ExpeditionRecorder
                             Native.GetWindowThreadProcessId(fg, out fpid);
                             int gpid = GetGamePid != null ? GetGamePid() : 0;
                             IntPtr root = Native.GetAncestor(fg, 2);
-                            bool focused = game != IntPtr.Zero && (fg == game || root == game || Native.IsChild(game, fg) || (gpid != 0 && (int)fpid == gpid));
+                            IntPtr own = GetOwnWindow != null ? GetOwnWindow() : IntPtr.Zero;
+                            /* 面板本身是前景时也接受 Q／E：用户点过面板后常直接按 E，
+                               以前会因为没有回到游戏窗口而完全没反应。 */
+                            bool focused = game != IntPtr.Zero && (fg == game || root == game || Native.IsChild(game, fg) || (gpid != 0 && (int)fpid == gpid))
+                                || (own != IntPtr.Zero && fg == own);
                             bool ctrl = (Native.GetAsyncKeyState(0x11) & 0x8000) != 0;
                             bool alt = (Native.GetAsyncKeyState(0x12) & 0x8000) != 0;
                             bool typing = TypingState.IsEditing;
@@ -748,20 +851,21 @@ namespace ExpeditionRecorder
         public List<string> Outcomes = new List<string>();
         public string JumpTo = "";
         public string FloorId = "", FloorName = "";
+        public string CombatEnemy = "";
 
         CheckBox _floor, _char, _common;
         RadioButton _curFloor, _customFloor;
-        TextBox _floorBox, _jumpBox;
-        CheckBox _normal, _jump, _shop, _rest;
+        TextBox _floorBox, _jumpBox, _enemyBox;
+        CheckBox _normal, _jump, _shop, _rest, _combat;
         string _curId = "", _curName = "";
 
-        public EndForm(string curId, string curName, int steps, string prefill)
+        public EndForm(string curId, string curName, int steps, string prefill, bool characterEvent = false, string characterName = "")
         {
             _curId = curId ?? "";
             _curName = curName ?? "";
             Text = "結束事件（" + steps + " 步）";
             KeyPreview = true;
-            ClientSize = new Size(480, 372);
+            ClientSize = new Size(480, 396);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -784,7 +888,10 @@ namespace ExpeditionRecorder
             _customFloor.CheckedChanged += delegate { _floorBox.Enabled = _customFloor.Checked; };
 
             _char = MkCheck("角色事件", 12, 112, 90);
-            string chDetected = Party.LocalCharacter;
+            _char.Checked = characterEvent;
+            string chDetected = !string.IsNullOrEmpty(characterName)
+                ? characterName
+                : (characterEvent ? "" : Party.LocalCharacter);
             var chLabel = new Label();
             chLabel.Text = chDetected != "" ? "角色：" + chDetected : "角色：未識別（會進待處理）";
             chLabel.SetBounds(110, 116, 320, 22);
@@ -798,8 +905,15 @@ namespace ExpeditionRecorder
             _jumpBox = new TextBox(); _jumpBox.SetBounds(88, 224, 160, 24); _jumpBox.BackColor = Color.FromArgb(40, 40, 44); _jumpBox.ForeColor = Color.White; _jumpBox.BorderStyle = BorderStyle.FixedSingle; Controls.Add(_jumpBox);
             _shop = MkCheck("進入商店", 12, 250, 140);
             _rest = MkCheck("進入休息處", 12, 278, 140);
+            _combat = MkCheck("進入戰鬥，實體名稱：", 12, 306, 200);
+            _enemyBox = new TextBox();
+            _enemyBox.SetBounds(220, 308, 248, 24);
+            _enemyBox.BackColor = Color.FromArgb(40, 40, 44);
+            _enemyBox.ForeColor = Color.White;
+            _enemyBox.BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(_enemyBox);
 
-            var save = new Button(); save.Text = "保存"; save.SetBounds(12, 318, 120, 30); save.FlatStyle = FlatStyle.Flat; save.BackColor = Color.FromArgb(44, 44, 47); save.ForeColor = Color.White;
+            var save = new Button(); save.Text = "保存"; save.SetBounds(12, 348, 120, 30); save.FlatStyle = FlatStyle.Flat; save.BackColor = Color.FromArgb(44, 44, 47); save.ForeColor = Color.White;
             save.Click += delegate
             {
                 Scopes.Clear();
@@ -824,12 +938,14 @@ namespace ExpeditionRecorder
                 if (_jump.Checked) Outcomes.Add("floor-jump");
                 if (_shop.Checked) Outcomes.Add("shop");
                 if (_rest.Checked) Outcomes.Add("rest");
+                if (_combat.Checked) Outcomes.Add("combat");
                 if (Outcomes.Count == 0) Outcomes.Add("normal");
                 JumpTo = _jumpBox.Text.Trim();
+                CombatEnemy = _combat.Checked ? _enemyBox.Text.Trim() : "";
                 DialogResult = DialogResult.OK; Close();
             };
             Controls.Add(save);
-            var cancel = new Button(); cancel.Text = "取消"; cancel.SetBounds(144, 318, 120, 30); cancel.FlatStyle = FlatStyle.Flat; cancel.BackColor = Color.FromArgb(44, 44, 47); cancel.ForeColor = Color.White;
+            var cancel = new Button(); cancel.Text = "取消"; cancel.SetBounds(144, 348, 120, 30); cancel.FlatStyle = FlatStyle.Flat; cancel.BackColor = Color.FromArgb(44, 44, 47); cancel.ForeColor = Color.White;
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancel);
         }
@@ -1074,12 +1190,48 @@ namespace ExpeditionRecorder
             catch { }
         }
 
+        static string CleanPlayerName(string s)
+        {
+            s = System.Text.RegularExpressions.Regex.Replace(s ?? "", @"Lv\s*\d+[★☆]?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"[★☆].*$", "");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
+            s = s.Trim('★', '☆', '·', '・', ' ', '　', '（', '）', '(', ')');
+            return s;
+        }
+
         public static void Scan(List<OcrLine> lines, int W)
         {
             NameToChar.Clear(); LocalName = ""; LocalCharacter = "";
             var right = new List<OcrLine>();
             foreach (var l in lines) right.Add(l);
             right.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
+
+            /* 每行先抓 Lv 前面的玩家名：名字里可能带 ★、?、_、英文；
+               Lv 后面的称号再对 characters.json。 */
+            foreach (var l in right)
+            {
+                string t = (l.Text ?? "").Trim();
+                int li = t.IndexOf("Lv", StringComparison.OrdinalIgnoreCase);
+                if (li <= 0) continue;
+                string nm = CleanPlayerName(t.Substring(0, li));
+                if (nm.Length == 0 || nm.Length >= 24) continue;
+                bool isLocal = t.IndexOf("（你", StringComparison.Ordinal) >= 0 || t.IndexOf("(你", StringComparison.Ordinal) >= 0;
+                if (isLocal) LocalName = nm;
+                string tail = ToHant(t.Substring(li));
+                CharacterInfo best = null;
+                foreach (var c in All)
+                {
+                    if (c.title.Length < 3) continue;
+                    if (tail.IndexOf(c.title, StringComparison.Ordinal) < 0) continue;
+                    if (best == null || c.title.Length > best.title.Length) best = c;
+                }
+                if (best != null)
+                {
+                    NameToChar[nm] = best.n;
+                    if (isLocal) LocalCharacter = best.n;
+                }
+            }
+
             foreach (var l in right)
             {
                 string t = (l.Text ?? "").Trim();
@@ -1101,16 +1253,14 @@ namespace ExpeditionRecorder
                         }
                         name = nameLine ?? "";
                     }
-                    name = System.Text.RegularExpressions.Regex.Replace(name, @"Lv\s*\d+", "").Trim();
                     bool isLocal = name.IndexOf("（你", StringComparison.Ordinal) >= 0 || name.IndexOf("(你", StringComparison.Ordinal) >= 0
                         || t.IndexOf("（你", StringComparison.Ordinal) >= 0 || t.IndexOf("(你", StringComparison.Ordinal) >= 0;
-                    name = name.Replace("（你）", "").Replace("(你)", "").Replace("（你", "").Replace("(你", "").Trim();
-                    name = name.Trim('（', '）', '(', ')', '·', '・', ' ', '　');
-                    if (name.Length > 0 && name.Length < 24) NameToChar[name] = c.n;
+                    name = CleanPlayerName(name);
+                    if (name.Length > 0 && name.Length < 24 && !NameToChar.ContainsKey(name)) NameToChar[name] = c.n;
                     if (isLocal)
                     {
-                        LocalName = name;
-                        LocalCharacter = c.n;
+                        if (LocalName == "" && name != "") LocalName = name;
+                        if (LocalCharacter == "") LocalCharacter = c.n;
                     }
                     break;
                 }
@@ -1131,6 +1281,25 @@ namespace ExpeditionRecorder
             name = name.Trim('（', '）', '(', ')', ' ', '　');
             if (name.Length < 1 || name.Length > 12) return;
             LocalName = name;
+        }
+
+        /* 玩家名 → 角色名。NameToChar 由右侧队伍栏的“角色称号”建立；
+           找不到（例如后缀是自选技能）就回空，表示自订/未识别。 */
+        public static string MapPlayer(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            name = CleanPlayerName(name);
+            if (name.Length < 2) return "";
+            string c;
+            if (NameToChar.TryGetValue(name, out c)) return c;
+            foreach (var kv in NameToChar)
+            {
+                if (kv.Key.Length < 2) continue;
+                if (name.IndexOf(kv.Key, StringComparison.Ordinal) >= 0
+                    || kv.Key.IndexOf(name, StringComparison.Ordinal) >= 0)
+                    return kv.Value;
+            }
+            return "";
         }
 
         public static string Normalize(string text)
@@ -2049,7 +2218,7 @@ namespace ExpeditionRecorder
                 foreach (var f in Directory.GetFiles(dir, "*.jsonl"))
                 {
                     string name = Path.GetFileName(f);
-                    if (name.StartsWith("draft-") || name.StartsWith("pending-")) continue;
+                    if (name.StartsWith("draft-") || name.StartsWith("pending-") || name.StartsWith("floor-lengths-")) continue;
                     foreach (var line in File.ReadAllLines(f))
                     {
                         if (line.Trim().Length == 0) continue;
@@ -2196,6 +2365,7 @@ namespace ExpeditionRecorder
                 else if (x == "floor-jump") parts.Add("跳層");
                 else if (x == "shop") parts.Add("商店");
                 else if (x == "rest") parts.Add("休息處");
+                else if (x == "combat") parts.Add("戰鬥");
                 else if (x != "") parts.Add(x);
             }
             return string.Join("、", parts.ToArray());
@@ -2249,7 +2419,16 @@ namespace ExpeditionRecorder
                 if (Str(st, "choice") != "") sb.AppendLine("決定：" + Str(st, "choice"));
                 var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
                 if (ck != null)
-                    sb.AppendLine("檢定：" + Str(ck, "attr") + " 難度 " + Str(ck, "dc") + (Str(ck, "roll") != "" ? "　擲出 " + Str(ck, "roll") : "") + (Str(ck, "outcome") != "" ? " → " + Str(ck, "outcome") : ""));
+                {
+                    string attr = Str(ck, "attribute"); if (attr == "") attr = Str(ck, "attr");
+                    sb.AppendLine("檢定：" + attr + (Str(ck, "outcome") != "" ? " → " + Str(ck, "outcome") : ""));
+                }
+                var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
+                if (qt != null)
+                {
+                    string qo = Str(qt, "outcome");
+                    sb.AppendLine("QTE：" + (qo == "failure" ? "失敗" : (qo == "success" ? "成功" : "已通過")));
+                }
                 var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
                 if (cb != null) sb.AppendLine("戰鬥：" + Str(cb, "enemy"));
                 var res = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
@@ -2257,6 +2436,27 @@ namespace ExpeditionRecorder
                 {
                     sb.AppendLine("結果：");
                     foreach (var r in res) sb.AppendLine("  " + Convert.ToString(r));
+                }
+                var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (eff != null && eff.Count > 0)
+                {
+                    sb.AppendLine("效果：");
+                    foreach (var e in eff)
+                    {
+                        var ed = e as Dictionary<string, object>;
+                        if (ed == null) continue;
+                        string text = Str(ed, "text");
+                        if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + Str(ed, "amount")).Trim();
+                        sb.AppendLine("  " + text);
+                    }
+                }
+                var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                if (pg != null)
+                {
+                    string txt = "出口進度";
+                    if (Str(pg, "delta") != "") txt += " " + Str(pg, "delta");
+                    if (Str(pg, "current") != "") txt += "（" + Str(pg, "current") + "/" + Str(pg, "total") + "）";
+                    sb.AppendLine(txt);
                 }
             }
         }
@@ -2446,7 +2646,10 @@ namespace ExpeditionRecorder
             }
             g.CompositingMode = old;
 
-            // 3) 拖框高亮
+            // 3) 已分類元素畫框＋標籤
+            DrawAnnotations(g);
+
+            // 4) 拖框高亮
             if (_dragging)
             {
                 var r = NormRect(_down, _cur);
@@ -2459,7 +2662,7 @@ namespace ExpeditionRecorder
                 }
             }
 
-            // 4) 提示
+            // 5) 提示
             string hint;
             if (Kind == "floor") hint = "拖框選「樓層名＋介紹」　鬆手即存　Esc 取消";
             else if (Kind == "exit1") hint = "拖框選「出口事件＋介紹」　鬆手即存　Esc 取消";
@@ -2477,6 +2680,83 @@ namespace ExpeditionRecorder
             using (var fg = new SolidBrush(Color.FromArgb(255, 250, 210)))
                 g.DrawString(hint, font, fg, hx + 8, hy + 5);
             font.Dispose();
+        }
+
+        /* 把 Parse.Classify 的結果畫成帶顏色的框與標籤：
+           藍=樓層名、橙=事件名、綠=選項、黃=選項條件。 */
+        void DrawAnnotations(Graphics g)
+        {
+            if (_lines == null || _lines.Count == 0) return;
+            using (var font = new Font("Microsoft JhengHei UI", 8.5F, FontStyle.Bold))
+            {
+                foreach (var l in _lines)
+                {
+                    if (l.IsChrome || l.OptionGroup == -2) continue;
+                    Color color;
+                    string label;
+                    if (l.IsFloor)
+                    {
+                        color = Color.FromArgb(255, 64, 158, 255);
+                        label = "樓層名";
+                    }
+                    else if (Kind == "event" && l.IsTitle)
+                    {
+                        color = Color.FromArgb(255, 255, 167, 38);
+                        label = "事件名";
+                    }
+                    else if (Kind == "event" && l.IsOption && l.OptionGroup >= 0)
+                    {
+                        color = Color.FromArgb(255, 76, 217, 100);
+                        label = "選項" + CnNumber(l.OptionGroup + 1);
+                        if (l.Check != "" || l.Requirement != "") label += "條件";
+                    }
+                    else if (Kind == "event" && l.IsCondition)
+                    {
+                        color = Color.FromArgb(255, 255, 214, 64);
+                        label = l.ConditionFor >= 0
+                            ? "選項" + CnNumber(l.ConditionFor + 1) + "條件"
+                            : "選項條件";
+                    }
+                    else continue;
+                    DrawTag(g, font, l.Rect, color, label);
+                }
+            }
+        }
+
+        static string CnNumber(int n)
+        {
+            string[] digits = { "零", "一", "二", "三", "四", "五", "六", "七", "八", "九" };
+            if (n <= 0) return n.ToString();
+            if (n < 10) return digits[n];
+            if (n == 10) return "十";
+            if (n < 20) return "十" + digits[n - 10];
+            int tens = n / 10, ones = n % 10;
+            return digits[tens] + "十" + (ones == 0 ? "" : digits[ones]);
+        }
+
+        void DrawTag(Graphics g, Font font, Rectangle r, Color color, string label)
+        {
+            var box = Rectangle.Inflate(r, 3, 3);
+            using (var fill = new SolidBrush(Color.FromArgb(32, color)))
+                g.FillRectangle(fill, box);
+            using (var pen = new Pen(color, 2))
+                g.DrawRectangle(pen, box);
+
+            var sz = g.MeasureString(label, font);
+            int tw = (int)Math.Ceiling(sz.Width) + 10;
+            int th = (int)Math.Ceiling(sz.Height) + 4;
+            int tx = r.Left - tw - 4;
+            if (tx < 2) tx = r.Right + 4;
+            if (tx + tw > Width - 2) tx = Math.Max(2, r.Left);
+            int ty = Math.Max(2, r.Top + (r.Height - th) / 2);
+            if (ty + th > Height - 2) ty = Math.Max(2, Height - th - 2);
+
+            using (var bg = new SolidBrush(Color.FromArgb(235, 18, 18, 22)))
+                g.FillRectangle(bg, tx, ty, tw, th);
+            using (var pen = new Pen(color, 1))
+                g.DrawRectangle(pen, tx, ty, tw, th);
+            using (var fg = new SolidBrush(color))
+                g.DrawString(label, font, fg, tx + 5, ty + 2);
         }
 
         static Rectangle NormRect(Point a, Point b)
@@ -2514,7 +2794,7 @@ namespace ExpeditionRecorder
                 var sel = new List<OcrLine>();
                 foreach (var l in _lines)
                 {
-                    if (l.IsChrome || l.IsOption || l.OptionGroup == -2) continue;
+                    if (l.IsChrome || l.IsOption || l.IsCondition || l.OptionGroup == -2) continue;
                     if (l.CenterY < r.Top || l.CenterY > r.Bottom) continue;
                     if (r.Width >= 60 && (l.CenterX < r.Left - 60 || l.CenterX > r.Right + 60)) continue;
                     sel.Add(l);
@@ -2594,10 +2874,29 @@ namespace ExpeditionRecorder
         Dictionary<string, object> BuildStep1(List<OcrLine> sel)
         {
             string title = Parse.TitleOf(sel);
+            /* 多人角色事件提示：全队投票：……（「狐天 自己的选择」……） */
+            string allText = "";
+            foreach (var l in _lines) allText += (l.Text ?? "") + "\n";
+            bool characterEvent = false;
+            string characterPlayer = "", characterName = "";
+            var mce = System.Text.RegularExpressions.Regex.Match(allText, @"[「『]([^」』]{1,16}?)\s*自己的选[择擇][」』]");
+            if (mce.Success)
+            {
+                characterEvent = true;
+                characterPlayer = mce.Groups[1].Value.Trim();
+                characterName = Party.MapPlayer(characterPlayer);
+            }
+            bool junctionEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一条|一條)路");
+            bool freeEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一个|一個|一条|一條)");
+            if (string.IsNullOrEmpty(allText)) freeEvent = false;
+
             var intro = new List<string>();
             foreach (var l in sel)
             {
                 if (title != "" && l.Text.IndexOf("【" + title + "】", StringComparison.Ordinal) >= 0) continue;
+                if (Parse.IsChrome(l.Text)) continue;
+                if (IsMultiplayerPrompt(l.Text)) continue;
+                if (IsStatusWorsening(l.Text)) continue;
                 intro.Add(Party.Normalize(l.Text.Trim()));
             }
             var opts = _lines.FindAll(delegate (OcrLine l) { return l.IsOption && l.OptionGroup >= 0; });
@@ -2610,6 +2909,12 @@ namespace ExpeditionRecorder
                 d["text"] = Party.Normalize(o.Text.Trim());
                 if (o.Desc != "") d["desc"] = o.Desc;
                 if (o.Check != "") d["check"] = o.Check;
+                if (o.IsSpecial)
+                {
+                    d["special"] = true;
+                    d["specialReason"] = SpecialReason(o);
+                    if (o.Condition != "") d["conditionText"] = Party.Normalize(o.Condition);
+                }
                 if (o.ReqType != "")
                 {
                     var req = new Dictionary<string, object>();
@@ -2627,36 +2932,217 @@ namespace ExpeditionRecorder
             rec["floorName"] = Parse.FloorName;
             rec["title"] = title;
             rec["intro"] = string.Join("\n", intro.ToArray());
+            if (characterEvent)
+            {
+                rec["characterEvent"] = true;
+                rec["characterPlayer"] = characterPlayer;
+                if (characterName != "") rec["character"] = characterName;
+            }
+            if (junctionEvent) rec["eventKind"] = "junction";
+            else if (freeEvent) rec["eventKind"] = "free";
             var mlead = System.Text.RegularExpressions.Regex.Match(rec["intro"] as string ?? "", @"(?:只有你察覺到了|只有你察觉到了).*?(?:通到|通往|通向)\s*Level\s*([0-9A-Za-z.]+)");
             if (mlead.Success) rec["leadsTo"] = mlead.Groups[1].Value;
             rec["options"] = optionList;
             return rec;
         }
 
+        static bool IsStatusCondition(string s)
+        {
+            string[] words = { "扭伤", "扭傷", "感染", "高烧", "高燒", "失温", "失溫", "中毒", "出血", "骨折", "昏迷", "恐惧", "恐懼", "饥饿", "飢餓", "口渴" };
+            foreach (var w in words) if ((s ?? "").IndexOf(w, StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
+        static string SpecialReason(OcrLine o)
+        {
+            if (o == null) return "event";
+            if (o.ReqType == "item") return "item";
+            if (o.ReqType == "character") return "character";
+            if (o.ReqType == "attr" || o.Check != "") return "attribute";
+            if (IsStatusCondition(o.Condition)) return "status";
+            if (o.ReqType == "skill") return "skill";
+            if (o.Condition != "") return "event";
+            return "event";
+        }
+
+        static bool TryChoiceLine(string t, out string actor, out string choice)
+        {
+            actor = ""; choice = "";
+            var mc = System.Text.RegularExpressions.Regex.Match(t ?? "", @"(?:你決定|你决定|→\s*([^：:]{1,24}))[：:]\s*[「『](.+?)[」』]");
+            if (!mc.Success) return false;
+            if (mc.Groups[1].Success && mc.Groups[1].Value.Trim() != "")
+            {
+                string a = mc.Groups[1].Value.Trim();
+                if (a != "队伍决定" && a != "隊伍決定") actor = a;
+            }
+            choice = mc.Groups[2].Value.Trim();
+            return true;
+        }
+
+        static List<string> SplitActors(string raw)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrEmpty(raw)) return list;
+            string[] parts = System.Text.RegularExpressions.Regex.Split(raw, @"[、,，;；]|\s+(?:和|與|与)\s+");
+            foreach (var part in parts)
+            {
+                string p = (part ?? "").Trim(' ', '　', '（', '）', '(', ')', '★', '☆');
+                if (p.Length > 0 && p.Length < 24 && !list.Contains(p)) list.Add(p);
+            }
+            return list;
+        }
+
+        static void AddQtePlayer(List<object> list, string raw, string outcome)
+        {
+            foreach (var pn in SplitActors(raw))
+            {
+                bool dup = false;
+                foreach (var x in list)
+                {
+                    var xd = x as Dictionary<string, object>;
+                    if (xd != null && Convert.ToString(xd["player"]) == pn && Convert.ToString(xd["outcome"]) == outcome) { dup = true; break; }
+                }
+                if (dup) continue;
+                var d = new Dictionary<string, object>();
+                d["player"] = pn;
+                d["outcome"] = outcome;
+                string cn = Party.MapPlayer(pn);
+                if (cn == "" && pn == Party.LocalName) cn = "你";
+                if (cn != "") d["character"] = cn;
+                list.Add(d);
+            }
+        }
+
         Dictionary<string, object> BuildStep2(List<OcrLine> sel)
         {
+            /* 自由事件一次框到多个“→ 玩家：「选择」”时，按选择行切成多个分支，
+               不再只保留最后一个选择。 */
+            var choiceAt = new List<int>();
+            for (int ci = 0; ci < sel.Count; ci++)
+            {
+                string ca0, cc0;
+                if (TryChoiceLine(sel[ci].Text, out ca0, out cc0)) choiceAt.Add(ci);
+            }
+            if (choiceAt.Count > 1)
+            {
+                var root = new Dictionary<string, object>();
+                root["step"] = Step;
+                var bList = new List<object>();
+                for (int bi = 0; bi < choiceAt.Count; bi++)
+                {
+                    int start = choiceAt[bi];
+                    int end = bi + 1 < choiceAt.Count ? choiceAt[bi + 1] : sel.Count;
+                    var seg = sel.GetRange(start, end - start);
+                    bList.Add(BuildStep2(seg));
+                }
+                root["branches"] = bList;
+                var last = bList[bList.Count - 1] as Dictionary<string, object>;
+                if (last != null)
+                {
+                    if (last.ContainsKey("choice")) root["choice"] = last["choice"];
+                    if (last.ContainsKey("results")) root["results"] = last["results"];
+                    if (last.ContainsKey("effects")) root["effects"] = last["effects"];
+                    if (last.ContainsKey("check")) root["check"] = last["check"];
+                    if (last.ContainsKey("combat")) root["combat"] = last["combat"];
+                    if (last.ContainsKey("progress")) root["progress"] = last["progress"];
+                    if (last.ContainsKey("qte")) root["qte"] = last["qte"];
+                    if (last.ContainsKey("player")) root["player"] = last["player"];
+                    if (last.ContainsKey("character")) root["character"] = last["character"];
+                }
+                return root;
+            }
+
             string choice = "";
-            string checkAttr = "", dc = "", roll = "", outcome = "", enemy = "", leadsTo = "";
+            string actor = "";
+            string checkAttr = "", outcome = "", enemy = "", leadsTo = "";
+            int progressDelta = 0, progressTotal = -1;
+            bool hasProgress = false;
+            bool hasQte = false;
+            string qteOutcome = "";
+            var qtePlayers = new List<object>();
             var results = new List<string>();
+            var effects = new List<object>();
             foreach (var l in sel)
             {
                 string t = l.Text.Trim();
                 var ml = System.Text.RegularExpressions.Regex.Match(t, @"(?:只有你察覺到了|只有你察觉到了).*?(?:通到|通往|通向)\s*Level\s*([0-9A-Za-z.]+)");
                 if (ml.Success) leadsTo = ml.Groups[1].Value;
-                var mc = System.Text.RegularExpressions.Regex.Match(t, @"(?:你決定|你决定)[：:]\s*[「『](.+?)[」』]");
-                if (mc.Success) { choice = Party.Normalize(mc.Groups[1].Value.Trim()); continue; }
+                /* 有些楼层显示“→ 天狐：「…」”而不是“→ 你决定：「…」”，
+                   箭头开头的这句同样是玩家已选行动，不能混进结果正文。 */
+                string ca, cc;
+                if (TryChoiceLine(t, out ca, out cc))
+                {
+                    if (ca != "") actor = ca;
+                    choice = Party.Normalize(cc);
+                    continue;
+                }
+                var mpd = System.Text.RegularExpressions.Regex.Match(t, @"^出口(?:进度|進度)\s*([+-]\s*\d+)\s*$");
+                if (mpd.Success)
+                {
+                    progressDelta += int.Parse(System.Text.RegularExpressions.Regex.Replace(mpd.Groups[1].Value, @"\s+", ""));
+                    hasProgress = true;
+                    continue;
+                }
+                var mpp = System.Text.RegularExpressions.Regex.Match(t, @"^出口(?:进度|進度)\s*(\d+)\s*/\s*(\d+)\s*$");
+                if (mpp.Success)
+                {
+                    /* 这个不是事件结果；只把总数写进楼层长度，事件里不留。 */
+                    progressTotal = int.Parse(mpp.Groups[2].Value);
+                    if (progressTotal > 0) Program.WriteFloorLength(Parse.FloorId, Parse.FloorName, progressTotal);
+                    continue;
+                }
+                if (IsMultiplayerPrompt(t)) continue;
+                if (IsStatusWorsening(t)) continue;
+                if (IsQtePrompt(t)) { hasQte = true; continue; }
+                string qteResult, qtePlayer;
+                if (IsQteResult(t, out qteResult, out qtePlayer))
+                {
+                    hasQte = true;
+                    if (qteResult != "") qteOutcome = qteResult;
+                    else if (qteOutcome == "" && qtePlayer != "") qteOutcome = "failure";
+                    if (qtePlayer != "") AddQtePlayer(qtePlayers, qtePlayer, qteResult == "" ? "failure" : qteResult);
+                    continue;
+                }
+                /* “狐天（慢了一步）：体力 -2、陷入「作呕感」”仍要拆效果，
+                   但括号里的慢了一步也是一次个人 QTE 失败。 */
+                var mqSlow = System.Text.RegularExpressions.Regex.Match(t, @"^([^：:]{1,16}?)\s*[（(]\s*慢了一步\s*[）)]\s*[：:]");
+                if (mqSlow.Success)
+                {
+                    hasQte = true;
+                    if (qteOutcome == "") qteOutcome = "failure";
+                    AddQtePlayer(qtePlayers, mqSlow.Groups[1].Value, "failure");
+                }
                 string cAttr, cDc, cRoll, cOut, cPl;
                 if (Parse.TryParseCheck(t, out cAttr, out cDc, out cRoll, out cOut, out cPl))
                 {
                     checkAttr = cAttr;
-                    dc = cDc;
-                    if (cRoll != "") roll = cRoll;
                     if (cOut != "") outcome = cOut;
-                    if (cPl != "") Party.SetLocal(cPl);
+                    if (cPl != "")
+                    {
+                        /* 只有队伍栏没识别出本地玩家时才拿检定角色当 fallback；
+                           不能把“狐天”这种其他玩家误设成本地玩家，否则会写成“你”。 */
+                        if (Party.LocalName == "") Party.SetLocal(cPl);
+                        if (actor == "") actor = cPl;
+                    }
                     continue;
                 }
+                /* 饥饿／口渴归零的红色警示与随之扣血、扣理智都不记。 */
+                if (IsHungerThirstWarning(t)) continue;
+
+                /* 大成功／大失败的额外奖惩整行不记；检定行本身含“掷出”，
+                   已经在上面解析成普通成功／失败，不会走到这里。 */
+                if (IsCriticalExtraLine(t)) continue;
+
                 var mcombat = System.Text.RegularExpressions.Regex.Match(t, @"【(?:戰鬥|战斗)】\s*(.+)");
                 if (mcombat.Success) { enemy = mcombat.Groups[1].Value.Trim(); continue; }
+
+                bool allEffects;
+                var parsedEffects = ParseEffects(t, out allEffects);
+                if (allEffects && parsedEffects.Count > 0)
+                {
+                    effects.AddRange(parsedEffects);
+                    continue;
+                }
                 results.Add(Party.Normalize(t));
             }
             var rec = new Dictionary<string, object>();
@@ -2665,16 +3151,277 @@ namespace ExpeditionRecorder
             if (checkAttr != "")
             {
                 var ck = new Dictionary<string, object>();
-                ck["attr"] = checkAttr;
-                if (dc != "") ck["dc"] = dc;
-                if (roll != "") ck["roll"] = roll;
+                ck["attribute"] = checkAttr;
+                ck["hasCheck"] = true;
                 if (outcome != "") ck["outcome"] = outcome;
+                ck["difficulty"] = "variable";
                 rec["check"] = ck;
             }
             if (enemy != "") { var cb = new Dictionary<string, object>(); cb["enemy"] = enemy; rec["combat"] = cb; }
             if (leadsTo != "") rec["leadsTo"] = leadsTo;
+            if (effects.Count > 0) rec["effects"] = effects;
+            if (hasProgress && progressDelta != 0)
+            {
+                var pg = new Dictionary<string, object>();
+                pg["delta"] = progressDelta;
+                rec["progress"] = pg;
+            }
+            if (hasQte)
+            {
+                var qd = new Dictionary<string, object>();
+                if (qteOutcome != "") qd["outcome"] = qteOutcome;
+                if (qtePlayers.Count > 0) qd["players"] = qtePlayers;
+                rec["qte"] = qd;
+            }
+            string playerName = actor != "" ? actor : Party.LocalName;
+            if (playerName != "") rec["player"] = playerName;
+            var players = SplitActors(playerName);
+            if (players.Count > 0) rec["players"] = players;
+            var chars = new List<string>();
+            foreach (var pn in players)
+            {
+                string cn = Party.MapPlayer(pn);
+                if (cn == "" && pn == Party.LocalName) cn = "你";
+                if (cn != "" && !chars.Contains(cn)) chars.Add(cn);
+            }
+            if (chars.Count > 0)
+            {
+                rec["characters"] = chars;
+                if (chars.Count == 1) rec["character"] = chars[0];
+            }
             rec["results"] = results;
             return rec;
+        }
+
+        /* 红三角 QTE 提示：⚠ 灯管摆下来了——闪！ */
+        static bool IsQtePrompt(string t)
+        {
+            string s = (t ?? "").TrimStart();
+            return s.StartsWith("⚠") || s.StartsWith("△") || s.StartsWith("▲");
+        }
+
+        /* QTE 结果：反应过来了／反应过来的有 N 个人＝成功；
+           只有 0 个人反应过来／慢了一步＝失败。 */
+        static bool IsQteResult(string t, out string outcome, out string player)
+        {
+            outcome = ""; player = "";
+            string s = t ?? "";
+            if (s.IndexOf("只有 0 个人反应", StringComparison.Ordinal) >= 0
+                || s.IndexOf("只有0个人反应", StringComparison.Ordinal) >= 0)
+            {
+                outcome = "failure";
+                return true;
+            }
+            var m = System.Text.RegularExpressions.Regex.Match(s, @"反应过来的有\s*(\d+)\s*个人");
+            if (m.Success)
+            {
+                outcome = Convert.ToInt32(m.Groups[1].Value) > 0 ? "success" : "failure";
+                return true;
+            }
+            if (s.IndexOf("反应过来了", StringComparison.Ordinal) >= 0
+                || s.IndexOf("反應過來了", StringComparison.Ordinal) >= 0)
+            {
+                var mp = System.Text.RegularExpressions.Regex.Match(s, @"^([^：:]{1,24}?)\s*(?:反应过来了|反應過來了)");
+                if (mp.Success) player = mp.Groups[1].Value.Trim();
+                outcome = "success";
+                return true;
+            }
+            /* “天狐（慢了一步）：体力 -3”是效果行，不是 QTE 结果行。 */
+            if (s.IndexOf("慢了一步", StringComparison.Ordinal) >= 0
+                && s.IndexOf("：", StringComparison.Ordinal) < 0
+                && s.IndexOf(":", StringComparison.Ordinal) < 0)
+            {
+                var mp = System.Text.RegularExpressions.Regex.Match(s, @"^([^：:]{1,24}?)\s*慢了一步");
+                if (mp.Success) player = mp.Groups[1].Value.Trim();
+                outcome = "failure";
+                return true;
+            }
+            return false;
+        }
+
+        /* 多人分配／角色事件提示，不属于剧情正文。 */
+        static bool IsMultiplayerPrompt(string t)
+        {
+            string s = (t ?? "").Trim();
+            if (s.StartsWith("要由谁来") || s.StartsWith("要由誰來")) return true;
+            if (s.StartsWith("大家推派") || s.StartsWith("大家推選") || s.StartsWith("大家推举") || s.StartsWith("大家推舉")) return true;
+            if (s.IndexOf("自己的选", StringComparison.Ordinal) >= 0 && s.IndexOf("择", StringComparison.Ordinal) >= 0) return true;
+            if (s.IndexOf("自己的選", StringComparison.Ordinal) >= 0 && s.IndexOf("擇", StringComparison.Ordinal) >= 0) return true;
+            if (s.IndexOf("一按就算数", StringComparison.Ordinal) >= 0 || s.IndexOf("一按就算數", StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
+        /* 身上状态恶化（感染拖太久→高烧）不是事件结果，不记。 */
+        static bool IsStatusWorsening(string t)
+        {
+            string s = t ?? "";
+            return s.IndexOf("拖太久", StringComparison.Ordinal) >= 0
+                || s.IndexOf("恶化", StringComparison.Ordinal) >= 0
+                || s.IndexOf("惡化", StringComparison.Ordinal) >= 0;
+        }
+
+        /* 饥饿／口渴见底的红字提示，以及它附带的体力／理智惩罚，整行不记。 */
+        static bool IsHungerThirstWarning(string t)
+        {
+            string s = t ?? "";
+            bool warn = s.IndexOf("肚子饿", StringComparison.Ordinal) >= 0
+                || s.IndexOf("肚子餓", StringComparison.Ordinal) >= 0
+                || s.IndexOf("饿得", StringComparison.Ordinal) >= 0
+                || s.IndexOf("餓得", StringComparison.Ordinal) >= 0
+                || s.IndexOf("喉咙干", StringComparison.Ordinal) >= 0
+                || s.IndexOf("喉嚨乾", StringComparison.Ordinal) >= 0
+                || s.IndexOf("渴得", StringComparison.Ordinal) >= 0
+                || s.IndexOf("嘴唇干", StringComparison.Ordinal) >= 0
+                || s.IndexOf("嘴唇乾", StringComparison.Ordinal) >= 0;
+            bool zero = s.IndexOf("饥饿 0", StringComparison.Ordinal) >= 0
+                || s.IndexOf("飢餓 0", StringComparison.Ordinal) >= 0
+                || s.IndexOf("口渴 0", StringComparison.Ordinal) >= 0;
+            return warn || zero;
+        }
+
+        /* “大失败的代价……”“大成功的额外收获……”是暴击附加奖惩，
+           按要求整行不记；检定行有“掷出”，不能误杀。 */
+        static bool IsCriticalExtraLine(string t)
+        {
+            string s = t ?? "";
+            bool critical = s.IndexOf("大成功", StringComparison.Ordinal) >= 0
+                || s.IndexOf("大失败", StringComparison.Ordinal) >= 0
+                || s.IndexOf("大失敗", StringComparison.Ordinal) >= 0;
+            if (!critical) return false;
+            if (s.IndexOf("→", StringComparison.Ordinal) >= 0) return false;
+            return s.IndexOf("掷出", StringComparison.Ordinal) < 0
+                && s.IndexOf("擲出", StringComparison.Ordinal) < 0;
+        }
+
+        /* 把“天狐：体力 -1、陷入「扭伤」”拆成结构化效果。
+           体力/理智/饥饿/口渴等数值只记增减方向；状态与物品保留原文。
+           只有整行都能识别时才从 results 移出，避免误吞普通叙述。 */
+        static List<object> ParseEffects(string raw, out bool all)
+        {
+            all = false;
+            var list = new List<object>();
+            string t = Party.Normalize((raw ?? "").Trim());
+            if (t.Length == 0) return list;
+
+            string target = Party.LocalCharacter;
+            string body = t;
+            var m = System.Text.RegularExpressions.Regex.Match(t, @"^([^：:]{1,16})[：:]\s*(.+)$");
+            if (m.Success)
+            {
+                target = m.Groups[1].Value.Trim();
+                body = m.Groups[2].Value.Trim();
+            }
+            /* “天狐（慢了一步）：体力 -3” 里括号是状态说明，不是名字。 */
+            target = System.Text.RegularExpressions.Regex.Replace(target ?? "", @"[（(][^）)]*[）)]", "").Trim();
+            if (target == "") target = "你";
+
+            /* （某段记忆被留了下来……这次冒险的记忆碎片 +1） */
+            var mm = System.Text.RegularExpressions.Regex.Match(t, @"(?:记忆碎片|記憶碎片)\s*([+-]?\s*\d+)");
+            if (mm.Success)
+            {
+                int n = int.Parse(System.Text.RegularExpressions.Regex.Replace(mm.Groups[1].Value, @"\s+", ""));
+                var d = new Dictionary<string, object>();
+                d["target"] = target; d["kind"] = "記憶碎片"; d["amount"] = n;
+                d["text"] = "記憶碎片 " + (n >= 0 ? "+" : "") + n;
+                list.Add(d);
+                all = true;
+                return list;
+            }
+
+            string[] parts = body.Split(new char[] { '、', '，', ',', '；', ';' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return list;
+            foreach (var part in parts)
+            {
+                string p = part.Trim();
+                if (p.Length == 0) continue;
+
+                var ms = System.Text.RegularExpressions.Regex.Match(p, @"^陷入\s*[「『]([^」』]+)");
+                if (ms.Success)
+                {
+                    string name = ms.Groups[1].Value.Trim();
+                    var d = new Dictionary<string, object>();
+                    d["target"] = target; d["kind"] = "status"; d["name"] = name;
+                    d["text"] = "陷入「" + name + "」";
+                    list.Add(d);
+                    continue;
+                }
+                var mi = System.Text.RegularExpressions.Regex.Match(p, @"^(?:獲得|获得|得到)\s*[「『]([^」』]+)");
+                if (mi.Success)
+                {
+                    string name = mi.Groups[1].Value.Trim();
+                    var d = new Dictionary<string, object>();
+                    d["target"] = target; d["kind"] = "item"; d["name"] = name;
+                    d["text"] = "得到「" + name + "」";
+                    list.Add(d);
+                    continue;
+                }
+                var mc = System.Text.RegularExpressions.Regex.Match(p, @"^(?:各|都|每人)?\s*(?:獲得|获得|得到)\s*(\d+)\s*(硬币|硬幣|金币|金幣)");
+                if (mc.Success)
+                {
+                    int n = int.Parse(mc.Groups[1].Value);
+                    string coin = mc.Groups[2].Value == "硬币" ? "硬幣" : (mc.Groups[2].Value == "金币" ? "金幣" : mc.Groups[2].Value);
+                    bool shared = target == "所有人" || target == "全体" || target == "全體" || target == "大家"
+                        || p.StartsWith("各") || p.StartsWith("都") || p.StartsWith("每人");
+                    var d = new Dictionary<string, object>();
+                    if (shared)
+                    {
+                        d["target"] = "所有人";
+                        d["kind"] = "item"; d["name"] = coin; d["amount"] = n;
+                        d["shared"] = true;
+                        d["text"] = "所有人 各得到 " + n + " " + coin;
+                    }
+                    else
+                    {
+                        d["target"] = target; d["kind"] = "item"; d["name"] = coin; d["amount"] = n;
+                        d["text"] = "得到 " + n + " " + coin;
+                    }
+                    list.Add(d);
+                    continue;
+                }
+                var mr = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神|經驗|经验)\s*([+-]?\s*\d+)\s*$");
+                if (mr.Success)
+                {
+                    string kind = EffectKind(mr.Groups[1].Value);
+                    int amount = int.Parse(System.Text.RegularExpressions.Regex.Replace(mr.Groups[2].Value, @"\s+", ""));
+                    var d = new Dictionary<string, object>();
+                    d["target"] = target; d["kind"] = kind; d["amount"] = amount;
+                    d["text"] = EffectText(kind, amount);
+                    list.Add(d);
+                    continue;
+                }
+                var mv = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神)\s*(\d+)\s*$");
+                if (mv.Success)
+                {
+                    string kind = EffectKind(mv.Groups[1].Value);
+                    int amount = int.Parse(mv.Groups[2].Value);
+                    var d = new Dictionary<string, object>();
+                    d["target"] = target; d["kind"] = kind; d["amount"] = amount;
+                    d["text"] = kind + " " + amount;
+                    list.Add(d);
+                    continue;
+                }
+                list.Clear();
+                return list;
+            }
+            all = true;
+            return list;
+        }
+
+        static string EffectKind(string kind)
+        {
+            if (kind == "体力") return "體力";
+            if (kind == "饥饿") return "飢餓";
+            if (kind == "经验") return "經驗";
+            return kind;
+        }
+
+        static string EffectText(string kind, int amount)
+        {
+            if (kind == "體力" || kind == "生命") return amount < 0 ? "損失" + kind : "恢復" + kind;
+            if (kind == "理智" || kind == "精神") return amount < 0 ? "損失" + kind : "恢復" + kind;
+            if (kind == "飢餓" || kind == "口渴") return amount < 0 ? "減少" + kind : "增加" + kind;
+            if (kind == "經驗") return amount < 0 ? "失去經驗" : "獲得經驗";
+            return kind + (amount >= 0 ? " +" : " ") + amount;
         }
     }
 
@@ -3130,6 +3877,11 @@ namespace ExpeditionRecorder
             Keys.StepVk = StepVk;
             Keys.GetGame = delegate { return GameHwnd; };
             Keys.GetGamePid = delegate { return Client != null ? Client.Id : 0; };
+            Keys.GetOwnWindow = delegate
+            {
+                return ControlWindow != null && ControlWindow.IsHandleCreated && !ControlWindow.IsDisposed
+                    ? ControlWindow.Handle : IntPtr.Zero;
+            };
             Keys.OnTrigger = delegate (int vk)
             {
                 if (vk == ModeVk)
@@ -3228,7 +3980,7 @@ namespace ExpeditionRecorder
                         string fn = Path.GetFileName(f);
                         int c = CountCached(f);
                         if (fn.StartsWith("pending-")) p += c;
-                        else if (!fn.StartsWith("draft-")) n += c;
+                        else if (!fn.StartsWith("draft-") && !fn.StartsWith("floor-lengths-")) n += c;
                     }
                 }
                 catch { }
@@ -3262,7 +4014,7 @@ namespace ExpeditionRecorder
 
         /* 低級鉤子的保險絲：
            1) 回呼太慢時 Windows 會靜默移除鉤子 → 立刻重掛；
-           2) 每 10 分鐘重掛一次，擋掉任何原因造成的「再也收不到按鍵」；
+           2) 每 30 秒重掛一次，擋掉任何原因造成的「再也收不到按鍵」；
            3) 漏接 keyup 卡住的按鍵，超過 3 秒放掉。 */
         static void HookWatchdog()
         {
@@ -3275,7 +4027,7 @@ namespace ExpeditionRecorder
                     LogDiag("hook reinstalled slow=" + Keys.Slow + " ok=" + ok);
                     Keys.Slow = false;
                 }
-                else if (unchecked(Environment.TickCount - Keys.InstalledTick) > 600000)
+                else if (unchecked(Environment.TickCount - Keys.InstalledTick) > 30000)
                 {
                     Keys.Reinstall();
                     LogDiag("hook periodic reinstall");
@@ -3501,6 +4253,7 @@ namespace ExpeditionRecorder
             else if (Mode == "floor") CaptureFloor();
             else if (Mode == "exit") CaptureExit();
             else if (Mode == "ending") CaptureEnding();
+            else if (Mode == "shop") CaptureShop();
         }
 
         static void ShowPicker()
@@ -3529,6 +4282,7 @@ namespace ExpeditionRecorder
             else if (Mode == "floor") hint = "樓層介紹：按 " + VkName(StepVk) + " 拖樓層名＋介紹；按 " + VkName(ModeVk) + " 選亮/暗";
             else if (Mode == "exit") hint = "出口：按 " + VkName(StepVk) + " 拖出口事件＋介紹；再按 " + VkName(StepVk) + " 拖通往文本；按 " + VkName(ModeVk) + " 輸入目標";
             else if (Mode == "ending") hint = "結局：按 " + VkName(StepVk) + " 拖結局名＋通用介紹；再按 " + VkName(StepVk) + " 拖後日談；按 " + VkName(ModeVk) + " 選分類";
+            else if (Mode == "shop") hint = "商店模式：按 " + VkName(StepVk) + " 掃描貨架或商店文字；按 " + VkName(ModeVk) + " 結束";
             else hint = "事件模式：按 " + VkName(StepVk) + " 記第 1 步；按 " + VkName(ModeVk) + " 結束";
             StepLabel.Text = hint;
             SetState("狀態：" + hint);
@@ -3562,6 +4316,7 @@ namespace ExpeditionRecorder
             finally
             {
                 OverlayOpen = false;
+                try { if (Keys != null) { Keys.ResetDown(); Keys.Reinstall(); } } catch { }
                 try { if (disabled && Native.IsWindow(GameHwnd)) Native.EnableWindow(GameHwnd, true); } catch { }
                 try { if (Native.IsWindow(GameHwnd)) Native.SetForegroundWindow(GameHwnd); } catch { }
             }
@@ -3570,16 +4325,18 @@ namespace ExpeditionRecorder
         static DateTime _partyScanned = DateTime.MinValue;
         static void ScanParty()
         {
-            if ((DateTime.Now - _partyScanned).TotalSeconds < 120) return;
-            _partyScanned = DateTime.Now;
+            if ((DateTime.Now - _partyScanned).TotalSeconds < 30) return;
             try
             {
                 Rectangle pr; double px, py;
                 Bitmap b = Capture.GrabRegion(GameHwnd, "party", out pr, out px, out py);
                 if (b == null) return;
+                int bw = b.Width;
                 var pl = Ocr.Recognize(b);
-                Party.Scan(pl, b.Width);
                 b.Dispose();
+                if (pl.Count == 0) return;
+                Party.Scan(pl, bw);
+                _partyScanned = DateTime.Now;
             }
             catch { }
         }
@@ -3624,7 +4381,9 @@ namespace ExpeditionRecorder
                 return;
             }
             Parse.Classify(lines, shot.Height);
-            Party.Scan(lines, shot.Width);
+            /* 右侧队伍栏单独扫，不能拿事件正文去猜队伍；
+               否则每次按 E 都会把玩家→角色映射清空。 */
+            try { ScanParty(); } catch { }
             ScaleLines(lines, sx, sy);
             HideBusy();
             var f = new OverlayForm(Step + 1, lines, rect, GameHwnd, "event");
@@ -4216,7 +4975,9 @@ namespace ExpeditionRecorder
             NormalizeSteps();
             string curId = Steps.Count > 0 && Steps[0].ContainsKey("floorId") ? Convert.ToString(Steps[0]["floorId"]) : Parse.FloorId;
             string curName = Steps.Count > 0 && Steps[0].ContainsKey("floorName") ? Convert.ToString(Steps[0]["floorName"]) : Parse.FloorName;
-            var ef = new EndForm(curId, curName, Steps.Count, Party.LocalCharacter);
+            bool characterEvent = Steps.Count > 0 && Steps[0].ContainsKey("characterEvent") && Convert.ToBoolean(Steps[0]["characterEvent"]);
+            string characterName = Steps.Count > 0 && Steps[0].ContainsKey("character") ? Convert.ToString(Steps[0]["character"]) : "";
+            var ef = new EndForm(curId, curName, Steps.Count, Party.LocalCharacter, characterEvent, characterName);
             var r = ef.ShowDialog();
             if (r != DialogResult.OK) { SetState("已取消結束；按 " + VkName(StepVk) + " 繼續記；按 " + VkName(ModeVk) + " 結束"); return; }
 
@@ -4233,8 +4994,34 @@ namespace ExpeditionRecorder
             if (ef.JumpTo != "") rec["jumpTo"] = ef.JumpTo;
             rec["floorId"] = ef.FloorId;
             rec["floorName"] = ef.FloorName;
+            string combatEnemy = ef.CombatEnemy;
+            if (combatEnemy == "" && Steps.Count > 1)
+            {
+                var s2 = Steps[1] as Dictionary<string, object>;
+                if (s2 != null && s2.ContainsKey("combat"))
+                {
+                    var oldCombat = s2["combat"] as Dictionary<string, object>;
+                    if (oldCombat != null && oldCombat.ContainsKey("enemy")) combatEnemy = Convert.ToString(oldCombat["enemy"]);
+                }
+            }
+            if (combatEnemy != "")
+            {
+                var cb = new Dictionary<string, object>();
+                cb["enemy"] = combatEnemy;
+                rec["combat"] = cb;
+                if (Steps.Count > 1)
+                {
+                    var s2 = Steps[1] as Dictionary<string, object>;
+                    if (s2 != null) s2["combat"] = cb;
+                }
+            }
             rec["steps"] = Steps.ToArray();
-            WriteEvent(rec);
+            if (!WriteEvent(rec))
+            {
+                StepLabel.Text = "寫入失敗，尚未存檔";
+                return;
+            }
+            if (ef.Outcomes.Contains("combat") && combatEnemy == "") WritePending("combat-enemy", rec);
             if (ef.Scopes.Contains("character") && ef.Characters.Count == 0) WritePending("character-missing", rec);
             Mode = ""; Step = 0; Steps.Clear();
             StepLabel.Text = "已存一條事件";
@@ -4248,6 +5035,42 @@ namespace ExpeditionRecorder
             if (!Directory.Exists(Path.Combine(baseDir, "Recorder"))) dir = Path.Combine(baseDir, "logs", "manual");
             Directory.CreateDirectory(dir);
             return dir;
+        }
+
+        /* “出口进度 N/M”里的 M 是楼层长度，不属于事件。
+           独立写成 floor-lengths-*.jsonl，由 import-manual 写回 floor.json。 */
+        public static void WriteFloorLength(string floorId, string floorName, int length)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(floorId) || length <= 0) return;
+                string dir = DataDir();
+                var ser = new JavaScriptSerializer();
+                foreach (var f in Directory.GetFiles(dir, "floor-lengths-*.jsonl"))
+                {
+                    foreach (var line in File.ReadAllLines(f))
+                    {
+                        if (line.Trim().Length == 0) continue;
+                        Dictionary<string, object> old;
+                        try { old = ser.Deserialize<Dictionary<string, object>>(line); } catch { continue; }
+                        if (old == null) continue;
+                        if (Convert.ToString(old.ContainsKey("floorId") ? old["floorId"] : "") == floorId
+                            && Convert.ToInt32(old.ContainsKey("length") ? old["length"] : 0) == length)
+                            return;
+                    }
+                }
+                var rec = new Dictionary<string, object>();
+                rec["v"] = 1;
+                rec["id"] = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
+                rec["ts"] = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
+                rec["kind"] = "floor-length";
+                rec["floorId"] = floorId;
+                rec["floorName"] = floorName ?? "";
+                rec["length"] = length;
+                File.AppendAllText(Path.Combine(dir, "floor-lengths-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
+                    ser.Serialize(rec) + "\r\n", new UTF8Encoding(false));
+            }
+            catch (Exception ex) { SetState("寫入樓層長度失敗：" + ex.Message); }
         }
 
         static void WriteDraft(string id, Dictionary<string, object> step)
@@ -4267,7 +5090,9 @@ namespace ExpeditionRecorder
 
         static string EventTitle(Dictionary<string, object> rec)
         {
-            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.ArrayList : null;
+            /* rec["steps"] 可能是 Dictionary[]（刚记完）或 ArrayList（从 JSONL 读回），
+               必须用 IList，否则新记录永远被当成“无标题”，同楼层互相覆盖。 */
+            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.IList : null;
             if (steps != null && steps.Count > 0)
             {
                 var s1 = steps[0] as Dictionary<string, object>;
@@ -4278,13 +5103,13 @@ namespace ExpeditionRecorder
 
         static void MarkUnseen(Dictionary<string, object> rec)
         {
-            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.ArrayList : null;
+            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.IList : null;
             if (steps == null || steps.Count < 2) return;
             var s1 = steps[0] as Dictionary<string, object>;
             var s2 = steps[1] as Dictionary<string, object>;
             if (s1 == null || s2 == null) return;
             string choice = Convert.ToString(s2.ContainsKey("choice") ? s2["choice"] : "");
-            var opts = s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
+            var opts = s1.ContainsKey("options") ? s1["options"] as System.Collections.IList : null;
             if (opts == null) return;
             foreach (var o in opts)
             {
@@ -4296,14 +5121,37 @@ namespace ExpeditionRecorder
             }
         }
 
-        static void WriteEvent(Dictionary<string, object> rec)
+        static Dictionary<string, object> BranchFromStep(Dictionary<string, object> s2)
+        {
+            var br = new Dictionary<string, object>();
+            br["selected"] = s2.ContainsKey("choice") ? Convert.ToString(s2["choice"]) : "";
+            br["results"] = s2.ContainsKey("results") ? s2["results"] : new System.Collections.ArrayList();
+            if (s2.ContainsKey("check")) br["check"] = s2["check"];
+            if (s2.ContainsKey("combat")) br["combat"] = s2["combat"];
+            if (s2.ContainsKey("effects")) br["effects"] = s2["effects"];
+            if (s2.ContainsKey("progress")) br["progress"] = s2["progress"];
+            if (s2.ContainsKey("qte")) br["qte"] = s2["qte"];
+            if (s2.ContainsKey("leadsTo")) br["leadsTo"] = s2["leadsTo"];
+            if (s2.ContainsKey("player")) br["player"] = s2["player"];
+            if (s2.ContainsKey("players")) br["players"] = s2["players"];
+            if (s2.ContainsKey("character")) br["character"] = s2["character"];
+            if (s2.ContainsKey("characters")) br["characters"] = s2["characters"];
+            return br;
+        }
+
+        static bool WriteEvent(Dictionary<string, object> rec)
         {
             try
             {
                 MarkUnseen(rec);
                 var ser = new JavaScriptSerializer();
                 string dir = DataDir();
-                string key = Convert.ToString(rec["floorId"]) + "|" + EventTitle(rec);
+                string floorId = Convert.ToString(rec.ContainsKey("floorId") ? rec["floorId"] : "");
+                string title = EventTitle(rec).Trim();
+                string id = Convert.ToString(rec.ContainsKey("id") ? rec["id"] : "");
+                /* 没有楼层或标题时不能用 "|" 当 key，否则同楼层的多条无标题事件
+                   会互相覆盖，最后只剩第一条。 */
+                string key = (floorId == "" ? "#" + id : floorId) + "|" + (title == "" ? "#" + id : title);
                 foreach (var f in Directory.GetFiles(dir, "events-*.jsonl"))
                 {
                     var lines = new List<string>(File.ReadAllLines(f));
@@ -4313,39 +5161,69 @@ namespace ExpeditionRecorder
                         Dictionary<string, object> old;
                         try { old = ser.Deserialize<Dictionary<string, object>>(lines[i]); } catch { continue; }
                         if (old == null) continue;
-                        if (Convert.ToString(old["floorId"]) + "|" + EventTitle(old) != key) continue;
-                        var branches = old.ContainsKey("branches") ? old["branches"] as System.Collections.ArrayList : null;
+                        string oldFloor = Convert.ToString(old.ContainsKey("floorId") ? old["floorId"] : "");
+                        string oldTitle = EventTitle(old).Trim();
+                        string oldId = Convert.ToString(old.ContainsKey("id") ? old["id"] : "");
+                        string oldKey = (oldFloor == "" ? "#" + oldId : oldFloor) + "|" + (oldTitle == "" ? "#" + oldId : oldTitle);
+                        if (oldKey != key) continue;
+                        var branches = old.ContainsKey("branches") ? old["branches"] as System.Collections.IList : null;
                         if (branches == null) { branches = new System.Collections.ArrayList(); old["branches"] = branches; }
-                        var br = new Dictionary<string, object>();
-                        var steps2 = rec["steps"] as System.Collections.ArrayList;
-                        if (steps2 != null && steps2.Count > 1)
+                        var newBranches = new List<Dictionary<string, object>>();
+                        var steps2 = rec["steps"] as System.Collections.IList;
+                        if (steps2 != null)
                         {
-                            var s2 = steps2[1] as Dictionary<string, object>;
-                            if (s2 != null)
+                            /* 自由事件／岔路事件可以连续按 E 记多个玩家分支；
+                               第 2 步之后每一步都当一条分支，不再只取 steps[1]。 */
+                            for (int si = 1; si < steps2.Count; si++)
                             {
-                                br["selected"] = s2.ContainsKey("choice") ? s2["choice"] : "";
-                                br["results"] = s2.ContainsKey("results") ? s2["results"] : new System.Collections.ArrayList();
-                                if (s2.ContainsKey("check")) br["check"] = s2["check"];
-                                if (s2.ContainsKey("combat")) br["combat"] = s2["combat"];
-                                if (s2.ContainsKey("leadsTo")) br["leadsTo"] = s2["leadsTo"];
+                                var s2 = steps2[si] as Dictionary<string, object>;
+                                if (s2 == null) continue;
+                                var nested = s2.ContainsKey("branches") ? s2["branches"] as System.Collections.IList : null;
+                                if (nested != null)
+                                {
+                                    foreach (var nb in nested)
+                                    {
+                                        var nd = nb as Dictionary<string, object>;
+                                        if (nd != null) newBranches.Add(BranchFromStep(nd));
+                                    }
+                                }
+                                else
+                                {
+                                    var br = BranchFromStep(s2);
+                                    if (Convert.ToString(br["selected"]) != "") newBranches.Add(br);
+                                }
                             }
                         }
-                        bool dup = false;
-                        foreach (var b in branches)
+                        /* 只有“选了某个选项”的分支才合并；没有选择时不能直接 return，
+                           否则这条新记录会被静默丢掉。 */
+                        if (newBranches.Count > 0)
                         {
-                            var bd = b as Dictionary<string, object>;
-                            if (bd != null && Convert.ToString(bd["selected"]) == Convert.ToString(br["selected"])) { dup = true; break; }
+                            foreach (var br in newBranches)
+                            {
+                                string selected = Convert.ToString(br["selected"]);
+                                string player = br.ContainsKey("player") ? Convert.ToString(br["player"]) : "";
+                                bool dup = false;
+                                foreach (var b in branches)
+                                {
+                                    var bd = b as Dictionary<string, object>;
+                                    if (bd == null) continue;
+                                    string bs = Convert.ToString(bd.ContainsKey("selected") ? bd["selected"] : "");
+                                    string bp = bd.ContainsKey("player") ? Convert.ToString(bd["player"]) : "";
+                                    if (bs == selected && bp == player) { dup = true; break; }
+                                }
+                                if (!dup) branches.Add(br);
+                            }
+                            lines[i] = ser.Serialize(old);
+                            File.WriteAllLines(f, lines.ToArray(), new UTF8Encoding(false));
+                            return true;
                         }
-                        if (!dup && Convert.ToString(br["selected"]) != "") branches.Add(br);
-                        lines[i] = ser.Serialize(old);
-                        File.WriteAllLines(f, lines.ToArray(), new UTF8Encoding(false));
-                        return;
                     }
                 }
                 File.AppendAllText(Path.Combine(dir, "events-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     ser.Serialize(rec) + "\r\n", new UTF8Encoding(false));
+                return true;
             }
-            catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
+            catch (Exception ex) { SetState("寫入失敗：" + ex.Message); return false; }
         }
 
         static string HotkeyFile() { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hotkeys.json"); }
@@ -4402,7 +5280,7 @@ namespace ExpeditionRecorder
             sb.AppendLine("【事件】");
             sb.AppendLine("  " + sk + " 第1步：拖「事件名＋介紹」→ 鬆手即存");
             sb.AppendLine("  " + sk + " 第2步：拖「決定＋結果」→ 鬆手即存");
-            sb.AppendLine("  " + mk + " 結束：選樓層/角色/通用 + 普通/跳層/商店/休息（可多選）");
+            sb.AppendLine("  " + mk + " 結束：選樓層/角色/通用 + 普通/跳層/商店/休息/戰鬥（可多選；戰鬥可填實體名稱）");
             sb.AppendLine();
             sb.AppendLine("【物品】");
             sb.AppendLine("  " + sk + " 收當前物品；" + mk + " 結束");
@@ -4559,6 +5437,7 @@ namespace ExpeditionRecorder
                 else if (x == "floor-jump") parts.Add("跳層");
                 else if (x == "shop") parts.Add("商店");
                 else if (x == "rest") parts.Add("休息處");
+                else if (x == "combat") parts.Add("戰鬥");
                 else if (x != "") parts.Add(x);
             }
             return string.Join("、", parts.ToArray());
@@ -4679,11 +5558,38 @@ namespace ExpeditionRecorder
                             if (S(st, "choice") != "") sb.AppendLine("  - 決定：" + S(st, "choice"));
                             if (S(st, "leadsTo") != "") sb.AppendLine("  - 感知線索 → Level " + S(st, "leadsTo"));
                             var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
-                            if (ck != null) sb.AppendLine("  - 檢定：" + S(ck, "attr") + " 難度 " + S(ck, "dc") + (S(ck, "roll") != "" ? " 擲出 " + S(ck, "roll") : "") + (S(ck, "outcome") != "" ? " → " + S(ck, "outcome") : ""));
+                            if (ck != null)
+                            {
+                                string attr = S(ck, "attribute"); if (attr == "") attr = S(ck, "attr");
+                                sb.AppendLine("  - 檢定：" + attr + (S(ck, "outcome") != "" ? " → " + S(ck, "outcome") : ""));
+                            }
+                            var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
+                            if (qt != null)
+                            {
+                                string qo = S(qt, "outcome");
+                                sb.AppendLine("  - QTE：" + (qo == "failure" ? "失敗" : (qo == "success" ? "成功" : "已通過")));
+                            }
                             var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
                             if (cb != null) sb.AppendLine("  - 戰鬥：" + S(cb, "enemy"));
                             var res = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
                             if (res != null) foreach (var r in res) sb.AppendLine("  - " + Convert.ToString(r));
+                            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                            if (eff != null) foreach (var eo in eff)
+                            {
+                                var ed = eo as Dictionary<string, object>;
+                                if (ed == null) continue;
+                                string text = S(ed, "text");
+                                if (text == "") text = (S(ed, "target") + " " + S(ed, "kind") + " " + S(ed, "amount")).Trim();
+                                sb.AppendLine("  - 效果：" + text);
+                            }
+                            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                            if (pg != null)
+                            {
+                                string txt = "出口進度";
+                                if (S(pg, "delta") != "") txt += " " + S(pg, "delta");
+                                if (S(pg, "current") != "") txt += "（" + S(pg, "current") + "/" + S(pg, "total") + "）";
+                                sb.AppendLine("  - " + txt);
+                            }
                         }
                     }
                     sb.AppendLine();

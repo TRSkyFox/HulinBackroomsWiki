@@ -494,7 +494,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
   font-family:inherit;font-size:1.02rem;border-radius:3px;padding:.42rem .6rem;
   cursor:pointer;
 }
-.evb .opt .ot{flex:1;min-width:0}
+.evb .opt .ot{flex:1;min-width:0;display:flex;flex-direction:column;gap:.18rem}
+.evb .opt .qte{color:var(--t-bad);font-size:.78rem;font-weight:700;line-height:1.1;letter-spacing:.02em}
 .evb .opt .go{color:var(--t-acc);font-size:.82rem;flex:none}
 .evb .opt .none{color:var(--t-dim);font-size:.82rem;flex:none}
 .evb .opt:hover{border-color:var(--t-acc);background:var(--t-head);color:var(--t-acc2);
@@ -503,6 +504,8 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .evb .opt.pa:hover{border-color:var(--t-pa);border-left-color:var(--t-pa)}
 .evb .opt.ac{border-left:3px solid var(--t-ev-b)}
 .evb .opt.ac:hover{border-color:var(--t-acc);border-left-color:var(--t-acc)}
+.evb .opt.sp{border-left-color:var(--t-warn)}
+.evb .opt.sp .otmain{color:var(--t-warn)}
 .evb .opt.off{opacity:.72;cursor:default}
 .evb .opt.off:hover{border-color:var(--t-line);border-left-color:var(--t-pa-b);
   background:var(--t-bg);color:var(--t-tx);box-shadow:none}
@@ -10783,14 +10786,16 @@ var EVB = { mode:'junction', jid:'路口-轉角', eid:null, ai:-1, hint:'' };
           return {
             t:a.text,
             /* 2026-10-31：檢定只顯示屬性＋成功／失敗（難度與擲出數字不顯示，使用者：每次都隨機、沒有意義） */
-            check: _ck ? (_ck.attribute || '') : (a.qte ? 'QTE' : ''),   /* 只顯示屬性；QTE 就標 QTE */
+            check: _ck ? (_ck.attribute || '') : '',   /* 只顯示屬性；QTE 在選項下另標 */
             qte: !!a.qte,
+            special: !!a.special,
+            specialReason: a.specialReason || '',
             checkRaw: _ck,
             variants: (a.variants || null),
             variantTotal: (a.variantTotal || 0),
             outcomeStats: (a.outcomeStats || null),
             outcome: (a.outcome || (_ck && _ck.outcome)) || '',
-            result:{ lines:(e.results || []).concat((e.effects || []).map(function(x){ return x.kind + ' ' + (x.amount > 0 ? '+' : '') + x.amount; })) }
+            result:{ lines:(e.results || []).concat((e.effects || []).map(function(x){ return x.text || (x.kind + ' ' + (x.amount > 0 ? '+' : '') + (x.amount == null ? '' : x.amount)); })) }
           };
         }) };
         EVB_ALL.push(id);
@@ -10824,9 +10829,10 @@ var EVB = { mode:'junction', jid:'路口-轉角', eid:null, ai:-1, hint:'' };
           text:(e.intro || ''),
           actions:(e.actions || []).map(function(a){
             var _ck = a.check && (a.check.attribute || a.check.hasCheck) ? a.check : null;
-            return { t:a.text, check:_ck ? (_ck.attribute || '') : (a.qte ? 'QTE' : ''), qte:!!a.qte,
+            return { t:a.text, check:_ck ? (_ck.attribute || '') : '', qte:!!a.qte,
+              special:!!a.special, specialReason:a.specialReason || '',
               checkRaw:_ck, outcome:(a.outcome || (_ck && _ck.outcome)) || '',
-              result:{ lines:(e.results || []).concat((e.effects || []).map(function(x){ return x.kind + ' ' + (x.amount > 0 ? '+' : '') + x.amount; })) } };
+              result:{ lines:(e.results || []).concat((e.effects || []).map(function(x){ return x.text || (x.kind + ' ' + (x.amount > 0 ? '+' : '') + (x.amount == null ? '' : x.amount)); })) } };
           }) };
         EVB_ALL.push(id);
       });
@@ -11050,7 +11056,10 @@ function evbViewEvent(){
  h+='<button class="opt ac off" data-act="-1"><span class="ot">（尚無資料）</span></button>';
  }
  as.forEach(function(a,i){
- h+='<button class="opt ac" data-act="'+i+'"><span class="ot">'+a.t+'</span>'
+ var ot='<span class="ot"><span class="otmain">'+a.t+'</span>'
+ + (a.qte ? '<span class="qte">⚠QTE</span>' : '')
+ + '</span>';
+ h+='<button class="opt ac'+(a.special ? ' sp' : '')+'" data-act="'+i+'">'+ot
  + (a.check ? '<span class="req">'+a.check+'</span>' : '')
  + '<span class="go">›</span></button>';
  });
@@ -11074,6 +11083,10 @@ function evbViewResult(){
       + (function(){ var os=a.outcomeStats||{}; var n1=os.success||0, n2=os.failure||0, tt=n1+n2; if(tt<2) return ''; return '<span class="ostat">成功 '+n1+' 次 · 失敗 '+n2+' 次'+(tt>=5?('（成功 '+(n1*100/tt).toFixed(0)+'%）'):'')+'</span>'; })()
       + '</div>';
  }
+ if(a.qte && !a.check){
+   var _qo = a.outcome;
+   h+='<div class="line">QTE：<span class="oc '+(_qo==='failure'?'bad':'ok')+'">'+(_qo==='failure'?'失敗':(_qo==='success'?'成功':'已通過'))+'</span></div>';
+ }
   /* 成功／失敗兩支各自導向什麼。
      2026-10-31 使用者指示：不要標「缺分支」——
      有檢定的選項就固定留兩個位置（成功／失敗），錄到哪一支就填哪一支，
@@ -11085,7 +11098,7 @@ function evbViewResult(){
       if(box && box.lines && box.lines.length){
         h+='<div class="line br '+(k==='failure'?'bad':'ok')+'">'+lab+'：</div>';
         box.lines.forEach(function(x){ h+='<div class="line">'+x+'</div>'; });
-        (box.effects||[]).forEach(function(ef){ h+='<div class="line got">'+ef.kind+' '+(ef.amount>0?'+':'')+ef.amount+'</div>'; });
+        (box.effects||[]).forEach(function(ef){ var _ef = ef.text || (ef.kind + ' ' + (ef.amount > 0 ? '+' : '') + (ef.amount == null ? '' : ef.amount)); h+='<div class="line got">'+iEsc(_ef)+'</div>'; });
       } else {
         h+='<div class="line br '+(k==='failure'?'bad':'ok')+'">'+lab+'：<span class="slot"></span></div>';
       }

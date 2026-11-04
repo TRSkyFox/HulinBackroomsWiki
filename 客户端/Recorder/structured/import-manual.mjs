@@ -85,12 +85,13 @@ function allJsonl(prefix) {
 const events = allJsonl('events-');
 const items = allJsonl('items-');
 const floors = allJsonl('floors-');
+const floorLengths = allJsonl('floor-lengths-');
 const exits = allJsonl('exits-');
 const endings = allJsonl('endings-');
 const pending = allJsonl('pending-');
 
 const pendingFiles = new Map();
-const report = { events: 0, merged: 0, items: 0, floors: 0, exits: 0, endings: 0, skipped: 0, pending: pending.length };
+const report = { events: 0, merged: 0, items: 0, floors: 0, floorLengths: 0, exits: 0, endings: 0, skipped: 0, pending: pending.length };
 const writes = [];
 
 /* ── 事件 ── */
@@ -106,16 +107,50 @@ for (const rec of events) {
   const j = pendingFiles.get(p) || (fs.existsSync(p) ? readJson(p) : { floorId: fkey, floorName: fl.data.name, events: [], junctions: [] });
   if (!Array.isArray(j.events)) j.events = [];
   const existing = j.events.find((e) => norm(e.name) === norm(name));
-  const branch = {
-    selected: step2.choice ? T(step2.choice) : null,
-    results: Array.isArray(step2.results) ? step2.results.map(T) : [],
-    check: step2.check || null,
-    combat: step2.combat || null
+  const branchOf = (s) => {
+    const ef = Array.isArray(s.effects) ? s.effects.map((e) => Object.assign({}, e, {
+      text: T(e.text),
+      kind: T(e.kind),
+      name: e.name ? T(e.name) : e.name
+    })) : [];
+    return {
+      selected: s.choice ? T(s.choice) : null,
+      results: Array.isArray(s.results) ? s.results.map(T) : [],
+      check: s.check || null,
+      combat: s.combat || rec.combat || null,
+      progress: s.progress || null,
+      qte: s.qte || null,
+      player: s.player ? T(s.player) : null,
+      players: Array.isArray(s.players) ? s.players.map(T) : null,
+      character: s.character ? T(s.character) : null,
+      characters: Array.isArray(s.characters) ? s.characters.map(T) : null,
+      effects: ef
+    };
   };
+  /* 自由事件／岔路事件：第 2 步之后每一步都是一个玩家分支；
+     同一步若框到多个选择，BuildStep2 会把它拆成 branches。 */
+  const rawBranches = [];
+  for (const s of (Array.isArray(rec.steps) ? rec.steps : []).slice(1)) {
+    if (Array.isArray(s.branches)) rawBranches.push(...s.branches);
+    else rawBranches.push(s);
+  }
+  const stepBranches = rawBranches
+    .map(branchOf)
+    .filter((b) => b.selected || b.results.length || b.effects.length);
+  if (!stepBranches.length) stepBranches.push(branchOf(step2));
+  const branch = stepBranches[0];
+  const effects = branch.effects;
   if (existing) {
     if (!Array.isArray(existing.branches)) existing.branches = [];
-    const dup = existing.branches.some((b) => norm(b.selected) === norm(branch.selected) && norm((b.results || []).join('')) === norm(branch.results.join('')));
-    if (!dup && branch.selected) existing.branches.push(branch);
+    for (const b of stepBranches) {
+      const dup = existing.branches.some((x) =>
+        norm(x.selected) === norm(b.selected)
+        && norm(x.player || '') === norm(b.player || '')
+        && norm((x.results || []).join('')) === norm((b.results || []).join(''))
+        && norm((x.effects || []).map((e) => e.text || '').join('')) === norm((b.effects || []).map((e) => e.text || '').join(''))
+      );
+      if (!dup && b.selected) existing.branches.push(b);
+    }
     pendingFiles.set(p, j);
     writes.push({ path: p, data: j });
     report.merged++;
@@ -129,14 +164,39 @@ for (const rec of events) {
       const a = { text: T(o.text) };
       if (o.check) a.check = { attribute: T(o.check) };
       if (o.requirement) a.requirement = typeof o.requirement === 'string' ? T(o.requirement) : o.requirement;
+      if (o.special) {
+        a.special = true;
+        if (o.specialReason) a.specialReason = o.specialReason;
+        if (o.conditionText) a.conditionText = T(o.conditionText);
+      }
+      /* 把每个分支的检定结果挂到对应的选项上；自由事件可能有多个
+         玩家各选不同选项，不能只看第 2 步。 */
+      const ab = stepBranches.find((b) => b.selected && norm(b.selected) === norm(o.text));
+      if (ab && ab.check) {
+        const attr = ab.check.attribute || ab.check.attr || o.check || '';
+        a.check = { attribute: T(attr) };
+        if (ab.check.hasCheck || attr) a.check.hasCheck = true;
+        const out = String(ab.check.outcome || '');
+        if (out) a.outcome = (out === '失敗' || out === '失败' || out === 'failure') ? 'failure' : 'success';
+      }
+      if (ab && ab.qte) {
+        a.qte = true;
+        const qout = String(ab.qte.outcome || '');
+        if (qout) a.outcome = qout === 'failure' ? 'failure' : 'success';
+      }
       return a;
     }),
-    selected: step2.choice ? T(step2.choice) : null,
-    results: Array.isArray(step2.results) ? step2.results.map(T) : [],
+    selected: branch.selected,
+    results: branch.results,
     _src: 'manual'
   };
-  if (step2.check) ev.check = step2.check;
-  if (step2.combat) ev.combat = step2.combat;
+  if (step1.eventKind) ev.eventKind = step1.eventKind;
+  if (stepBranches.length > 1) ev.branches = stepBranches;
+  if (branch.check) ev.check = branch.check;
+  if (branch.combat) ev.combat = branch.combat;
+  if (branch.progress) ev.progress = branch.progress;
+  if (branch.qte) ev.qte = branch.qte;
+  if (effects.length) ev.effects = effects;
   if (rec.scopes) ev.scopes = rec.scopes;
   if (rec.characters) ev.characters = rec.characters;
   if (rec.outcomes) ev.outcomes = rec.outcomes;
@@ -223,6 +283,19 @@ for (const rec of floors) {
   report.floors++;
 }
 
+/* ── 樓層長度（出口進度 N/M 的 M，與事件無關） ── */
+for (const rec of floorLengths) {
+  const fkey = fid(rec.floorId);
+  const fl = floorById.get(fkey);
+  if (!fl) { report.skipped++; continue; }
+  const len = Number(rec.length);
+  if (!Number.isFinite(len) || len <= 0) { report.skipped++; continue; }
+  if (Number(fl.data.length) === len) continue;
+  fl.data.length = len;
+  writes.push({ path: fl.path, data: fl.data });
+  report.floorLengths++;
+}
+
 /* ── 出口 ── */
 for (const rec of exits) {
   const fkey = fid(rec.floorId);
@@ -267,7 +340,7 @@ for (const rec of endings) {
 
 /* ── 寫入 ── */
 console.log('manual dir:', manualDir);
-console.log('found:', { events: events.length, items: items.length, floors: floors.length, exits: exits.length, endings: endings.length, pending: pending.length });
+console.log('found:', { events: events.length, items: items.length, floors: floors.length, floorLengths: floorLengths.length, exits: exits.length, endings: endings.length, pending: pending.length });
 if (!confirm) {
   console.log('dry-run:', report);
   console.log('加 --confirm 才會寫入（會先備份）');

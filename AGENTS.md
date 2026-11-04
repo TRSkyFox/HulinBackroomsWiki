@@ -140,7 +140,7 @@ enhancements/enhancements.json      强化表
 - `_status: 'name-only' | 'id-only'` 只给“只有名字／只有编号”的占位楼层；有正文就不要留这个字段。
 - 楼层 `doc` 只放页面会显示的“环境”引言 HTML；不要混事件、商店、战斗流水。
 - 不要把截图放进 `wiki/content`；截图只拿来读字，读完删。
-- 玩家账号名 `狐天`／`狐夭` 不进正文，一律换成“你”；`天狐` 是游戏角色，保留。
+- 玩家名与角色名按右侧队伍栏判断：普通事件本地玩家名 →“你”；角色事件玩家名 → 对应角色名（如 `狐天 → 諾亞`）；后缀是自选技能、对不上 `characters.json` 的不强行映射。
 - 内容 JSON 不要写入 `D:\Project\HulinBackroomsWiki\...` 这类绝对路径；用相对路径或只留 session 名。
 
 ---
@@ -227,8 +227,9 @@ node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\run-tests
    - 只删自己读过的那几张；不要用万用字元扫整个文件夹。
 
 6. **玩家名与角色名分开。**
-   - `狐天`／`狐夭` 是玩家账号名 → 正文换“你”。
-   - `天狐`、`小猦`、`呐豆` 等是角色名 → 保留。
+   - 普通事件：本地玩家名（队伍栏带“（你）”）→“你”；其他玩家名按队伍栏后缀映射角色名。
+   - 角色事件：玩家名 → 对应角色名（如 `狐天 → 諾亞`），不要一律换成“你”。
+   - 后缀是自选特殊技能、对不上 `characters.json` 的，按自订角色处理，不强行映射。
    - 不确定这一局操作的是哪个角色 → 先问。
 
 7. **语言。**
@@ -304,13 +305,13 @@ node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\run-tests
 
 ```text
 改 客户端/ExpeditionRecorder.cs（控制台／OCR 浮层）或 ExpeditionPlayer.cs（client-only 游戏）
-→ powershell -ExecutionPolicy Bypass -File 客户端/build.ps1
-→ 用 start.ps1 重开 ExpeditionRecorder；ExpeditionClient 可保持开启
+→ 直接运行 客户端/啟動.bat（默认先跑 build.ps1 再启动）
 ```
 
-- 只改 `ExpeditionRecorder.exe` 或 `backroom-logger.ps1`：关掉控制台、重新 `start.ps1` 即可，**不用关游戏**。
+- 只改 `ExpeditionRecorder.exe` 或 `backroom-logger.ps1`：关掉控制台、重新 `啟動.bat` 即可，**不用关游戏**。
 - 只有改到 `ExpeditionPlayer.cs` / `ExpeditionClient.exe`（WebView 游戏本身）才需要关游戏 client。
-- `start.ps1` 会跳过被 client 锁住的 exe／DLL；更新面板不会强关客户端。
+- `start.ps1` 默认先编译；面板正在运行时提示先关闭，client 锁住的 exe／DLL 会跳过；更新面板不会强关客户端。
+- 只想跳过编译时用 `啟動.bat -NoBuild`。
 
 ---
 
@@ -333,7 +334,7 @@ node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\run-tests
 - 不要恢复自动玩。
 - 不要用程序名称批量关程序。
 - 不要把截图放进 Wiki。
-- 不要写玩家名（`狐天`／`狐夭`）；`天狐` 是角色。
+- 不要写玩家名；普通事件本地玩家 →“你”，角色事件 → 对应角色名（按队伍栏映射）。
 - 不要直接改 `wiki/site/index.html`。
 - 不要只改 `客户端/structured` 或 `dist/.../structured`（会被 sync 覆盖）。
 - 不要用全域 `content/events.json` 或 `content/endings/`。

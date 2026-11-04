@@ -34,13 +34,16 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
 ```
 
-`start.ps1` 会：
+`start.ps1` 默认会：
 
-1. 把 `客户端` 的可执行文件、DLL、`structured` 同步副本复制到 `%LOCALAPPDATA%\Expedition\app`；
-2. 从 `客户端\Recorder` 覆盖 `backroom-logger.ps1`、`palette-from-shots.ps1`；
-3. 把 `app\logs` 接成 `客户端\Recorder\logs` 的 junction；
-4. 启动本机那份 `ExpeditionRecorder.exe`；
-5. 控制台再启动 `ExpeditionClient.exe`。
+1. 先运行 `build.ps1`，把最新源码编译成 `ExpeditionRecorder.exe`、`ExpeditionClient.exe`；
+2. 把 `客户端` 的可执行文件、DLL、`structured` 同步副本复制到 `%LOCALAPPDATA%\Expedition\app`；
+3. 从 `客户端\Recorder` 覆盖 `backroom-logger.ps1`、`palette-from-shots.ps1`；
+4. 把 `app\logs` 接成 `客户端\Recorder\logs` 的 junction；
+5. 启动本机那份 `ExpeditionRecorder.exe`；
+6. 控制台再启动 `ExpeditionClient.exe`。
+
+**运行前先关闭旧的记录器面板**；面板的 exe 被占用时无法替换，`start.ps1` 会直接提示并停止，避免启动旧版本。只想跳过编译、直接启动现有 exe 时，加 `-NoBuild`。
 
 客户端已经开著时，控制台会接上现有窗口，不会再开第二个。浏览器开同一个游戏页面不会被误认。
 
@@ -49,7 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
 ## 3. 记录流程（默认 Q／E）
 
 - **Q**：按住出现圆盘；滑向模式后放开即选。再按 Q 结束当前记录。
-- **E**：框选／记录下一步。
+- **E**：框选／记录下一步。覆盖层会用彩色框标出识别结果：**蓝=楼层名、橙=事件名、绿=选项、黄=选项条件**。
 - 圆盘六种模式：**事件／物品／楼层介绍／出口／结局／商店**。
 - 按键可在面板“按键设置”改，设置写在 app 目录的 `hotkeys.json`。
 
@@ -57,7 +60,37 @@ powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
 
 1. 第 1 步：框事件名＋介绍＋这一屏的选项。
 2. 第 2 步以后：框选择、结果、检定、战斗、跳层。
-3. 没有后续就再按 Q 结束；结束窗可选楼层（事件发生地）与结果分类。
+3. 没有后续就再按 Q 结束；结束窗可选楼层（事件发生地）、归属与结果分类（普通／跳层／商店／休息／战斗）。
+
+记录规则：
+
+- 选项条件只记“属性＋是否有检定”，不写难度数字；例如“敏捷 难度12”只记敏捷检定。
+- 选择需要检定的事件后，只记检定结果“成功／失败”，不写骰值与难度。
+- 大成功／大失败按普通成功／失败记录；它们额外附带的奖励或惩罚行整行不记。
+- 结果正文单独记录；体力、理智、饥饿、口渴只记增加／减少，状态效果与获得物品照常记录。
+- 饥饿／口渴归零触发的警示，以及随之扣体力／理智，整行不记。
+- 事件造成的“出口进度 +N／-N”会记录为事件结果。
+- “出口进度 N/M”不进事件；只把 M 记到对应楼层的 `length`（楼层长度）。
+- “记忆碎片 +N”会记录为效果。
+- QTE：红三角提示行不记；“反应过来了”“反应过来的有 N 个人”记成功，“只有 0 个人反应过来”“慢了一步”记失败；结果正文与效果照常记录。多人 QTE 的总体结果写 `qte.outcome`，个人成功／`（慢了一步）`写 `qte.players`。QTE 选项会在 Wiki 选项文本下显示 `⚠QTE`。
+- 进入战斗时，只记到战斗前的介绍；结束窗勾“进入战斗”并填实体名称，不记录战斗过程。
+
+特殊选项与自由／岔路事件：
+
+- 金色文字或 `★` 开头的选项记为 `special: true`；按条件来源写 `specialReason`：`attribute`／`item`／`character`／`skill`／`status`／`event`。
+- `各自选一个去做` 之类的事件记为 `eventKind: "free"`；一次框到多个“→ 玩家：「选择」”会自动拆成多个分支，也可以连续按 E 记录，分支带 `player`／`players`／`character`／`characters`。
+- 多人共同选择写成 `→ 天狐、狐天：「…」` 时，`players` 会拆成两个名字，`characters` 分别映射。
+- `所有人：各得到 5 硬币` 记为共享效果，`text` 保留“所有人 各得到 5 硬币”，不会拆成普通的 5 硬币。
+- `各自选一条路` 记为 `eventKind: "junction"`；事件描述照常记录，分支同样按玩家分步记录。
+
+多人队伍：
+
+- 按 E 时会扫描右侧队伍栏，读取“玩家名＋角色后缀”；名字允许带 `★`、`?`、`_`、英文和等级星号（如 `Lv7★`），先取 `Lv` 前的玩家名，再用 `Lv` 后的称号对 `characters.json`。
+- 后缀能对上 `characters.json` 的角色称号时，建立“玩家名 → 角色名”映射。
+- `「玩家名 自己的选择」…一按就算数` 这类事件会自动标成角色事件，并把玩家名换成真实角色名（例如 `狐天 → 諾亞`）。
+- 普通事件里，本地玩家名（队伍栏带“（你）”）换成“你”；其他玩家名按映射换成角色名。
+- 后缀是自选特殊技能、找不到角色称号的，按自订角色处理，不强行映射。
+- `要由谁来…`、`大家推派…` 两行不记录；`感染拖太久→恶化` 这类身上状态变化也不记录。
 
 输出（JSONL，一行一笔）：
 
@@ -66,6 +99,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
   events-YYYYMMDD.jsonl
   items-YYYYMMDD.jsonl
   floors-YYYYMMDD.jsonl
+  floor-lengths-YYYYMMDD.jsonl
   exits-YYYYMMDD.jsonl
   endings-YYYYMMDD.jsonl
   shops-YYYYMMDD.jsonl
@@ -101,15 +135,18 @@ node 客户端\Recorder\structured\import-manual.mjs --confirm
 参数：
 
 ```powershell
-客户端\啟動.bat -NoRecord                 # 只开游戏，不录
-客户端\啟動.bat -NoOverlay                # 不显示旧 OCR 覆盖层
-客户端\啟動.bat -Preset 1600x900          # 1280x720 / 1600x900 / 1920x1080 / 2400x1350
-客户端\啟動.bat -Url https://...          # 换测试网址
+客户端\啟動.bat -NoBuild                 # 跳过编译，直接启动现有 exe
+客户端\啟動.bat -NoRecord                # 只开游戏，不录
+客户端\啟動.bat -NoOverlay               # 不显示旧 OCR 覆盖层
+客户端\啟動.bat -Preset 1600x900         # 1280x720 / 1600x900 / 1920x1080 / 2400x1350
+客户端\啟動.bat -Url https://...         # 换测试网址
 ```
 
 ---
 
 ## 5. 编译
+
+正常情况下**不需要手动编译**：`啟動.bat`／`start.ps1` 默认会先跑 `build.ps1`。只有想单独验证编译结果时才手动运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File 客户端\build.ps1
@@ -123,11 +160,11 @@ powershell -ExecutionPolicy Bypass -File 客户端\build.ps1
 
 `build.ps1` 会：
 
-- 编译 `ExpeditionPlayer.cs` → `ExpeditionPlayer.exe`，再复制成 `ExpeditionClient.exe`；
-- 编译 `ExpeditionRecorder.cs` → `ExpeditionRecorder.exe`；
+- 先编译到临时目录，再替换 `ExpeditionRecorder.exe`；面板正在运行时直接报错，要求先关闭面板；
+- 编译 `ExpeditionPlayer.cs` → `ExpeditionClient.exe`；目标 exe 被占用时警告并跳过；
 - 复制 WebView2 DLL、`Recorder\backroom-logger.ps1`、`Recorder\palette-from-shots.ps1`、`Recorder\structured\*`。
 
-客户端正在跑时，被锁住的 exe／DLL 会跳过，只更新面板；之后重开控制台即可。
+游戏客户端正在跑时，`start.ps1` 复制到 app 会跳过被占用的客户端 exe／DLL；面板仍可更新，关闭游戏后重新运行 `啟動.bat` 即可更新客户端。
 
 ---
 

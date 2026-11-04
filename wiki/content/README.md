@@ -195,10 +195,12 @@ content\新增条目.bat floor 197 打烊的量贩店
   "info": { "id": "LX", "name": "尽力弥补", "roman": "LX", "items": [], "desc": "" },
   "doc": "<h4>环境</h4><blockquote>…</blockquote>",
   "palette": { "bg": "#EDEBE6", "acc": "#6F6A5E" },
-  "paletteKey": "60"
+  "paletteKey": "60",
+  "length": 13
 }
 ```
 
+- `length` 是该层“出口进度 N/M”的总数 M；由记录器的 `floor-lengths-*.jsonl` 独立导入，不属于事件。
 - `doc` 只放楼层页真的会显示的“环境”引言 HTML；旧事件记录、表格、`<code>`、未显示段落一律不要放。
 - 这一层的专属设计写在**同文件夹的 `design.css`**，重建时会一起塞进网页。
 - `design.css` 只作用于 `html[data-pal="…"]`，不要引用其他楼层。
