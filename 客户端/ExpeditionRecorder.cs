@@ -700,6 +700,7 @@ namespace ExpeditionRecorder
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
         public Func<bool> EscapeHandler;
+        public Action OverlayCancel;
         /* 回呼超過 100ms 就代表這次拖慢了鉤子。Windows 會在使用者沒按鍵的
            空檔把反應太慢的低級鉤子悄悄移除，而且不通知任何人——移除之後
            Q／E 就完全沒反應，看起來就像「有時候鍵盤不聽了」。 */
@@ -772,6 +773,13 @@ namespace ExpeditionRecorder
                     if (down || up)
                     {
                         int vk = Marshal.ReadInt32(lParam);
+                        /* 框选/扫描覆盖层打开时，直接由钩子收取消键，
+                           不依赖覆盖层是否抢到焦点。 */
+                        if (down && vk == CancelVk && OverlayCancel != null)
+                        {
+                            OverlayCancel();
+                            return (IntPtr)1;
+                        }
                         /* Esc 只在游戏窗口，或记录器自己的浮层（Q 圆盘）上处理；
                            其他程序一律放行。 */
                         if (down && vk == 0x1B && EscapeHandler != null && !TypingState.IsEditing)
@@ -4371,6 +4379,22 @@ namespace ExpeditionRecorder
         {
             bool disabled = false;
             OverlayOpen = true;
+            if (Keys != null)
+            {
+                Keys.OverlayCancel = delegate
+                {
+                    try
+                    {
+                        Action close = delegate
+                        {
+                            if (!f.IsDisposed) { f.DialogResult = DialogResult.Cancel; f.Close(); }
+                        };
+                        if (f.IsHandleCreated) f.BeginInvoke(close);
+                        else close();
+                    }
+                    catch { }
+                };
+            }
             try
             {
                 try
@@ -4383,6 +4407,7 @@ namespace ExpeditionRecorder
             finally
             {
                 OverlayOpen = false;
+                try { if (Keys != null) Keys.OverlayCancel = null; } catch { }
                 try { if (Keys != null) { Keys.ResetDown(); Keys.Reinstall(); } } catch { }
                 try { if (disabled && Native.IsWindow(GameHwnd)) Native.EnableWindow(GameHwnd, true); } catch { }
                 try { if (Native.IsWindow(GameHwnd)) Native.SetForegroundWindow(GameHwnd); } catch { }
