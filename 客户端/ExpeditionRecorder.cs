@@ -2150,6 +2150,278 @@ namespace ExpeditionRecorder
         public Dictionary<string, object> Data;
     }
 
+    /* ══ 已記錄：結構化編輯（不讓玩家改 JSON 原文） ═════════ */
+    class RecordEditForm : Form
+    {
+        RecordEntry _entry;
+        Panel _panel;
+        int _y = 12;
+        List<Action> _savers = new List<Action>();
+
+        public RecordEditForm(RecordEntry entry)
+        {
+            _entry = entry;
+            Text = "編輯記錄：" + entry.Kind;
+            ClientSize = new Size(780, 700);
+            FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            TopMost = true;
+            StartPosition = FormStartPosition.CenterParent;
+            BackColor = Color.FromArgb(28, 28, 31);
+            ForeColor = Color.FromArgb(230, 230, 235);
+            KeyPreview = true;
+
+            var bottom = new Panel();
+            bottom.Dock = DockStyle.Bottom;
+            bottom.Height = 48;
+            bottom.BackColor = Color.FromArgb(24, 24, 27);
+
+            var save = new Button();
+            save.Text = "保存修改";
+            save.SetBounds(12, 10, 120, 28);
+            save.FlatStyle = FlatStyle.Flat;
+            save.BackColor = Color.FromArgb(44, 44, 47);
+            save.ForeColor = Color.White;
+            save.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            save.Click += delegate { SaveAndClose(); };
+            bottom.Controls.Add(save);
+
+            var cancel = new Button();
+            cancel.Text = "取消";
+            cancel.SetBounds(144, 10, 100, 28);
+            cancel.FlatStyle = FlatStyle.Flat;
+            cancel.BackColor = Color.FromArgb(44, 44, 47);
+            cancel.ForeColor = Color.White;
+            cancel.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
+            bottom.Controls.Add(cancel);
+
+            var tip = new Label();
+            tip.Text = "只改结构字段；原始 JSONL 由程序重写，不需要手动改原文。";
+            tip.SetBounds(260, 15, 500, 20);
+            tip.ForeColor = Color.FromArgb(160, 160, 168);
+            bottom.Controls.Add(tip);
+
+            _panel = new Panel();
+            _panel.Dock = DockStyle.Fill;
+            _panel.AutoScroll = true;
+            _panel.Padding = new Padding(10);
+            _panel.BackColor = Color.FromArgb(32, 32, 36);
+            Controls.Add(_panel);
+            Controls.Add(bottom);
+            bottom.BringToFront();
+
+            BuildFields();
+            KeyDown += delegate (object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
+                else if (e.Control && e.KeyCode == Keys.S) SaveAndClose();
+            };
+        }
+
+        Label AddHeading(string text)
+        {
+            var l = new Label();
+            l.Text = text;
+            l.SetBounds(14, _y, 720, 24);
+            l.ForeColor = Color.FromArgb(255, 214, 120);
+            l.Font = new Font("Microsoft JhengHei UI", 10F, FontStyle.Bold);
+            _panel.Controls.Add(l);
+            _y += 30;
+            return l;
+        }
+
+        TextBox AddRaw(string label, string value, bool multi, int height)
+        {
+            var l = new Label();
+            l.Text = label;
+            l.SetBounds(14, _y + 4, 130, 20);
+            l.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(l);
+            var t = new TextBox();
+            t.Multiline = multi;
+            t.ScrollBars = multi ? ScrollBars.Vertical : ScrollBars.None;
+            t.SetBounds(150, _y, 560, multi ? height : 24);
+            t.BackColor = Color.FromArgb(40, 40, 44);
+            t.ForeColor = Color.White;
+            t.BorderStyle = BorderStyle.FixedSingle;
+            t.Text = value ?? "";
+            _panel.Controls.Add(t);
+            _y += (multi ? height : 24) + 10;
+            return t;
+        }
+
+        void AddText(Dictionary<string, object> d, string key, string label)
+        {
+            string val = d != null && d.ContainsKey(key) ? Convert.ToString(d[key]) : "";
+            var t = AddRaw(label, val, false, 24);
+            _savers.Add(delegate { if (d != null) d[key] = t.Text; });
+        }
+
+        void AddLongText(Dictionary<string, object> d, string key, string label)
+        {
+            string val = d != null && d.ContainsKey(key) ? Convert.ToString(d[key]) : "";
+            var t = AddRaw(label, val, true, 86);
+            _savers.Add(delegate { if (d != null) d[key] = t.Text; });
+        }
+
+        void AddList(Dictionary<string, object> d, string key, string label, bool dictItems)
+        {
+            var old = d != null && d.ContainsKey(key) ? d[key] as System.Collections.ArrayList : null;
+            var vals = new List<string>();
+            if (old != null)
+            {
+                foreach (var x in old)
+                {
+                    var xd = x as Dictionary<string, object>;
+                    vals.Add(xd != null ? Convert.ToString(xd.ContainsKey("text") ? xd["text"] : "") : Convert.ToString(x));
+                }
+            }
+            var t = AddRaw(label + "（每行一条）", string.Join("\r\n", vals.ToArray()), true, 90);
+            _savers.Add(delegate
+            {
+                var arr = new System.Collections.ArrayList();
+                int idx = 0;
+                foreach (var line in t.Lines)
+                {
+                    string v = (line ?? "").Trim();
+                    if (v == "") continue;
+                    if (dictItems)
+                    {
+                        Dictionary<string, object> od = null;
+                        if (old != null && idx < old.Count) od = old[idx] as Dictionary<string, object>;
+                        if (od == null) od = new Dictionary<string, object>();
+                        od["text"] = v;
+                        arr.Add(od);
+                    }
+                    else arr.Add(v);
+                    idx++;
+                }
+                if (d != null) d[key] = arr;
+            });
+        }
+
+        void BuildFields()
+        {
+            var o = _entry.Data;
+            AddHeading("結構化欄位");
+            if (_entry.Kind == "事件")
+            {
+                AddText(o, "floorId", "樓層 ID");
+                AddText(o, "floorName", "樓層名稱");
+                var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
+                Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
+                AddHeading("第 1 步");
+                string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
+                var tt = AddRaw("事件名", title, false, 24);
+                _savers.Add(delegate
+                {
+                    if (s1 != null) s1["title"] = tt.Text;
+                    if (o.ContainsKey("title")) o["title"] = tt.Text;
+                });
+                if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
+                else AddLongText(o, "intro", "事件介紹");
+                if (s1 != null && s1.ContainsKey("options")) AddList(s1, "options", "選項", true);
+                else AddList(o, "options", "選項", true);
+                if (steps != null)
+                {
+                    for (int i = 1; i < steps.Count; i++)
+                    {
+                        var st = steps[i] as Dictionary<string, object>;
+                        if (st == null) continue;
+                        AddHeading("第 " + (i + 1) + " 步");
+                        AddText(st, "choice", "決定");
+                        AddList(st, "results", "結果", false);
+                    }
+                }
+            }
+            else if (_entry.Kind == "物品")
+            {
+                AddText(o, "name", "名稱");
+                AddText(o, "type", "類型");
+                AddText(o, "source", "來源");
+                AddText(o, "price", "參考價格");
+                AddText(o, "character", "角色");
+                AddLongText(o, "desc", "介紹");
+                AddList(o, "eff", "效果", false);
+                AddList(o, "cures", "可治療", false);
+            }
+            else if (_entry.Kind == "樓層")
+            {
+                AddText(o, "floorId", "樓層 ID");
+                AddText(o, "floorName", "樓層名稱");
+                AddText(o, "theme", "主題（light／dark）");
+                AddLongText(o, "intro", "樓層介紹");
+                Dictionary<string, object> pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
+                if (pal != null)
+                {
+                    AddText(pal, "bg", "配色：底色");
+                    AddText(pal, "title", "配色：標題");
+                    AddText(pal, "text", "配色：正文");
+                }
+            }
+            else if (_entry.Kind == "出口")
+            {
+                AddText(o, "floorId", "樓層 ID");
+                AddText(o, "floorName", "樓層名稱");
+                AddText(o, "event", "出口事件");
+                AddText(o, "target", "通往樓層");
+                AddLongText(o, "intro", "事件介紹");
+                AddLongText(o, "transition", "通往文本");
+            }
+            else if (_entry.Kind == "結局")
+            {
+                AddText(o, "name", "結局名稱");
+                AddText(o, "category", "分類");
+                AddLongText(o, "intro", "通用介紹");
+                AddLongText(o, "epilogue", "後日談");
+            }
+            else if (_entry.Kind == "商店")
+            {
+                AddText(o, "title", "商店標題");
+                AddText(o, "floorId", "樓層 ID");
+                AddText(o, "floorName", "樓層名稱");
+                AddLongText(o, "intro", "商店介紹");
+                AddList(o, "items", "商品", false);
+            }
+            else
+            {
+                var l = new Label();
+                l.Text = "這種記錄尚未提供結構化編輯。";
+                l.SetBounds(14, _y, 700, 24);
+                l.ForeColor = Color.FromArgb(220, 160, 120);
+                _panel.Controls.Add(l);
+            }
+        }
+
+        void SaveAndClose()
+        {
+            try
+            {
+                foreach (var save in _savers) save();
+                var ser = new JavaScriptSerializer();
+                var lines = new List<string>(File.ReadAllLines(_entry.File));
+                bool replaced = false;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (lines[i] == _entry.Line)
+                    {
+                        lines[i] = ser.Serialize(_entry.Data);
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (!replaced) throw new Exception("找不到原始記錄行，請重新整理後再修改。");
+                File.WriteAllLines(_entry.File, lines.ToArray(), new UTF8Encoding(false));
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("保存失敗：" + ex.Message, "已記錄", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+
     class RecordsForm : Form
     {
         TextBox _search, _detail;
@@ -2210,15 +2482,16 @@ namespace ExpeditionRecorder
             Controls.Add(_detail);
 
             _count = new Label();
-            _count.SetBounds(12, 530, 420, 22);
+            _count.SetBounds(12, 560, 880, 18);
             _count.ForeColor = Color.FromArgb(170, 170, 178);
             Controls.Add(_count);
 
-            var reload = MkBtn("重整", 444, 528, 90); reload.Click += delegate { LoadAll(); };
-            var del = MkBtn("刪除選中", 540, 528, 100); del.Click += delegate { DeleteSelected(); };
-            var open = MkBtn("開啟資料夾", 646, 528, 110); open.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
-            var close = MkBtn("關閉", 762, 528, 90); close.Click += delegate { Close(); };
-            Controls.Add(reload); Controls.Add(del); Controls.Add(open); Controls.Add(close);
+            var edit = MkBtn("編輯選中", 12, 528, 100); edit.Click += delegate { EditSelected(); };
+            var reload = MkBtn("重整", 120, 528, 90); reload.Click += delegate { LoadAll(); };
+            var del = MkBtn("刪除選中", 218, 528, 100); del.Click += delegate { DeleteSelected(); };
+            var open = MkBtn("開啟資料夾", 326, 528, 110); open.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
+            var close = MkBtn("關閉", 444, 528, 90); close.Click += delegate { Close(); };
+            Controls.Add(edit); Controls.Add(reload); Controls.Add(del); Controls.Add(open); Controls.Add(close);
 
             LoadAll();
         }
@@ -2545,6 +2818,15 @@ namespace ExpeditionRecorder
                 return ser.Serialize(d);
             }
             return Convert.ToString(v);
+        }
+
+        void EditSelected()
+        {
+            int i = _list.SelectedIndex;
+            if (i < 0 || i >= _shown.Count) return;
+            var f = new RecordEditForm(_shown[i]);
+            if (f.ShowDialog() == DialogResult.OK) LoadAll();
+            f.Dispose();
         }
 
         void DeleteSelected()
@@ -2905,10 +3187,19 @@ namespace ExpeditionRecorder
             foreach (var l in sel) lines.Add(Party.Normalize(l.Text.Trim()));
             string first = lines.Count > 0 ? lines[0] : "";
             var rec = new Dictionary<string, object>();
-            rec["floorRaw"] = first;
+            /* 左上角识别到的楼层优先；框选内容只用来补充简介。 */
+            string fid = Parse.FloorId, fname = Parse.FloorName;
             var mf = System.Text.RegularExpressions.Regex.Match(first, @"Level\s*([0-9A-Za-z.]+)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
-            rec["floorId"] = mf.Success ? mf.Groups[1].Value : "";
-            rec["floorName"] = mf.Success ? mf.Groups[2].Value : first;
+            if (fid == "" && mf.Success)
+            {
+                fid = mf.Groups[1].Value;
+                if (fid == "O" || fid == "o") fid = "0";
+                if (fid == "I" || fid == "l") fid = "1";
+                fname = mf.Groups[2].Value;
+            }
+            rec["floorRaw"] = fid != "" ? ("Level " + fid + "「" + fname + "」") : first;
+            rec["floorId"] = fid;
+            rec["floorName"] = fname;
             var rest = new List<string>();
             for (int i = 1; i < lines.Count; i++) rest.Add(lines[i]);
             rec["intro"] = string.Join("\n", rest.ToArray());
