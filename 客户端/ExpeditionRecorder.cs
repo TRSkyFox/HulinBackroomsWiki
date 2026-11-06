@@ -1818,6 +1818,8 @@ namespace ExpeditionRecorder
             if (type == "combat-enemy" || type == "character-missing") return "事件";
             if (type == "item-incomplete") return "物品";
             if (type == "shop-incomplete") return "商店";
+            if (type == "floor-unknown") return "樓層";
+            if (type == "exit-target") return "出口";
             return "";
         }
 
@@ -2800,6 +2802,7 @@ namespace ExpeditionRecorder
             else if (_shown[i].Kind == "樓層") FormatFloor(sb, o);
             else if (_shown[i].Kind == "出口") FormatExit(sb, o);
             else if (_shown[i].Kind == "結局") FormatEnding(sb, o);
+            else if (_shown[i].Kind == "商店") FormatShop(sb, o);
             _detail.Text = sb.ToString();
         }
 
@@ -3070,6 +3073,27 @@ namespace ExpeditionRecorder
             sb.AppendLine("分類：" + Str(o, "category"));
             if (Str(o, "intro") != "") { sb.AppendLine("通用介紹："); foreach (var l in Str(o, "intro").Split('\n')) sb.AppendLine("  " + l); }
             if (Str(o, "epilogue") != "") { sb.AppendLine("後日談："); foreach (var l in Str(o, "epilogue").Split('\n')) sb.AppendLine("  " + l); }
+        }
+
+        static void FormatShop(StringBuilder sb, Dictionary<string, object> o)
+        {
+            sb.AppendLine("商店：" + Str(o, "title"));
+            sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
+            if (Str(o, "intro") != "")
+            {
+                sb.AppendLine("介紹：");
+                foreach (var l in Str(o, "intro").Split('\n')) sb.AppendLine("  " + l);
+            }
+            var items = o.ContainsKey("items") ? o["items"] as System.Collections.ArrayList : null;
+            if (items != null && items.Count > 0)
+            {
+                sb.AppendLine("商品：");
+                foreach (var it in items)
+                {
+                    var d = it as Dictionary<string, object>;
+                    sb.AppendLine("  · " + (d != null ? Str(d, "n") : Convert.ToString(it)));
+                }
+            }
         }
 
         static string FormatValue(object v)
