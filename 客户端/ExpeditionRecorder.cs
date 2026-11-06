@@ -1615,6 +1615,7 @@ namespace ExpeditionRecorder
         Label _type;
         Label _l1, _l2, _l3;
         TextBox _f1, _f2, _f3;
+        Button _edit;
         List<string[]> _refs = new List<string[]>();
         List<Dictionary<string, object>> _objs = new List<Dictionary<string, object>>();
         System.Windows.Forms.Timer _follow, _refresh;
@@ -1654,10 +1655,12 @@ namespace ExpeditionRecorder
             var del = MkBtn("刪除", 120, 452, 100); del.Click += delegate { Delete(); };
             var refresh = MkBtn("重新整理", 230, 452, 120); refresh.Click += delegate { Reload(); };
             Controls.Add(save); Controls.Add(del); Controls.Add(refresh);
+            _edit = MkBtn("編輯結構", 10, 500, 370); _edit.Click += delegate { EditSelected(); };
+            Controls.Add(_edit);
 
             var tip = new Label();
-            tip.Text = "改完按保存：會同時改原始記錄";
-            tip.SetBounds(10, 492, 370, 20);
+            tip.Text = "事件請按「編輯結構」修改所有文字，不要改 JSON 原文";
+            tip.SetBounds(10, 532, 370, 20);
             tip.ForeColor = Color.FromArgb(140, 140, 148);
             Controls.Add(tip);
 
@@ -1781,7 +1784,14 @@ namespace ExpeditionRecorder
             var data = ok ? _objs[i]["data"] as Dictionary<string, object> : null;
             string type = ok ? Convert.ToString(_objs[i]["type"]) : "";
             _l1.Visible = _f1.Visible = _l2.Visible = _f2.Visible = _l3.Visible = _f3.Visible = ok;
+            if (_edit != null) _edit.Visible = ok && IsStructuredPending(type);
             if (!ok || data == null) { _f1.Text = _f2.Text = _f3.Text = ""; return; }
+            if (IsStructuredPending(type))
+            {
+                _l1.Visible = _f1.Visible = _l2.Visible = _f2.Visible = _l3.Visible = _f3.Visible = false;
+                _type.Text = type + "（按下方「編輯結構」修改全部文字）";
+                return;
+            }
             if (type == "floor-unknown")
             {
                 _l1.Text = "樓層 id"; _l2.Text = "名稱"; _l3.Text = "介紹";
@@ -1803,6 +1813,44 @@ namespace ExpeditionRecorder
             }
         }
 
+        static string EditKind(string type)
+        {
+            if (type == "combat-enemy" || type == "character-missing") return "事件";
+            if (type == "item-incomplete") return "物品";
+            if (type == "shop-incomplete") return "商店";
+            return "";
+        }
+
+        static bool IsStructuredPending(string type)
+        {
+            return EditKind(type) != "";
+        }
+
+        void EditSelected()
+        {
+            int i = _list.SelectedIndex;
+            if (i < 0 || i >= _objs.Count) return;
+            var o = _objs[i];
+            var data = o["data"] as Dictionary<string, object>;
+            if (data == null) return;
+            string type = Convert.ToString(o["type"]);
+            string kind = EditKind(type);
+            if (kind == "")
+            {
+                MessageBox.Show("這一類待處理項目尚未提供結構化編輯。", "待處理", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var refs = _refs[i];
+            var f = new RecordEditForm(kind, data, delegate (Dictionary<string, object> nd)
+            {
+                o["data"] = nd;
+                PatchSourceEvent(Convert.ToString(nd.ContainsKey("id") ? nd["id"] : ""), nd);
+                RemoveLine(refs[0], refs[1]);
+            });
+            if (f.ShowDialog() == DialogResult.OK) Reload();
+            f.Dispose();
+        }
+
         void Save()
         {
             int i = _list.SelectedIndex;
@@ -1811,6 +1859,7 @@ namespace ExpeditionRecorder
             var data = o["data"] as Dictionary<string, object>;
             string type = Convert.ToString(o["type"]);
             if (data == null) return;
+            if (IsStructuredPending(type)) { EditSelected(); return; }
             if (type == "floor-unknown")
             {
                 data["floorId"] = _f1.Text.Trim();
@@ -1855,6 +1904,36 @@ namespace ExpeditionRecorder
                 var lines = new List<string>(File.ReadAllLines(file));
                 lines.Remove(line);
                 File.WriteAllLines(file, lines.ToArray(), new UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        static void PatchSourceEvent(string id, Dictionary<string, object> data)
+        {
+            if (string.IsNullOrEmpty(id) || data == null) return;
+            try
+            {
+                foreach (var f in Directory.GetFiles(Program.DataDir(), "*.jsonl"))
+                {
+                    string name = Path.GetFileName(f);
+                    if (name.StartsWith("pending-") || name.StartsWith("draft-")) continue;
+                    var lines = new List<string>(File.ReadAllLines(f));
+                    bool changed = false;
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        if (lines[i].Trim().Length == 0) continue;
+                        try
+                        {
+                            var rec = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(lines[i]);
+                            if (rec == null || !rec.ContainsKey("id")) continue;
+                            if (Convert.ToString(rec["id"]) != id) continue;
+                            lines[i] = new JavaScriptSerializer().Serialize(data);
+                            changed = true;
+                        }
+                        catch { }
+                    }
+                    if (changed) File.WriteAllLines(f, lines.ToArray(), new UTF8Encoding(false));
+                }
             }
             catch { }
         }
@@ -2164,14 +2243,26 @@ namespace ExpeditionRecorder
     class RecordEditForm : Form
     {
         RecordEntry _entry;
+        string _kind;
+        Dictionary<string, object> _data;
+        Action<Dictionary<string, object>> _externalSave;
         Panel _panel;
         int _y = 12;
         List<Action> _savers = new List<Action>();
 
         public RecordEditForm(RecordEntry entry)
+            : this(entry.Kind, entry.Data, null)
         {
             _entry = entry;
             Text = "編輯記錄：" + entry.Kind;
+        }
+
+        public RecordEditForm(string kind, Dictionary<string, object> data, Action<Dictionary<string, object>> externalSave)
+        {
+            _kind = kind;
+            _data = data;
+            _externalSave = externalSave;
+            Text = "編輯記錄：" + kind;
             ClientSize = new Size(780, 700);
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
@@ -2312,15 +2403,15 @@ namespace ExpeditionRecorder
 
         void BuildFields()
         {
-            var o = _entry.Data;
+            var o = _data;
             AddHeading("結構化欄位");
-            if (_entry.Kind == "事件")
+            if (_kind == "事件")
             {
+                AddHeading("事件");
                 AddText(o, "floorId", "樓層 ID");
                 AddText(o, "floorName", "樓層名稱");
                 var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
-                AddHeading("第 1 步");
                 string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
                 var tt = AddRaw("事件名", title, false, 24);
                 _savers.Add(delegate
@@ -2330,21 +2421,105 @@ namespace ExpeditionRecorder
                 });
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
-                if (s1 != null && s1.ContainsKey("options")) AddList(s1, "options", "選項", true);
-                else AddList(o, "options", "選項", true);
+
+                var branches = new List<Dictionary<string, object>>();
                 if (steps != null)
                 {
                     for (int i = 1; i < steps.Count; i++)
                     {
                         var st = steps[i] as Dictionary<string, object>;
                         if (st == null) continue;
-                        AddHeading("第 " + (i + 1) + " 步");
-                        AddText(st, "choice", "決定");
-                        AddList(st, "results", "結果", false);
+                        var nested = st.ContainsKey("branches") ? st["branches"] as System.Collections.ArrayList : null;
+                        if (nested != null)
+                        {
+                            foreach (var n in nested) { var nd = n as Dictionary<string, object>; if (nd != null) branches.Add(nd); }
+                        }
+                        else branches.Add(st);
                     }
                 }
+                else if (o.ContainsKey("choice")) branches.Add(o);
+
+                var opts = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
+                AddHeading("選項");
+                if (opts != null && opts.Count > 0)
+                {
+                    for (int oi = 0; oi < opts.Count; oi++)
+                    {
+                        var od = opts[oi] as Dictionary<string, object>;
+                        if (od == null) continue;
+                        AddHeading("選項 " + (oi + 1));
+                        AddText(od, "text", "選項文字");
+                        if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
+                        if (od.ContainsKey("check")) AddText(od, "check", "檢定屬性");
+                        if (od.ContainsKey("conditionText")) AddLongText(od, "conditionText", "出現條件");
+                        var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+                        if (req != null)
+                        {
+                            AddText(req, "type", "需求類型");
+                            AddText(req, "name", "需求名稱");
+                            if (req.ContainsKey("min")) AddText(req, "min", "需求數值");
+                            if (req.ContainsKey("consume")) AddText(req, "consume", "是否消耗");
+                        }
+                        else if (od.ContainsKey("requirement"))
+                            AddText(od, "requirement", "需求文字");
+                        string optText = Convert.ToString(od["text"]);
+                        foreach (var st in branches)
+                        {
+                            if (Convert.ToString(st.ContainsKey("choice") ? st["choice"] : "") != optText) continue;
+                            AddHeading("選中結果：" + optText);
+                            var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
+                            if (ck != null)
+                            {
+                                AddText(ck, "attribute", "判定屬性");
+                                AddText(ck, "outcome", "判定結果（成功／失敗）");
+                            }
+                            AddList(st, "results", "結果文本", false);
+                            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                            if (eff != null)
+                            {
+                                for (int ei = 0; ei < eff.Count; ei++)
+                                {
+                                    var ed = eff[ei] as Dictionary<string, object>;
+                                    if (ed != null) AddText(ed, "text", "影響文字 " + (ei + 1));
+                                }
+                            }
+                            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                            if (pg != null) AddText(pg, "delta", "出口進度增減");
+                        }
+                    }
+                }
+                else
+                {
+                    AddList(s1 ?? o, "options", "選項", true);
+                }
+                /* 選中但不在選項清單裡的分支，仍然給出可修改欄位。 */
+                foreach (var st in branches)
+                {
+                    string c = Convert.ToString(st.ContainsKey("choice") ? st["choice"] : "");
+                    bool matched = false;
+                    if (opts != null)
+                        foreach (var oo in opts)
+                        {
+                            var od = oo as Dictionary<string, object>;
+                            if (od != null && Convert.ToString(od["text"]) == c) { matched = true; break; }
+                        }
+                    if (matched) continue;
+                    AddHeading("選中（未匹配選項）：" + c);
+                    var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
+                    if (ck != null) { AddText(ck, "attribute", "判定屬性"); AddText(ck, "outcome", "判定結果"); }
+                    AddList(st, "results", "結果文本", false);
+                    var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                    if (eff != null)
+                        for (int ei = 0; ei < eff.Count; ei++)
+                        {
+                            var ed = eff[ei] as Dictionary<string, object>;
+                            if (ed != null) AddText(ed, "text", "影響文字 " + (ei + 1));
+                        }
+                    var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                    if (pg != null) AddText(pg, "delta", "出口進度增減");
+                }
             }
-            else if (_entry.Kind == "物品")
+            else if (_kind == "物品")
             {
                 AddText(o, "name", "名稱");
                 AddText(o, "type", "類型");
@@ -2355,7 +2530,7 @@ namespace ExpeditionRecorder
                 AddList(o, "eff", "效果", false);
                 AddList(o, "cures", "可治療", false);
             }
-            else if (_entry.Kind == "樓層")
+            else if (_kind == "樓層")
             {
                 AddText(o, "floorId", "樓層 ID");
                 AddText(o, "floorName", "樓層名稱");
@@ -2369,7 +2544,7 @@ namespace ExpeditionRecorder
                     AddText(pal, "text", "配色：正文");
                 }
             }
-            else if (_entry.Kind == "出口")
+            else if (_kind == "出口")
             {
                 AddText(o, "floorId", "樓層 ID");
                 AddText(o, "floorName", "樓層名稱");
@@ -2378,14 +2553,14 @@ namespace ExpeditionRecorder
                 AddLongText(o, "intro", "事件介紹");
                 AddLongText(o, "transition", "通往文本");
             }
-            else if (_entry.Kind == "結局")
+            else if (_kind == "結局")
             {
                 AddText(o, "name", "結局名稱");
                 AddText(o, "category", "分類");
                 AddLongText(o, "intro", "通用介紹");
                 AddLongText(o, "epilogue", "後日談");
             }
-            else if (_entry.Kind == "商店")
+            else if (_kind == "商店")
             {
                 AddText(o, "title", "商店標題");
                 AddText(o, "floorId", "樓層 ID");
@@ -2408,6 +2583,13 @@ namespace ExpeditionRecorder
             try
             {
                 foreach (var save in _savers) save();
+                if (_externalSave != null)
+                {
+                    _externalSave(_data);
+                    DialogResult = DialogResult.OK;
+                    Close();
+                    return;
+                }
                 var ser = new JavaScriptSerializer();
                 var lines = new List<string>(File.ReadAllLines(_entry.File));
                 bool replaced = false;
@@ -2680,8 +2862,74 @@ namespace ExpeditionRecorder
             return string.Join("、", parts.ToArray());
         }
 
+        static string EventEffectText(Dictionary<string, object> ed)
+        {
+            if (ed == null) return "";
+            string text = Str(ed, "text");
+            string amount = Str(ed, "amount");
+            if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + amount).Trim();
+            else if (amount != "" && amount != "0" && text.IndexOf(amount, StringComparison.Ordinal) < 0)
+                text += " " + amount;
+            string target = Str(ed, "target");
+            if (target != "" && text.IndexOf(target, StringComparison.Ordinal) < 0) return target + "：" + text;
+            return text;
+        }
+
+        static string EventProgressText(Dictionary<string, object> pg)
+        {
+            if (pg == null) return "";
+            string txt = "出口進度";
+            if (Str(pg, "delta") != "") txt += " " + Str(pg, "delta");
+            if (Str(pg, "current") != "") txt += "（" + Str(pg, "current") + "/" + Str(pg, "total") + "）";
+            return txt;
+        }
+
+        static List<Dictionary<string, object>> EventBranches(Dictionary<string, object> o)
+        {
+            var list = new List<Dictionary<string, object>>();
+            var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
+            if (steps == null) steps = new System.Collections.ArrayList();
+            if (steps.Count == 0 && o.ContainsKey("choice")) list.Add(o);
+            for (int i = 1; i < steps.Count; i++)
+            {
+                var st = steps[i] as Dictionary<string, object>;
+                if (st == null) continue;
+                var nested = st.ContainsKey("branches") ? st["branches"] as System.Collections.ArrayList : null;
+                if (nested != null)
+                {
+                    foreach (var n in nested)
+                    {
+                        var nd = n as Dictionary<string, object>;
+                        if (nd != null) list.Add(nd);
+                    }
+                }
+                else list.Add(st);
+            }
+            return list;
+        }
+
+        static string EventTitle(Dictionary<string, object> o)
+        {
+            var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
+            if (steps != null && steps.Count > 0)
+            {
+                var s1 = steps[0] as Dictionary<string, object>;
+                if (s1 != null && Str(s1, "title") != "") return Str(s1, "title");
+            }
+            return Str(o, "title");
+        }
+
+        static Dictionary<string, object> EventStep1(Dictionary<string, object> o)
+        {
+            var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
+            if (steps != null && steps.Count > 0)
+                return steps[0] as Dictionary<string, object>;
+            return o;
+        }
+
         static void FormatEvent(StringBuilder sb, Dictionary<string, object> o)
         {
+            sb.AppendLine("事件名：" + EventTitle(o));
             sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
             string scopes = JoinArr(o, "scopes");
             if (scopes == "") scopes = Str(o, "scope");
@@ -2690,82 +2938,97 @@ namespace ExpeditionRecorder
             sb.AppendLine("歸屬：" + ScopeText(scopes) + (chars != "" ? "　角色：" + chars : ""));
             string outs = JoinArr(o, "outcomes");
             if (outs == "") outs = Str(o, "outcome");
-            sb.AppendLine("結果：" + OutcomeText(outs) + (Str(o, "jumpTo") != "" ? " → " + Str(o, "jumpTo") : ""));
-            var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
-            if (steps == null && o.ContainsKey("step"))
+            sb.AppendLine("結果類型：" + OutcomeText(outs) + (Str(o, "jumpTo") != "" ? " → " + Str(o, "jumpTo") : ""));
+            var s1 = EventStep1(o);
+            string intro = s1 != null ? Str(s1, "intro") : Str(o, "intro");
+            if (intro != "")
             {
-                steps = new System.Collections.ArrayList();
-                steps.Add(o);
+                sb.AppendLine("介紹：");
+                foreach (var line in intro.Split('\n')) sb.AppendLine("  " + line.Trim());
             }
-            if (steps == null) return;
-            foreach (var so in steps)
+
+            var opts = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
+            var branches = EventBranches(o);
+            sb.AppendLine();
+            sb.AppendLine("選項：");
+            if (opts == null || opts.Count == 0) sb.AppendLine("  （尚無選項）");
+            else
             {
-                var st = so as Dictionary<string, object>;
-                if (st == null) continue;
-                sb.AppendLine();
-                sb.AppendLine("── 第 " + Str(st, "step") + " 步 ──");
-                if (Str(st, "title") != "") sb.AppendLine("【" + Str(st, "title") + "】");
-                string intro = Str(st, "intro");
-                if (intro != "")
+                foreach (var oo in opts)
                 {
-                    sb.AppendLine("介紹：");
-                    foreach (var line in intro.Split('\n')) sb.AppendLine("  " + line.Trim());
+                    var od = oo as Dictionary<string, object>;
+                    if (od == null) continue;
+                    string optText = Str(od, "text");
+                    sb.AppendLine("  · " + optText);
+                    if (Str(od, "desc") != "") sb.AppendLine("    " + Str(od, "desc"));
+                    if (od.ContainsKey("requirement")) sb.AppendLine("    需求：" + ReqText(od["requirement"]));
+                    if (Str(od, "conditionText") != "") sb.AppendLine("    出現需求：" + Str(od, "conditionText"));
+                    bool needCheck = Str(od, "check") != "";
+                    var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+                    if (req != null && Str(req, "type") == "attr") needCheck = true;
+                    foreach (var st in branches)
+                    {
+                        if (Str(st, "choice") != optText) continue;
+                        var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
+                        if (ck != null && Str(ck, "attribute") != "") needCheck = true;
+                        if (needCheck)
+                        {
+                            string attr = ck != null ? Str(ck, "attribute") : Str(od, "check");
+                            string outv = ck != null ? Str(ck, "outcome") : "";
+                            sb.AppendLine("    判定：" + (outv == "" ? "—" : (outv == "失敗" || outv == "失败" || outv == "failure" ? "失敗" : "成功")) + (attr != "" ? "（" + attr + "）" : ""));
+                        }
+                        var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
+                        if (qt != null)
+                        {
+                            string qo = Str(qt, "outcome");
+                            sb.AppendLine("    QTE：" + (qo == "failure" ? "失敗" : (qo == "success" ? "成功" : "已通過")));
+                        }
+                        var res = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
+                        if (res != null && res.Count > 0)
+                        {
+                            sb.AppendLine("    結果：");
+                            foreach (var r in res) sb.AppendLine("      " + Convert.ToString(r));
+                        }
+                        var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                        var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                        var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
+                        if ((eff != null && eff.Count > 0) || pg != null || cb != null)
+                        {
+                            sb.AppendLine("    影響：");
+                            if (cb != null) sb.AppendLine("      · 戰鬥：" + Str(cb, "enemy"));
+                            if (pg != null) sb.AppendLine("      · " + EventProgressText(pg));
+                            if (eff != null)
+                                foreach (var e in eff)
+                                {
+                                    var ed = e as Dictionary<string, object>;
+                                    if (ed != null) sb.AppendLine("      · " + EventEffectText(ed));
+                                }
+                        }
+                    }
                 }
-                var opts = st.ContainsKey("options") ? st["options"] as System.Collections.ArrayList : null;
-                if (opts != null && opts.Count > 0)
+                /* 選中的選項不在選項清單裡（舊記錄/OCR 差異）也要顯示。 */
+                var unmatched = branches.FindAll(delegate (Dictionary<string, object> b)
                 {
-                    sb.AppendLine("選項：");
+                    string c = Str(b, "choice");
+                    if (c == "") return false;
                     foreach (var oo in opts)
                     {
                         var od = oo as Dictionary<string, object>;
-                        if (od == null) continue;
-                        string line = "  · " + Str(od, "text");
-                        if (Str(od, "check") != "") line += "　[檢定 " + Str(od, "check") + "]";
-                        if (od.ContainsKey("requirement")) line += "　[需求 " + ReqText(od["requirement"]) + "]";
-                        sb.AppendLine(line);
+                        if (od != null && Str(od, "text") == c) return false;
                     }
-                }
-                if (Str(st, "choice") != "") sb.AppendLine("決定：" + Str(st, "choice"));
-                var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
-                if (ck != null)
+                    return true;
+                });
+                foreach (var st in unmatched)
                 {
-                    string attr = Str(ck, "attribute"); if (attr == "") attr = Str(ck, "attr");
-                    sb.AppendLine("檢定：" + attr + (Str(ck, "outcome") != "" ? " → " + Str(ck, "outcome") : ""));
-                }
-                var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
-                if (qt != null)
-                {
-                    string qo = Str(qt, "outcome");
-                    sb.AppendLine("QTE：" + (qo == "failure" ? "失敗" : (qo == "success" ? "成功" : "已通過")));
-                }
-                var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
-                if (cb != null) sb.AppendLine("戰鬥：" + Str(cb, "enemy"));
-                var res = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
-                if (res != null && res.Count > 0)
-                {
-                    sb.AppendLine("結果：");
-                    foreach (var r in res) sb.AppendLine("  " + Convert.ToString(r));
-                }
-                var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (eff != null && eff.Count > 0)
-                {
-                    sb.AppendLine("效果：");
-                    foreach (var e in eff)
+                    sb.AppendLine("  · 已選（未匹配選項）：" + Str(st, "choice"));
+                    var res = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
+                    if (res != null) foreach (var r in res) sb.AppendLine("    結果：" + Convert.ToString(r));
+                    var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                    if (eff != null) foreach (var e in eff)
                     {
                         var ed = e as Dictionary<string, object>;
-                        if (ed == null) continue;
-                        string text = Str(ed, "text");
-                        if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + Str(ed, "amount")).Trim();
-                        sb.AppendLine("  " + text);
+                        if (ed != null) sb.AppendLine("    影響：" + EventEffectText(ed));
                     }
-                }
-                var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-                if (pg != null)
-                {
-                    string txt = "出口進度";
-                    if (Str(pg, "delta") != "") txt += " " + Str(pg, "delta");
-                    if (Str(pg, "current") != "") txt += "（" + Str(pg, "current") + "/" + Str(pg, "total") + "）";
-                    sb.AppendLine(txt);
                 }
             }
         }
