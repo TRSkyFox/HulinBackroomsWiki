@@ -203,9 +203,12 @@ node 客户端\Recorder\structured\sync.mjs --check
 客户端\Recorder\logs\backroom-YYYYMMDD-HHMMSS\   旧 OCR 场次（只读）
 客户端\Recorder\logs\manual\                     新人工记录 JSONL
 %LOCALAPPDATA%\Expedition\app\logs                → junction 到上面
+%LOCALAPPDATA%\Expedition\app\perf.log            E 各阶段耗时（截图/裁切/OCR/Parse/覆盖层）
 ```
 
 旧场次文件：`wiki.md`、`wiki.jsonl`、`structured.jsonl`、`ocr-raw.log`、`levels\`、`floor-colors.log`、`logger.log`。
+
+`perf.log` 用来判断 E 到底卡在截图、OCR、Parse 还是窗口显示；队伍栏扫描已移到后台，不占 E 的同步链路。
 
 原始 logs 只读；要清旧场次先确认没有要回溯的出处行号。
 

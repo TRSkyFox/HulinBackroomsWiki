@@ -1184,6 +1184,7 @@ namespace ExpeditionRecorder
         public static Dictionary<string, string> NameToChar = new Dictionary<string, string>();
         public static string LocalName = "";
         public static string LocalCharacter = "";
+        static readonly object Sync = new object();
 
         public static void Load(string exeDir)
         {
@@ -1221,6 +1222,8 @@ namespace ExpeditionRecorder
 
         public static void Scan(List<OcrLine> lines, int W)
         {
+            lock (Sync)
+            {
             NameToChar.Clear(); LocalName = ""; LocalCharacter = "";
             var right = new List<OcrLine>();
             foreach (var l in lines) right.Add(l);
@@ -1285,6 +1288,7 @@ namespace ExpeditionRecorder
                     break;
                 }
             }
+            }
         }
 
         public static string ToHant(string s)
@@ -1300,7 +1304,7 @@ namespace ExpeditionRecorder
             if (string.IsNullOrEmpty(name)) return;
             name = name.Trim('（', '）', '(', ')', ' ', '　');
             if (name.Length < 1 || name.Length > 12) return;
-            LocalName = name;
+            lock (Sync) { LocalName = name; }
         }
 
         /* 玩家名 → 角色名。NameToChar 由右侧队伍栏的“角色称号”建立；
@@ -1310,29 +1314,35 @@ namespace ExpeditionRecorder
             if (string.IsNullOrEmpty(name)) return "";
             name = CleanPlayerName(name);
             if (name.Length < 2) return "";
-            string c;
-            if (NameToChar.TryGetValue(name, out c)) return c;
-            foreach (var kv in NameToChar)
+            lock (Sync)
             {
-                if (kv.Key.Length < 2) continue;
-                if (name.IndexOf(kv.Key, StringComparison.Ordinal) >= 0
-                    || kv.Key.IndexOf(name, StringComparison.Ordinal) >= 0)
-                    return kv.Value;
+                string c;
+                if (NameToChar.TryGetValue(name, out c)) return c;
+                foreach (var kv in NameToChar)
+                {
+                    if (kv.Key.Length < 2) continue;
+                    if (name.IndexOf(kv.Key, StringComparison.Ordinal) >= 0
+                        || kv.Key.IndexOf(name, StringComparison.Ordinal) >= 0)
+                        return kv.Value;
+                }
+                return "";
             }
-            return "";
         }
 
         public static string Normalize(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
-            string s = text;
-            if (LocalName.Length > 0) s = s.Replace(LocalName, "你");
-            foreach (var kv in NameToChar)
+            lock (Sync)
             {
-                if (kv.Key == LocalName || kv.Key.Length < 2) continue;
-                s = s.Replace(kv.Key, kv.Value);
+                string s = text;
+                if (LocalName.Length > 0) s = s.Replace(LocalName, "你");
+                foreach (var kv in NameToChar)
+                {
+                    if (kv.Key == LocalName || kv.Key.Length < 2) continue;
+                    s = s.Replace(kv.Key, kv.Value);
+                }
+                return s;
             }
-            return s;
         }
     }
 
@@ -2848,6 +2858,11 @@ namespace ExpeditionRecorder
     /* ══ 分層透明視窗（不遮畫面、可即時重繪） ═══════════════ */
     class LayeredForm : Form
     {
+        /* 覆盖层/圆盘逐个重建时复用同尺寸的位图与 Graphics，避免每次按 E
+           都重新分配几百 MB 级别的绘制表面。 */
+        static Bitmap _sharedBmp;
+        static Graphics _sharedG;
+        static int _sharedW, _sharedH;
         Bitmap _bmp;
         Graphics _g;
 
@@ -2876,13 +2891,16 @@ namespace ExpeditionRecorder
         public void Render()
         {
             if (!IsHandleCreated || Width <= 0 || Height <= 0) return;
-            if (_bmp == null || _bmp.Width != Width || _bmp.Height != Height)
+            if (_sharedBmp == null || _sharedW != Width || _sharedH != Height)
             {
-                if (_g != null) _g.Dispose();
-                if (_bmp != null) _bmp.Dispose();
-                _bmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
-                _g = Graphics.FromImage(_bmp);
+                if (_sharedG != null) _sharedG.Dispose();
+                if (_sharedBmp != null) _sharedBmp.Dispose();
+                _sharedW = Width; _sharedH = Height;
+                _sharedBmp = new Bitmap(Width, Height, PixelFormat.Format32bppArgb);
+                _sharedG = Graphics.FromImage(_sharedBmp);
             }
+            _bmp = _sharedBmp;
+            _g = _sharedG;
             _g.Clear(Color.Transparent);
             _g.SmoothingMode = SmoothingMode.AntiAlias;
             Draw(_g);
@@ -2908,8 +2926,9 @@ namespace ExpeditionRecorder
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            if (_g != null) { _g.Dispose(); _g = null; }
-            if (_bmp != null) { _bmp.Dispose(); _bmp = null; }
+            /* 位图/Graphics 归 LayeredForm 的静态缓存所有，不能在这里释放。 */
+            _g = null;
+            _bmp = null;
             base.OnFormClosed(e);
         }
     }
@@ -2933,6 +2952,16 @@ namespace ExpeditionRecorder
             Bounds = screenRect;
             TopMost = true;
             KeyPreview = true;
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            if (Program.CaptureSw != null)
+            {
+                Program.PerfLog("overlay-shown", Program.CaptureSw.ElapsedMilliseconds, "");
+                Program.CaptureSw = null;
+            }
         }
 
         protected override void Draw(Graphics g)
@@ -4272,6 +4301,13 @@ namespace ExpeditionRecorder
             UiTimer.Interval = 500;
             UiTimer.Tick += delegate { RefreshStatus(); HookWatchdog(); };
             UiTimer.Start();
+
+            /* 预热 OCR 服务，并让空闲时的队伍扫描提前完成，避免第一次 E
+               才启动服务/扫队伍。 */
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try { if (!Ocr.Ready) Ocr.Start(AppDomain.CurrentDomain.BaseDirectory); } catch { }
+            });
         }
 
         static GroupBox Group(string text, int x, int y, int w, int h)
@@ -4375,6 +4411,7 @@ namespace ExpeditionRecorder
                 string recText = "已記錄 " + n, pendText = "待處理 " + p;
                 if (RecordsBtn != null && RecordsBtn.Text != recText) RecordsBtn.Text = recText;
                 if (PendingBtn != null && PendingBtn.Text != pendText) PendingBtn.Text = pendText;
+                if (GameHwnd != IntPtr.Zero && Mode == "") ScanPartyAsync();
             }
             catch { }
         }
@@ -4482,6 +4519,7 @@ namespace ExpeditionRecorder
                 TypingState.Clear();
                 ClientOwned = false;
                 SetState("狀態：已接上客戶端");
+                try { ScanPartyAsync(); } catch { }
                 return true;
             }
             catch { return false; }
@@ -4735,6 +4773,28 @@ namespace ExpeditionRecorder
         }
 
         static DateTime _partyScanned = DateTime.MinValue;
+        static int _partyScanning;
+        static void ScanPartyAsync()
+        {
+            if (!Ocr.Ready || GameHwnd == IntPtr.Zero || OverlayOpen) return;
+            if (Interlocked.CompareExchange(ref _partyScanning, 1, 0) != 0) return;
+            try
+            {
+                if ((DateTime.Now - _partyScanned).TotalSeconds < 30)
+                {
+                    Interlocked.Exchange(ref _partyScanning, 0);
+                    return;
+                }
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try { ScanParty(); }
+                    finally { Interlocked.Exchange(ref _partyScanning, 0); }
+                });
+            }
+            catch { Interlocked.Exchange(ref _partyScanning, 0); }
+        }
+
+        /* 同步版本只给后台线程/演示模式用；E 的响应链路不再调用它。 */
         static void ScanParty()
         {
             if ((DateTime.Now - _partyScanned).TotalSeconds < 30) return;
@@ -4765,18 +4825,85 @@ namespace ExpeditionRecorder
             return Ocr.Ready;
         }
 
+        public static Stopwatch CaptureSw;
+        internal static void PerfLog(string stage, long ms, string extra)
+        {
+            try
+            {
+                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "perf.log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + stage + " " + ms + "ms " + (extra ?? "") + "\r\n",
+                    new UTF8Encoding(false));
+            }
+            catch { }
+        }
+
+        /* 只把有文字/高对比内容的区域送 OCR；坐标随后加回原图。 */
+        static Rectangle FindTextBounds(Bitmap bmp)
+        {
+            int w = bmp.Width, h = bmp.Height;
+            int bgR = 0, bgG = 0, bgB = 0;
+            int[,] pts = { { 2, 2 }, { w - 3, 2 }, { 2, h - 3 }, { w - 3, h - 3 } };
+            for (int i = 0; i < 4; i++)
+            {
+                Color c;
+                try { c = bmp.GetPixel(pts[i, 0], pts[i, 1]); } catch { c = Color.Black; }
+                bgR += c.R; bgG += c.G; bgB += c.B;
+            }
+            bgR /= 4; bgG /= 4; bgB /= 4;
+            int minX = w, minY = h, maxX = -1, maxY = -1;
+            BitmapData data;
+            try { data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb); }
+            catch { return new Rectangle(0, 0, w, h); }
+            try
+            {
+                int stride = data.Stride;
+                byte[] row = new byte[w * 4];
+                for (int y = 0; y < h; y += 2)
+                {
+                    Marshal.Copy(IntPtr.Add(data.Scan0, y * stride), row, 0, w * 4);
+                    for (int x = 0; x < w; x += 2)
+                    {
+                        int b = row[x * 4], g = row[x * 4 + 1], r = row[x * 4 + 2];
+                        int diff = Math.Abs(r - bgR) + Math.Abs(g - bgG) + Math.Abs(b - bgB);
+                        int mx = Math.Max(r, Math.Max(g, b));
+                        /* 只认明亮的文字/图标；暗色背景、深色面板边框不算，
+                           否则整张图都会被当成内容，裁切就失去意义。 */
+                        if (mx < 165) continue;
+                        if (diff < 110 && mx < 215) continue;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            finally { bmp.UnlockBits(data); }
+            if (maxX < minX || maxY < minY) return new Rectangle(0, 0, w, h);
+            int pad = 12;
+            int x0 = Math.Max(0, minX - pad), y0 = Math.Max(0, minY - pad);
+            int x1 = Math.Min(w - 1, maxX + pad), y1 = Math.Min(h - 1, maxY + pad);
+            var crop = Rectangle.FromLTRB(x0, y0, x1 + 1, y1 + 1);
+            if (crop.Width < 24 || crop.Height < 24) return new Rectangle(0, 0, w, h);
+            /* 省不到 10% 就不裁，避免白做一次 Clone 和坐标换算。 */
+            if (crop.Width > w * 0.9 && crop.Height > h * 0.9) return new Rectangle(0, 0, w, h);
+            return crop;
+        }
+
         static void CaptureStep()
         {
             if (GameHwnd == IntPtr.Zero) EnsureClient(false);
             if (GameHwnd == IntPtr.Zero) { SetState("找不到客戶端視窗"); return; }
             ShowBusy("辨識中…");
             var sw = Stopwatch.StartNew();
+            CaptureSw = sw;
+            long last = 0;
             Application.DoEvents();
 
             Rectangle rect;
             double sx = 1, sy = 1;
             Bitmap shot = Capture.GrabRegion(GameHwnd, "event", out rect, out sx, out sy);
             if (shot == null) { HideBusy(); SetState("截圖失敗（PrintWindow）"); return; }
+            PerfLog("grab", sw.ElapsedMilliseconds - last, shot.Width + "x" + shot.Height); last = sw.ElapsedMilliseconds;
             if (!EnsureOcr())
             {
                 shot.Dispose();
@@ -4784,7 +4911,17 @@ namespace ExpeditionRecorder
                 SetState("OCR 服務還在啟動，稍後再按 " + VkName(StepVk));
                 return;
             }
-            var lines = Ocr.Recognize(shot);
+            Rectangle crop = FindTextBounds(shot);
+            Bitmap ocrShot = shot;
+            if (crop.Width < shot.Width || crop.Height < shot.Height)
+            {
+                try { ocrShot = shot.Clone(crop, PixelFormat.Format32bppArgb); }
+                catch { ocrShot = shot; crop = new Rectangle(0, 0, shot.Width, shot.Height); }
+            }
+            PerfLog("crop", sw.ElapsedMilliseconds - last, crop.Width + "x" + crop.Height); last = sw.ElapsedMilliseconds;
+            var lines = Ocr.Recognize(ocrShot);
+            if (ocrShot != shot) ocrShot.Dispose();
+            PerfLog("event-ocr", sw.ElapsedMilliseconds - last, "lines=" + lines.Count); last = sw.ElapsedMilliseconds;
             if (lines.Count == 0)
             {
                 shot.Dispose();
@@ -4792,14 +4929,16 @@ namespace ExpeditionRecorder
                 SetState("OCR 沒有結果");
                 return;
             }
+            if (crop.X != 0 || crop.Y != 0)
+                foreach (var l in lines) { l.X += crop.X; l.Y += crop.Y; }
             Parse.Classify(lines, shot.Height);
-            /* 右侧队伍栏单独扫，不能拿事件正文去猜队伍；
-               否则每次按 E 都会把玩家→角色映射清空。 */
-            try { ScanParty(); } catch { }
+            PerfLog("parse", sw.ElapsedMilliseconds - last, "lines=" + lines.Count); last = sw.ElapsedMilliseconds;
             ScaleLines(lines, sx, sy);
             HideBusy();
             var f = new OverlayForm(Step + 1, lines, rect, GameHwnd, "event");
+            PerfLog("overlay-show", sw.ElapsedMilliseconds - last, "");
             var r = RunOverlay(f);
+            PerfLog("overlay-close", sw.ElapsedMilliseconds - last, "result=" + r);
             if (r == DialogResult.OK && f.Result != null)
             {
                 Step++;
