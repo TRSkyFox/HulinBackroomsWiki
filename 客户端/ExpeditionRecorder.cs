@@ -697,6 +697,7 @@ namespace ExpeditionRecorder
         int _installedTick;
         public Func<IntPtr> GetGame;
         public int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
+        public bool Enabled = true;
         public Action<int> OnTrigger;
         public Action<int> OnRelease;
         public Func<bool> EscapeHandler;
@@ -762,6 +763,11 @@ namespace ExpeditionRecorder
 
         IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
         {
+            if (!Enabled)
+            {
+                _downVk = 0;
+                return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            }
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             try
             {
@@ -4329,7 +4335,8 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn;
+        static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
         public static int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
@@ -4493,6 +4500,9 @@ namespace ExpeditionRecorder
             var keyBtn = Btn("按鍵設定", 232, 62, 100, 24);
             keyBtn.Click += delegate { new KeysForm().ShowDialog(); };
             clientGroup.Controls.Add(keyBtn);
+            HotkeyBtn = Btn("快捷鍵：開", 340, 62, 66, 24);
+            HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
+            clientGroup.Controls.Add(HotkeyBtn);
 
             var recGroup = Group("記錄", 12, 112, 406, 112);
             StepLabel = new Label();
@@ -4515,6 +4525,7 @@ namespace ExpeditionRecorder
             helpBtn.Click += delegate { new HelpForm().ShowDialog(); };
             recGroup.Controls.Add(helpBtn);
             UpdateRecordButtons();
+            UpdateHotkeyButton();
 
             var viewGroup = Group("檢視與輸出", 12, 232, 406, 64);
             RecordsBtn = Btn("已記錄", 14, 24, 120, 26);
@@ -4544,6 +4555,7 @@ namespace ExpeditionRecorder
             Keys.ModeVk = ModeVk;
             Keys.StepVk = StepVk;
             Keys.CancelVk = CancelVk;
+            Keys.Enabled = HotkeysEnabled;
             Keys.GetGame = delegate { return GameHwnd; };
             Keys.OnTrigger = delegate (int vk)
             {
@@ -4657,6 +4669,32 @@ namespace ExpeditionRecorder
                 }
                 if (EBtn != null && EBtn.Text != eText) EBtn.Text = eText;
                 if (CancelBtn != null && CancelBtn.Text != cText) CancelBtn.Text = cText;
+            }
+            catch { }
+        }
+
+        static void SetHotkeysEnabled(bool on)
+        {
+            HotkeysEnabled = on;
+            if (Keys != null) { Keys.Enabled = on; Keys.ResetDown(); }
+            if (!on && Picker != null)
+            {
+                var p = Picker; Picker = null;
+                try { p.Close(); } catch { }
+            }
+            UpdateHotkeyButton();
+            SetState(on ? "快捷鍵已啟用（Q/E/C 可用）" : "快捷鍵已暫停（Q/E/C 直接給遊戲）");
+        }
+
+        static void UpdateHotkeyButton()
+        {
+            try
+            {
+                if (HotkeyBtn == null) return;
+                HotkeyBtn.Text = HotkeysEnabled ? "快捷鍵：開" : "快捷鍵：關";
+                HotkeyBtn.BackColor = HotkeysEnabled ? Color.FromArgb(42, 72, 48) : Color.FromArgb(76, 44, 44);
+                HotkeyBtn.ForeColor = HotkeysEnabled ? Color.FromArgb(190, 240, 190) : Color.FromArgb(255, 190, 180);
+                HotkeyBtn.FlatAppearance.BorderColor = HotkeysEnabled ? Color.FromArgb(80, 160, 90) : Color.FromArgb(180, 80, 70);
             }
             catch { }
         }
@@ -6105,7 +6143,7 @@ namespace ExpeditionRecorder
 
         public static void ApplyHotkeys()
         {
-            if (Keys != null) { Keys.ModeVk = ModeVk; Keys.StepVk = StepVk; Keys.CancelVk = CancelVk; }
+            if (Keys != null) { Keys.ModeVk = ModeVk; Keys.StepVk = StepVk; Keys.CancelVk = CancelVk; Keys.Enabled = HotkeysEnabled; }
             UpdateHint();
             UpdateRecordButtons();
         }
