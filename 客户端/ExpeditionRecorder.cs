@@ -1352,6 +1352,52 @@ namespace ExpeditionRecorder
         }
     }
 
+    /* ══ UI 简繁切换 ═══════════════════════════════════════ */
+    static class UiText
+    {
+        public static bool Simplified;
+        static Dictionary<char, char> _t2s;
+
+        static void Ensure()
+        {
+            if (_t2s != null) return;
+            _t2s = new Dictionary<char, char>();
+            foreach (var kv in Party.S2T) _t2s[kv.Value] = kv.Key;
+        }
+
+        public static string Convert(string s, bool toSimplified)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            Ensure();
+            var map = toSimplified ? _t2s : Party.S2T;
+            if (map == null || map.Count == 0) return s;
+            var sb = new StringBuilder(s.Length);
+            foreach (char ch in s) { char c; sb.Append(map.TryGetValue(ch, out c) ? c : ch); }
+            return sb.ToString();
+        }
+
+        public static string T(string s)
+        {
+            return Simplified ? Convert(s, true) : s;
+        }
+
+        static void Apply(Control c, bool toSimplified)
+        {
+            if (c == null) return;
+            if (!string.IsNullOrEmpty(c.Text)) c.Text = Convert(c.Text, toSimplified);
+            foreach (Control child in c.Controls) Apply(child, toSimplified);
+        }
+
+        public static void SetSimplified(bool on)
+        {
+            Simplified = on;
+            foreach (Form f in Application.OpenForms)
+            {
+                try { Apply(f, on); } catch { }
+            }
+        }
+    }
+
     /* ══ 待處理清單 ═════════════════════════════════════════ */
     class PendingForm : Form
     {
@@ -4335,7 +4381,7 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, LangBtn;
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
@@ -4464,7 +4510,7 @@ namespace ExpeditionRecorder
         {
             ControlWindow = new Form();
             ControlWindow.Text = "Expedition Recorder";
-            ControlWindow.ClientSize = new Size(430, 345);
+            ControlWindow.ClientSize = new Size(430, 520);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -4497,10 +4543,10 @@ namespace ExpeditionRecorder
                 if (resCombo.SelectedItem != null) Preset = Convert.ToString(resCombo.SelectedItem);
             };
             clientGroup.Controls.Add(resCombo);
-            var keyBtn = Btn("按鍵設定", 232, 62, 100, 24);
+            var keyBtn = Btn("按鍵設定", 232, 62, 88, 24);
             keyBtn.Click += delegate { new KeysForm().ShowDialog(); };
             clientGroup.Controls.Add(keyBtn);
-            HotkeyBtn = Btn("快捷鍵：開", 340, 62, 66, 24);
+            HotkeyBtn = Btn("快捷鍵：開", 326, 62, 80, 24);
             HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
             clientGroup.Controls.Add(HotkeyBtn);
 
@@ -4508,7 +4554,7 @@ namespace ExpeditionRecorder
             StepLabel = new Label();
             StepLabel.SetBounds(14, 24, 378, 40);
             StepLabel.ForeColor = Color.FromArgb(232, 232, 236);
-            StepLabel.Text = "按 " + VkName(ModeVk) + " 開始記錄";
+            StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
             recGroup.Controls.Add(StepLabel);
 
             /* Q／E／C 的 GUI 按钮；和取消记录放在同一排。 */
@@ -4541,8 +4587,38 @@ namespace ExpeditionRecorder
             StateLabel = new Label();
             StateLabel.SetBounds(14, 304, 402, 26);
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
-            StateLabel.Text = "狀態：—";
+            StateLabel.Text = UiText.T("狀態：—");
             ControlWindow.Controls.Add(StateLabel);
+
+            var infoGroup = Group("說明／簡繁", 12, 332, 406, 176);
+            var info = new TextBox();
+            info.Multiline = true;
+            info.ReadOnly = true;
+            info.ScrollBars = ScrollBars.Vertical;
+            info.SetBounds(14, 24, 378, 106);
+            info.BackColor = Color.FromArgb(24, 24, 27);
+            info.ForeColor = Color.FromArgb(210, 210, 218);
+            info.BorderStyle = BorderStyle.FixedSingle;
+            info.Font = new Font("Microsoft JhengHei UI", 9F);
+            info.Text = "Q：按住選模式；再按 Q 結束\r\nE：拖框選下一步\r\nC：取消目前掃描；再按取消整條記錄\r\n快捷鍵：打字前先切到「關」\r\n框選只看 Y 軸；Esc／右鍵取消\r\n簡繁：按下方按鈕切換顯示文字";
+            infoGroup.Controls.Add(info);
+
+            LangBtn = Btn("簡體", 14, 138, 100, 26);
+            LangBtn.Click += delegate
+            {
+                bool next = !UiText.Simplified;
+                UiText.SetSimplified(next);
+                LangBtn.Text = next ? "繁體" : "簡體";
+                UpdateHotkeyButton();
+                UpdateRecordButtons();
+                SetState(next ? "已切換為簡體" : "已切換為繁體");
+            };
+            infoGroup.Controls.Add(LangBtn);
+            var langTip = new Label();
+            langTip.Text = "切換顯示文字";
+            langTip.SetBounds(124, 142, 260, 20);
+            langTip.ForeColor = Color.FromArgb(150, 150, 158);
+            infoGroup.Controls.Add(langTip);
 
             ControlWindow.FormClosing += delegate
             {
@@ -4640,7 +4716,7 @@ namespace ExpeditionRecorder
             {
                 if (ControlWindow == null || ControlWindow.IsDisposed) return;
                 if (ControlWindow.InvokeRequired) { ControlWindow.BeginInvoke((Action)delegate { SetState(text); }); return; }
-                StateLabel.Text = text;
+                StateLabel.Text = UiText.T(text);
                 UpdateRecordButtons();
             }
             catch { }
@@ -4657,9 +4733,9 @@ namespace ExpeditionRecorder
                     return;
                 }
                 bool recording = Mode != "";
-                string qText = VkName(ModeVk) + (recording ? " 結束記錄" : " 開始記錄");
-                string eText = VkName(StepVk) + " 記錄下一步";
-                string cText = VkName(CancelVk) + " 取消記錄";
+                string qText = UiText.T(VkName(ModeVk) + (recording ? " 結束記錄" : " 開始記錄"));
+                string eText = UiText.T(VkName(StepVk) + " 記錄下一步");
+                string cText = UiText.T(VkName(CancelVk) + " 取消記錄");
                 if (QBtn != null)
                 {
                     if (QBtn.Text != qText) QBtn.Text = qText;
@@ -4691,7 +4767,7 @@ namespace ExpeditionRecorder
             try
             {
                 if (HotkeyBtn == null) return;
-                HotkeyBtn.Text = HotkeysEnabled ? "快捷鍵：開" : "快捷鍵：關";
+                HotkeyBtn.Text = UiText.T(HotkeysEnabled ? "快捷鍵：開" : "快捷鍵：關");
                 HotkeyBtn.BackColor = HotkeysEnabled ? Color.FromArgb(42, 72, 48) : Color.FromArgb(76, 44, 44);
                 HotkeyBtn.ForeColor = HotkeysEnabled ? Color.FromArgb(190, 240, 190) : Color.FromArgb(255, 190, 180);
                 HotkeyBtn.FlatAppearance.BorderColor = HotkeysEnabled ? Color.FromArgb(80, 160, 90) : Color.FromArgb(180, 80, 70);
@@ -4720,6 +4796,7 @@ namespace ExpeditionRecorder
                 string state = Mode == ""
                     ? (GameHwnd != IntPtr.Zero ? "狀態：客戶端已開，按 " + VkName(ModeVk) + " 開始" : "狀態：客戶端未接上（點「開啟客戶端」可接上）")
                     : "狀態：事件模式（已記 " + Step + " 步）";
+                state = UiText.T(state);
                 if (StateLabel.Text != state) StateLabel.Text = state;
                 int n = 0, p = 0;
                 try
@@ -4733,7 +4810,7 @@ namespace ExpeditionRecorder
                     }
                 }
                 catch { }
-                string recText = "已記錄 " + n, pendText = "待處理 " + p;
+                string recText = UiText.T("已記錄 " + n), pendText = UiText.T("待處理 " + p);
                 if (RecordsBtn != null && RecordsBtn.Text != recText) RecordsBtn.Text = recText;
                 if (PendingBtn != null && PendingBtn.Text != pendText) PendingBtn.Text = pendText;
                 if (GameHwnd != IntPtr.Zero && Mode == "") ScanPartyAsync();
@@ -5042,7 +5119,7 @@ namespace ExpeditionRecorder
             else if (Mode == "ending") hint = "結局：按 " + VkName(StepVk) + " 拖結局名＋通用介紹；再按 " + VkName(StepVk) + " 拖後日談；按 " + VkName(ModeVk) + " 選分類";
             else if (Mode == "shop") hint = "商店模式：按 " + VkName(StepVk) + " 掃描貨架或商店文字；按 " + VkName(ModeVk) + " 結束";
             else hint = "事件模式：按 " + VkName(StepVk) + " 記第 1 步；按 " + VkName(ModeVk) + " 結束";
-            StepLabel.Text = hint;
+            StepLabel.Text = UiText.T(hint);
             SetState("狀態：" + hint);
         }
 
@@ -5269,7 +5346,7 @@ namespace ExpeditionRecorder
                 Step++;
                 Steps.Add(f.Result);
                 WriteDraft(EventId, f.Result);
-                StepLabel.Text = "已記 " + Step + " 步";
+                StepLabel.Text = UiText.T("已記 " + Step + " 步");
                 SetState("第 " + Step + " 步已存（辨識 " + sw.ElapsedMilliseconds + "ms）；按 " + VkName(StepVk) + " 記第 " + (Step + 1) + " 步");
             }
             else SetState("這一步已取消（" + sw.ElapsedMilliseconds + "ms）；按 " + VkName(StepVk) + " 重記");
@@ -5894,13 +5971,13 @@ namespace ExpeditionRecorder
             rec["steps"] = Steps.ToArray();
             if (!WriteEvent(rec))
             {
-                StepLabel.Text = "寫入失敗，尚未存檔";
+                StepLabel.Text = UiText.T("寫入失敗，尚未存檔");
                 return;
             }
             if (ef.Outcomes.Contains("combat") && combatEnemy == "") WritePending("combat-enemy", rec);
             if (ef.Scopes.Contains("character") && ef.Characters.Count == 0) WritePending("character-missing", rec);
             Mode = ""; Step = 0; Steps.Clear();
-            StepLabel.Text = "已存一條事件";
+            StepLabel.Text = UiText.T("已存一條事件");
             SetState("已存一條事件（" + string.Join("+", ef.Scopes.ToArray()) + " / " + string.Join("+", ef.Outcomes.ToArray()) + "），按 " + VkName(ModeVk) + " 再記");
         }
 
@@ -6187,7 +6264,7 @@ namespace ExpeditionRecorder
             try
             {
                 if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) HelpForm.Instance.SetText(HelpText());
-                if (StepLabel != null && Mode == "") StepLabel.Text = "按 " + VkName(ModeVk) + " 開始記錄";
+                if (StepLabel != null && Mode == "") StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
             }
             catch { }
         }
@@ -6199,7 +6276,7 @@ namespace ExpeditionRecorder
             var p = Picker;
             Picker = null;
             if (p != null && !p.IsDisposed) { try { p.Close(); } catch { } }
-            StepLabel.Text = "按 " + VkName(ModeVk) + " 開始記錄";
+            StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
             SetState(had ? "已取消這次記錄" : "沒有進行中的記錄");
         }
 
