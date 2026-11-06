@@ -4510,7 +4510,7 @@ namespace ExpeditionRecorder
         {
             ControlWindow = new Form();
             ControlWindow.Text = "Expedition Recorder";
-            ControlWindow.ClientSize = new Size(430, 520);
+            ControlWindow.ClientSize = new Size(430, 428);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -4534,7 +4534,7 @@ namespace ExpeditionRecorder
             clientGroup.Controls.Add(resLabel);
             var resCombo = new ComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            resCombo.SetBounds(72, 62, 150, 24);
+            resCombo.SetBounds(72, 62, 334, 24);
             resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
@@ -4543,37 +4543,35 @@ namespace ExpeditionRecorder
                 if (resCombo.SelectedItem != null) Preset = Convert.ToString(resCombo.SelectedItem);
             };
             clientGroup.Controls.Add(resCombo);
-            var keyBtn = Btn("按鍵設定", 232, 62, 88, 24);
-            keyBtn.Click += delegate { new KeysForm().ShowDialog(); };
-            clientGroup.Controls.Add(keyBtn);
-            HotkeyBtn = Btn("快捷鍵：開", 326, 62, 80, 24);
-            HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
-            clientGroup.Controls.Add(HotkeyBtn);
 
-            var recGroup = Group("記錄", 12, 112, 406, 112);
+            var recGroup = Group("記錄", 12, 112, 406, 140);
             StepLabel = new Label();
             StepLabel.SetBounds(14, 24, 378, 40);
             StepLabel.ForeColor = Color.FromArgb(232, 232, 236);
             StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
             recGroup.Controls.Add(StepLabel);
 
-            /* Q／E／C 的 GUI 按钮；和取消记录放在同一排。 */
-            QBtn = Btn(VkName(ModeVk) + " 開始記錄", 14, 70, 88, 26);
+            /* Q／E／C 的 GUI 按钮；取消记录和快捷键设置分两排。 */
+            QBtn = Btn(VkName(ModeVk) + " 開始記錄", 14, 70, 120, 26);
             QBtn.Click += delegate { OnHotkey(1); };
             recGroup.Controls.Add(QBtn);
-            EBtn = Btn(VkName(StepVk) + " 記錄下一步", 108, 70, 88, 26);
+            EBtn = Btn(VkName(StepVk) + " 記錄下一步", 140, 70, 120, 26);
             EBtn.Click += delegate { OnHotkey(2); };
             recGroup.Controls.Add(EBtn);
-            CancelBtn = Btn(VkName(CancelVk) + " 取消記錄", 202, 70, 112, 26);
+            CancelBtn = Btn(VkName(CancelVk) + " 取消記錄", 266, 70, 140, 26);
             CancelBtn.Click += delegate { CancelRecording(); };
             recGroup.Controls.Add(CancelBtn);
-            var helpBtn = Btn("說明", 320, 70, 72, 26);
-            helpBtn.Click += delegate { new HelpForm().ShowDialog(); };
-            recGroup.Controls.Add(helpBtn);
+
+            var keyBtn = Btn("按鍵設定", 14, 102, 120, 26);
+            keyBtn.Click += delegate { new KeysForm().ShowDialog(); };
+            recGroup.Controls.Add(keyBtn);
+            HotkeyBtn = Btn("快捷鍵：開", 142, 102, 120, 26);
+            HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
+            recGroup.Controls.Add(HotkeyBtn);
             UpdateRecordButtons();
             UpdateHotkeyButton();
 
-            var viewGroup = Group("檢視與輸出", 12, 232, 406, 64);
+            var viewGroup = Group("檢視與輸出", 12, 260, 406, 64);
             RecordsBtn = Btn("已記錄", 14, 24, 120, 26);
             RecordsBtn.Click += delegate { new RecordsForm().ShowDialog(); };
             viewGroup.Controls.Add(RecordsBtn);
@@ -4585,25 +4583,13 @@ namespace ExpeditionRecorder
             viewGroup.Controls.Add(exportBtn);
 
             StateLabel = new Label();
-            StateLabel.SetBounds(14, 304, 402, 26);
+            StateLabel.SetBounds(14, 332, 402, 26);
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
             StateLabel.Text = UiText.T("狀態：—");
             ControlWindow.Controls.Add(StateLabel);
 
-            var infoGroup = Group("說明／簡繁", 12, 332, 406, 176);
-            var info = new TextBox();
-            info.Multiline = true;
-            info.ReadOnly = true;
-            info.ScrollBars = ScrollBars.Vertical;
-            info.SetBounds(14, 24, 378, 106);
-            info.BackColor = Color.FromArgb(24, 24, 27);
-            info.ForeColor = Color.FromArgb(210, 210, 218);
-            info.BorderStyle = BorderStyle.FixedSingle;
-            info.Font = new Font("Microsoft JhengHei UI", 9F);
-            info.Text = "Q：按住選模式；再按 Q 結束\r\nE：拖框選下一步\r\nC：取消目前掃描；再按取消整條記錄\r\n快捷鍵：打字前先切到「關」\r\n框選只看 Y 軸；Esc／右鍵取消\r\n簡繁：按下方按鈕切換顯示文字";
-            infoGroup.Controls.Add(info);
-
-            LangBtn = Btn("簡體", 14, 138, 100, 26);
+            var langGroup = Group("簡繁", 12, 360, 406, 56);
+            LangBtn = Btn("簡體", 14, 22, 140, 26);
             LangBtn.Click += delegate
             {
                 bool next = !UiText.Simplified;
@@ -4613,12 +4599,7 @@ namespace ExpeditionRecorder
                 UpdateRecordButtons();
                 SetState(next ? "已切換為簡體" : "已切換為繁體");
             };
-            infoGroup.Controls.Add(LangBtn);
-            var langTip = new Label();
-            langTip.Text = "切換顯示文字";
-            langTip.SetBounds(124, 142, 260, 20);
-            langTip.ForeColor = Color.FromArgb(150, 150, 158);
-            infoGroup.Controls.Add(langTip);
+            langGroup.Controls.Add(LangBtn);
 
             ControlWindow.FormClosing += delegate
             {
