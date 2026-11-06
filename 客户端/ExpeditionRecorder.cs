@@ -3722,7 +3722,7 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
         public static int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
@@ -3894,19 +3894,20 @@ namespace ExpeditionRecorder
             StepLabel.Text = "按 " + VkName(ModeVk) + " 開始記錄";
             recGroup.Controls.Add(StepLabel);
 
-            /* Q／E 的 GUI 对应按钮；和「取消這次記錄」放在同一排。 */
-            var qBtn = Btn(VkName(ModeVk) + " 開始／結束", 14, 70, 88, 26);
-            qBtn.Click += delegate { OnHotkey(1); };
-            recGroup.Controls.Add(qBtn);
-            var eBtn = Btn(VkName(StepVk) + " 記錄下一步", 108, 70, 88, 26);
-            eBtn.Click += delegate { OnHotkey(2); };
-            recGroup.Controls.Add(eBtn);
-            var cancelBtn = Btn("取消這次記錄", 202, 70, 112, 26);
-            cancelBtn.Click += delegate { CancelRecording(); };
-            recGroup.Controls.Add(cancelBtn);
+            /* Q／E／C 的 GUI 按钮；和取消记录放在同一排。 */
+            QBtn = Btn(VkName(ModeVk) + " 開始記錄", 14, 70, 88, 26);
+            QBtn.Click += delegate { OnHotkey(1); };
+            recGroup.Controls.Add(QBtn);
+            EBtn = Btn(VkName(StepVk) + " 記錄下一步", 108, 70, 88, 26);
+            EBtn.Click += delegate { OnHotkey(2); };
+            recGroup.Controls.Add(EBtn);
+            CancelBtn = Btn(VkName(CancelVk) + " 取消記錄", 202, 70, 112, 26);
+            CancelBtn.Click += delegate { CancelRecording(); };
+            recGroup.Controls.Add(CancelBtn);
             var helpBtn = Btn("說明", 320, 70, 72, 26);
             helpBtn.Click += delegate { new HelpForm().ShowDialog(); };
             recGroup.Controls.Add(helpBtn);
+            UpdateRecordButtons();
 
             var viewGroup = Group("檢視與輸出", 12, 232, 406, 64);
             RecordsBtn = Btn("已記錄", 14, 24, 120, 26);
@@ -4014,6 +4015,34 @@ namespace ExpeditionRecorder
                 if (ControlWindow == null || ControlWindow.IsDisposed) return;
                 if (ControlWindow.InvokeRequired) { ControlWindow.BeginInvoke((Action)delegate { SetState(text); }); return; }
                 StateLabel.Text = text;
+                UpdateRecordButtons();
+            }
+            catch { }
+        }
+
+        /* Q 按钮随记录状态切换文字与高亮；Q/E/C 的字母跟随按键设置。 */
+        static void UpdateRecordButtons()
+        {
+            try
+            {
+                if (ControlWindow != null && ControlWindow.InvokeRequired)
+                {
+                    ControlWindow.BeginInvoke((Action)UpdateRecordButtons);
+                    return;
+                }
+                bool recording = Mode != "";
+                string qText = VkName(ModeVk) + (recording ? " 結束記錄" : " 開始記錄");
+                string eText = VkName(StepVk) + " 記錄下一步";
+                string cText = VkName(CancelVk) + " 取消記錄";
+                if (QBtn != null)
+                {
+                    if (QBtn.Text != qText) QBtn.Text = qText;
+                    QBtn.BackColor = recording ? Color.FromArgb(96, 74, 38) : Color.FromArgb(44, 44, 47);
+                    QBtn.ForeColor = recording ? Color.FromArgb(255, 232, 160) : Color.FromArgb(232, 232, 236);
+                    QBtn.FlatAppearance.BorderColor = recording ? Color.FromArgb(230, 184, 72) : Color.FromArgb(78, 78, 84);
+                }
+                if (EBtn != null && EBtn.Text != eText) EBtn.Text = eText;
+                if (CancelBtn != null && CancelBtn.Text != cText) CancelBtn.Text = cText;
             }
             catch { }
         }
@@ -5361,6 +5390,7 @@ namespace ExpeditionRecorder
         {
             if (Keys != null) { Keys.ModeVk = ModeVk; Keys.StepVk = StepVk; Keys.CancelVk = CancelVk; }
             UpdateHint();
+            UpdateRecordButtons();
         }
 
         public static string HelpText()
