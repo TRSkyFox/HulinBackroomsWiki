@@ -3541,19 +3541,33 @@ namespace ExpeditionRecorder
             typeLabel.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(typeLabel);
             int typeY = narrow ? _y + UiScale.Px(26) : _y;
-            var normalRadio = new RadioButton();
-            normalRadio.Text = "常規樓層";
-            normalRadio.SetBounds(narrow ? 14 : UiScale.Px(120), typeY, UiScale.Px(100), UiScale.Px(24));
-            normalRadio.ForeColor = Color.White;
-            normalRadio.Checked = ft == "normal";
-            _panel.Controls.Add(normalRadio);
-            var anomalousRadio = new RadioButton();
-            anomalousRadio.Text = "異常樓層";
-            anomalousRadio.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(226), typeY, UiScale.Px(100), UiScale.Px(24));
-            anomalousRadio.ForeColor = Color.White;
-            anomalousRadio.Checked = ft == "anomalous";
-            _panel.Controls.Add(anomalousRadio);
-            _y = typeY + UiScale.Px(28) + UiScale.Px(8);
+            bool normal = ft == "normal";
+            var normalBtn = new Button();
+            normalBtn.Text = "常規樓層";
+            normalBtn.SetBounds(narrow ? 14 : UiScale.Px(120), typeY, UiScale.Px(100), UiScale.Px(26));
+            normalBtn.FlatStyle = FlatStyle.Flat;
+            normalBtn.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            normalBtn.ForeColor = Color.White;
+            _panel.Controls.Add(normalBtn);
+            var anomalousBtn = new Button();
+            anomalousBtn.Text = "異常樓層";
+            anomalousBtn.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(226), typeY, UiScale.Px(100), UiScale.Px(26));
+            anomalousBtn.FlatStyle = FlatStyle.Flat;
+            anomalousBtn.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            anomalousBtn.ForeColor = Color.White;
+            _panel.Controls.Add(anomalousBtn);
+            Action layout = null;
+            Action refreshType = delegate
+            {
+                normalBtn.BackColor = normal ? Color.FromArgb(66, 70, 78) : Color.FromArgb(44, 44, 47);
+                anomalousBtn.BackColor = normal ? Color.FromArgb(44, 44, 47) : Color.FromArgb(66, 70, 78);
+                normalBtn.FlatAppearance.BorderColor = normal ? Color.FromArgb(130, 170, 215) : Color.FromArgb(78, 78, 84);
+                anomalousBtn.FlatAppearance.BorderColor = normal ? Color.FromArgb(78, 78, 84) : Color.FromArgb(130, 170, 215);
+            };
+            normalBtn.Click += delegate { normal = true; o["floorType"] = "normal"; refreshType(); if (layout != null) layout(); };
+            anomalousBtn.Click += delegate { normal = false; o["floorType"] = "anomalous"; refreshType(); if (layout != null) layout(); };
+            refreshType();
+            _y = typeY + UiScale.Px(30) + UiScale.Px(8);
 
             int rowY = _y;
             var floorLabel = new Label();
@@ -3583,9 +3597,8 @@ namespace ExpeditionRecorder
             nameBox.Text = S(o, "floorName");
             _panel.Controls.Add(nameBox);
 
-            Action layout = delegate
+            layout = delegate
             {
-                bool normal = normalRadio.Checked;
                 prefix.Visible = normal;
                 if (narrow)
                 {
@@ -3604,26 +3617,14 @@ namespace ExpeditionRecorder
                     nameBox.SetBounds(UiScale.Px(288), rowY, Math.Min(UiScale.Px(300), Math.Max(UiScale.Px(100), avail - UiScale.Px(302))), UiScale.Px(24));
                 }
             };
-            normalRadio.CheckedChanged += delegate
-            {
-                if (!normalRadio.Checked) return;
-                o["floorType"] = "normal";
-                layout();
-            };
-            anomalousRadio.CheckedChanged += delegate
-            {
-                if (!anomalousRadio.Checked) return;
-                o["floorType"] = "anomalous";
-                layout();
-            };
             idBox.KeyPress += delegate (object s, KeyPressEventArgs e)
             {
-                if (!normalRadio.Checked || char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar) || e.KeyChar == '.') return;
+                if (!normal || char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar) || e.KeyChar == '.') return;
                 e.Handled = true;
             };
             _savers.Add(delegate
             {
-                o["floorType"] = normalRadio.Checked ? "normal" : "anomalous";
+                o["floorType"] = normal ? "normal" : "anomalous";
                 o["floorId"] = idBox.Text.Trim();
                 o["floorName"] = nameBox.Text.Trim();
             });
@@ -4046,7 +4047,10 @@ namespace ExpeditionRecorder
             {
                 if (_autoSave != null) _autoSave.Stop();
                 SaveData(false);
+                var olds = new List<Control>();
+                foreach (Control c in _panel.Controls) olds.Add(c);
                 _panel.Controls.Clear();
+                foreach (var c in olds) { try { c.Dispose(); } catch { } }
                 _savers.Clear();
                 _y = 12;
                 BuildFields();
@@ -4131,6 +4135,7 @@ namespace ExpeditionRecorder
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (_autoSave != null) _autoSave.Stop();
+            if (_relayout != null) _relayout.Stop();
             if (!SaveData(true)) { e.Cancel = true; return; }
             if (_externalSave != null) DialogResult = DialogResult.OK;
             base.OnFormClosing(e);
