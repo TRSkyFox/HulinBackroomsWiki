@@ -1590,6 +1590,8 @@ namespace ExpeditionRecorder
             { "按鍵設定", "Hotkeys" },
             { "快捷鍵：開", "Hotkeys: On" },
             { "快捷鍵：關", "Hotkeys: Off" },
+            { "本次記錄：開", "Session: On" },
+            { "本次記錄：關", "Session: Off" },
             { "檢視與輸出", "View / export" },
             { "已記錄", "Recorded" },
             { "待處理", "Pending" },
@@ -2568,17 +2570,22 @@ namespace ExpeditionRecorder
     class CurrentDock : Form
     {
         public static CurrentDock Instance;
+        public static bool DockEnabled = true;
         static System.Windows.Forms.Timer _follow;
         ListBox _list;
         Label _title;
+        Label _empty;
+        Button _refresh;
         Panel _editorHost;
         RecordEditForm _editor;
         bool _closingEditor;
         bool _loading;
+        bool _programmaticClose;
         readonly List<RecordEntry> _entries = new List<RecordEntry>();
 
         public static void ShowDock()
         {
+            DockEnabled = true;
             if (Instance == null || Instance.IsDisposed)
             {
                 Instance = new CurrentDock();
@@ -2591,6 +2598,16 @@ namespace ExpeditionRecorder
                 Instance.Show();
                 Instance.Activate();
                 Instance.Reload(true);
+            }
+        }
+
+        public static void HideDock()
+        {
+            DockEnabled = false;
+            if (Instance != null && !Instance.IsDisposed)
+            {
+                Instance._programmaticClose = true;
+                try { Instance.Close(); } catch { }
             }
         }
 
@@ -2623,17 +2640,15 @@ namespace ExpeditionRecorder
             _title.ForeColor = Color.FromArgb(232, 232, 236);
             Controls.Add(_title);
 
-            var refresh = new Button();
-            refresh.Text = "重整";
-            refresh.SetBounds(320, 6, 90, 24);
-            refresh.FlatStyle = FlatStyle.Flat;
-            refresh.BackColor = Color.FromArgb(44, 44, 47);
-            refresh.ForeColor = Color.White;
-            refresh.Click += delegate { Reload(false); };
-            Controls.Add(refresh);
+            _refresh = new Button();
+            _refresh.Text = "重整";
+            _refresh.FlatStyle = FlatStyle.Flat;
+            _refresh.BackColor = Color.FromArgb(44, 44, 47);
+            _refresh.ForeColor = Color.White;
+            _refresh.Click += delegate { Reload(false); };
+            Controls.Add(_refresh);
 
             _list = new ListBox();
-            _list.SetBounds(10, 36, 400, 120);
             _list.BackColor = Color.FromArgb(36, 36, 40);
             _list.ForeColor = Color.FromArgb(226, 226, 232);
             _list.IntegralHeight = false;
@@ -2641,12 +2656,18 @@ namespace ExpeditionRecorder
             Controls.Add(_list);
 
             _editorHost = new Panel();
-            _editorHost.SetBounds(10, 164, 400, 446);
-            _editorHost.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
             _editorHost.AutoScroll = true;
             _editorHost.BackColor = Color.FromArgb(24, 24, 27);
             _editorHost.BorderStyle = BorderStyle.FixedSingle;
             Controls.Add(_editorHost);
+
+            _empty = new Label();
+            _empty.Text = "完成一條記錄後會自動出現在這裡。";
+            _empty.TextAlign = ContentAlignment.MiddleCenter;
+            _empty.ForeColor = Color.FromArgb(160, 160, 168);
+            _empty.BackColor = Color.FromArgb(24, 24, 27);
+            Controls.Add(_empty);
+            Resize += delegate { LayoutDock(); };
 
             _follow = new System.Windows.Forms.Timer();
             _follow.Interval = 400;
@@ -2655,6 +2676,33 @@ namespace ExpeditionRecorder
             FollowGame();
             Reload(true);
             _list.ItemHeight = Math.Max(16, UiScale.Px(20));
+            LayoutDock();
+        }
+
+        int S(int v) { return Math.Max(1, (int)Math.Round(v * UiScale.Scale)); }
+
+        void LayoutDock()
+        {
+            if (_title == null || _list == null || _editorHost == null) return;
+            int m = S(10);
+            int titleH = S(24);
+            int headerY = S(6);
+            int btnW = S(90);
+            _title.SetBounds(m, headerY, Math.Max(S(80), ClientSize.Width - btnW - m * 3), titleH);
+            _refresh.SetBounds(ClientSize.Width - m - btnW, headerY, btnW, S(24));
+            int listY = S(36);
+            int listH = Math.Max(S(100), (int)(ClientSize.Height * 0.24));
+            listH = Math.Min(listH, Math.Max(S(100), ClientSize.Height - listY - S(120)));
+            _list.SetBounds(m, listY, Math.Max(S(120), ClientSize.Width - m * 2), listH);
+            int editorY = listY + listH + S(8);
+            _editorHost.SetBounds(m, editorY, Math.Max(S(120), ClientSize.Width - m * 2),
+                Math.Max(S(80), ClientSize.Height - editorY - m));
+            _empty.SetBounds(m, listY, Math.Max(S(120), ClientSize.Width - m * 2),
+                Math.Max(S(80), ClientSize.Height - listY - m));
+            bool empty = _entries.Count == 0;
+            _list.Visible = !empty;
+            _editorHost.Visible = !empty;
+            _empty.Visible = empty;
         }
 
         void FollowGame()
@@ -2757,6 +2805,7 @@ namespace ExpeditionRecorder
             catch { }
             finally { _loading = false; }
             ShowEntry();
+            LayoutDock();
         }
 
         void ClearEditor()
@@ -2807,12 +2856,20 @@ namespace ExpeditionRecorder
         public void RefreshScale()
         {
             _list.ItemHeight = Math.Max(16, UiScale.Px(20));
+            LayoutDock();
             Reload(false);
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             try { if (_follow != null) _follow.Stop(); } catch { }
+            if (!_programmaticClose && !Program.Closing)
+            {
+                DockEnabled = false;
+                try { Program.SaveHotkeys(); } catch { }
+                try { Program.UpdateCurrentDockButton(); } catch { }
+            }
+            _programmaticClose = false;
             if (Instance == this) Instance = null;
             base.OnFormClosed(e);
         }
@@ -5775,12 +5832,13 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn, CacheBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, CurrentBtn, HelpBtn, TradBtn, SimpBtn, EngBtn, CacheBtn;
         static Button[] ScaleBtns;
         static int CacheConfirm;
         static System.Windows.Forms.Timer CacheResetTimer;
         static Label ScaleLabel;
         static bool HotkeysEnabled = true;
+        internal static bool Closing;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
         internal static DateTime SessionStart = DateTime.Now;
@@ -6086,11 +6144,12 @@ namespace ExpeditionRecorder
             HotkeyBtn = Btn("快捷鍵：開", 142, 102, 120, 26);
             HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
             recGroup.Controls.Add(HotkeyBtn);
-            var currentBtn = Btn("本次記錄", 270, 102, 120, 26);
-            currentBtn.Click += delegate { CurrentDock.ShowDock(); };
-            recGroup.Controls.Add(currentBtn);
+            CurrentBtn = Btn("本次記錄：開", 270, 102, 120, 26);
+            CurrentBtn.Click += delegate { SetCurrentDockEnabled(!CurrentDock.DockEnabled); };
+            recGroup.Controls.Add(CurrentBtn);
             UpdateRecordButtons();
             UpdateHotkeyButton();
+            UpdateCurrentDockButton();
 
             var viewGroup = Group("檢視與輸出", 12, 260, 406, 64);
             RecordsBtn = Btn("已記錄", 14, 24, 120, 26);
@@ -6162,6 +6221,7 @@ namespace ExpeditionRecorder
 
             ControlWindow.FormClosing += delegate
             {
+                Closing = true;
                 try { if (CacheResetTimer != null) CacheResetTimer.Stop(); } catch { }
                 try { if (Keys != null) Keys.Uninstall(); } catch { }
                 try { if (GameHwnd != IntPtr.Zero) Native.EnableWindow(GameHwnd, true); } catch { }
@@ -6287,6 +6347,7 @@ namespace ExpeditionRecorder
                 }
                 if (EBtn != null) UiText.SetText(EBtn, eText);
                 if (CancelBtn != null) UiText.SetText(CancelBtn, cText);
+                UpdateCurrentDockButton();
             }
             catch { }
         }
@@ -6303,6 +6364,28 @@ namespace ExpeditionRecorder
             UpdateHotkeyButton();
             SaveHotkeys();
             SetState(on ? "快捷鍵已啟用（Q/E/C 可用）" : "快捷鍵已暫停（Q/E/C 直接給遊戲）");
+        }
+
+        static void SetCurrentDockEnabled(bool on)
+        {
+            if (on) CurrentDock.ShowDock(); else CurrentDock.HideDock();
+            UpdateCurrentDockButton();
+            SaveHotkeys();
+            SetState(on ? "本次記錄：開" : "本次記錄：關");
+        }
+
+        internal static void UpdateCurrentDockButton()
+        {
+            try
+            {
+                if (CurrentBtn == null) return;
+                bool on = CurrentDock.DockEnabled;
+                UiText.SetText(CurrentBtn, on ? "本次記錄：開" : "本次記錄：關");
+                CurrentBtn.BackColor = on ? Color.FromArgb(42, 72, 48) : Color.FromArgb(76, 44, 44);
+                CurrentBtn.ForeColor = on ? Color.FromArgb(190, 240, 190) : Color.FromArgb(255, 190, 180);
+                CurrentBtn.FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(180, 80, 70);
+            }
+            catch { }
         }
 
         static void UpdateHotkeyButton()
@@ -6528,7 +6611,7 @@ namespace ExpeditionRecorder
                 ClientOwned = false;
                 SetState("狀態：已接上客戶端");
                 try { ScanPartyAsync(); } catch { }
-                try { CurrentDock.ShowDock(); } catch { }
+                try { if (CurrentDock.DockEnabled) CurrentDock.ShowDock(); } catch { }
                 return true;
             }
             catch { return false; }
@@ -7960,6 +8043,12 @@ namespace ExpeditionRecorder
                     if (he == "true") HotkeysEnabled = true;
                     else if (he == "false") HotkeysEnabled = false;
                 }
+                if (d != null && d.ContainsKey("currentDock"))
+                {
+                    string cd = Convert.ToString(d["currentDock"]).ToLowerInvariant();
+                    if (cd == "true") CurrentDock.DockEnabled = true;
+                    else if (cd == "false") CurrentDock.DockEnabled = false;
+                }
             }
             catch { }
         }
@@ -7976,6 +8065,7 @@ namespace ExpeditionRecorder
                 d["preset"] = Preset;
                 d["lang"] = UiText.Lang.ToString();
                 d["hotkeysEnabled"] = HotkeysEnabled;
+                d["currentDock"] = CurrentDock.DockEnabled;
                 File.WriteAllText(HotkeyFile(), new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }
