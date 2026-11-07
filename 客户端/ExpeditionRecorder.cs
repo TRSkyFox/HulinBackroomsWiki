@@ -1536,24 +1536,40 @@ namespace ExpeditionRecorder
             set { Scale = Math.Max(1.0f, Math.Min(2.0f, value)); }
         }
 
+        static void Collect(Control c, List<Control> list)
+        {
+            if (c == null) return;
+            list.Add(c);
+            foreach (Control child in c.Controls) Collect(child, list);
+        }
+
         public static void Apply(Control root)
         {
             if (root == null) return;
-            if (!(root is TrackBar))
+            var controls = new List<Control>();
+            Collect(root, controls);
+            /* 先記下所有原始字級，再統一放大；不能在遞迴途中讀 Font，
+               否則子控制項會讀到已經放大的父字級，變成 2×2×2。 */
+            foreach (var c in controls)
             {
+                if (c is TrackBar) continue;
                 Font b;
-                if (!BaseFonts.TryGetValue(root, out b))
+                if (!BaseFonts.TryGetValue(c, out b))
                 {
-                    b = root.Font;
-                    BaseFonts[root] = b;
+                    b = c.Font;
+                    BaseFonts[c] = b;
                 }
-                if (b != null)
+            }
+            foreach (var c in controls)
+            {
+                if (c is TrackBar) continue;
+                Font b;
+                if (BaseFonts.TryGetValue(c, out b) && b != null)
                 {
-                    try { root.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
+                    try { c.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
                     catch { }
                 }
             }
-            foreach (Control child in root.Controls) Apply(child);
         }
     }
 
@@ -1721,11 +1737,13 @@ namespace ExpeditionRecorder
     /* ══ 按鍵設定 ═══════════════════════════════════════════ */
     class KeysForm : Form
     {
+        public static KeysForm Instance;
         Button _mode, _step, _cancel;
         int _cap = 0;
 
         public KeysForm()
         {
+            Instance = this;
             Text = "按鍵設定";
             ClientSize = new Size(380, 236);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
@@ -1808,6 +1826,12 @@ namespace ExpeditionRecorder
             RefreshText();
             e.Handled = true;
             e.SuppressKeyPress = true;
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (Instance == this) Instance = null;
+            base.OnFormClosed(e);
         }
     }
 
@@ -2195,6 +2219,7 @@ namespace ExpeditionRecorder
     /* ══ 導出：選項＋壓縮 ═══════════════════════════════════ */
     class ExportForm : Form
     {
+        public static ExportForm Instance;
         CheckBox _ev, _it, _fl, _ex, _en, _shop, _merge, _md, _zip;
         TextBox _dir;
         Button _go;
@@ -2203,6 +2228,7 @@ namespace ExpeditionRecorder
 
         public ExportForm()
         {
+            Instance = this;
             Text = "導出記錄";
             ClientSize = new Size(500, 330);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
@@ -2357,6 +2383,12 @@ namespace ExpeditionRecorder
             }
             _go.Enabled = true;
         }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (Instance == this) Instance = null;
+            base.OnFormClosed(e);
+        }
     }
 
     /* ══ 商店：貨架或商店事件 ═══════════════════════════════ */
@@ -2501,12 +2533,12 @@ namespace ExpeditionRecorder
 
             var bottom = new Panel();
             bottom.Dock = DockStyle.Bottom;
-            bottom.Height = UiScale.Px(48);
+            bottom.Height = UiScale.Px(52);
             bottom.BackColor = Color.FromArgb(24, 24, 27);
 
             var save = new Button();
             save.Text = "保存修改";
-            save.SetBounds(12, UiScale.Px(10), UiScale.Px(120), UiScale.Px(28));
+            save.SetBounds(12, UiScale.Px(10), UiScale.Px(120), UiScale.Px(32));
             save.FlatStyle = FlatStyle.Flat;
             save.BackColor = Color.FromArgb(44, 44, 47);
             save.ForeColor = Color.White;
@@ -2516,7 +2548,7 @@ namespace ExpeditionRecorder
 
             var cancel = new Button();
             cancel.Text = "取消";
-            cancel.SetBounds(UiScale.Px(144), UiScale.Px(10), UiScale.Px(100), UiScale.Px(28));
+            cancel.SetBounds(UiScale.Px(144), UiScale.Px(10), UiScale.Px(100), UiScale.Px(32));
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.BackColor = Color.FromArgb(44, 44, 47);
             cancel.ForeColor = Color.White;
@@ -2552,12 +2584,12 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = text;
-            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(24));
+            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(28));
             l.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             l.ForeColor = Color.FromArgb(255, 214, 120);
             l.Font = new Font("Microsoft JhengHei UI", 10F, FontStyle.Bold);
             _panel.Controls.Add(l);
-            _y += UiScale.Px(30);
+            _y += UiScale.Px(34);
             return l;
         }
 
@@ -2565,16 +2597,16 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(20));
+            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(24));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(UiScale.Px(150), _y + 4, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), UiScale.Px(20));
+            v.SetBounds(UiScale.Px(150), _y + 4, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), UiScale.Px(24));
             v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
-            _y += UiScale.Px(28);
+            _y += UiScale.Px(34);
         }
 
         static string S(Dictionary<string, object> d, string k)
@@ -2608,10 +2640,10 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(20));
+            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(24));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
-            int h = UiScale.Px(multi ? height : 24);
+            int h = UiScale.Px(multi ? height : 28);
             var t = new TextBox();
             t.Multiline = multi;
             t.ScrollBars = multi ? ScrollBars.Vertical : ScrollBars.None;
@@ -2622,7 +2654,7 @@ namespace ExpeditionRecorder
             t.BorderStyle = BorderStyle.FixedSingle;
             t.Text = value ?? "";
             _panel.Controls.Add(t);
-            _y += h + UiScale.Px(10);
+            _y += h + UiScale.Px(12);
             return t;
         }
 
@@ -2637,11 +2669,11 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 5, UiScale.Px(130), UiScale.Px(20));
+            l.SetBounds(14, _y + 5, UiScale.Px(130), UiScale.Px(24));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int n = Math.Max(1, values.Length);
-            int bh = UiScale.Px(24);
+            int bh = UiScale.Px(28);
             string current = S(d, key);
             int selected = Array.IndexOf(values, current);
             var buttons = new List<Button>();
@@ -2685,7 +2717,7 @@ namespace ExpeditionRecorder
             }
             _panel.Controls.Add(table);
             _savers.Add(delegate { if (d != null && selected >= 0) d[key] = values[selected]; });
-            _y += bh + UiScale.Px(10);
+            _y += bh + UiScale.Px(12);
         }
 
         void AddLongText(Dictionary<string, object> d, string key, string label)
@@ -3013,7 +3045,9 @@ namespace ExpeditionRecorder
 
     class RecordsForm : Form
     {
+        public static RecordsForm Instance;
         TextBox _search;
+        Label _searchTip;
         Panel _editorHost;
         RecordEditForm _inlineEditor;
         bool _closingInline;
@@ -3026,6 +3060,7 @@ namespace ExpeditionRecorder
 
         public RecordsForm()
         {
+            Instance = this;
             Text = "已記錄";
             ClientSize = new Size(920, 580);
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
@@ -3035,20 +3070,20 @@ namespace ExpeditionRecorder
             ForeColor = Color.FromArgb(230, 230, 235);
 
             _search = new TextBox();
-            _search.SetBounds(12, 10, 400, UiScale.Px(24));
+            _search.SetBounds(12, 10, 400, UiScale.Px(28));
             _search.BackColor = Color.FromArgb(40, 40, 44);
             _search.ForeColor = Color.White;
             _search.BorderStyle = BorderStyle.FixedSingle;
             _search.TextChanged += delegate { ApplyFilter(); };
             Controls.Add(_search);
-            var tip = new Label();
-            tip.Text = "搜尋";
-            tip.SetBounds(420, UiScale.Px(13), 48, UiScale.Px(20));
-            tip.ForeColor = Color.FromArgb(140, 140, 148);
-            Controls.Add(tip);
+            _searchTip = new Label();
+            _searchTip.Text = "搜尋";
+            _searchTip.SetBounds(420, UiScale.Px(13), 48, UiScale.Px(24));
+            _searchTip.ForeColor = Color.FromArgb(140, 140, 148);
+            Controls.Add(_searchTip);
             _kind = new ComboBox();
             _kind.DropDownStyle = ComboBoxStyle.DropDownList;
-            _kind.SetBounds(472, 10, 130, UiScale.Px(24));
+            _kind.SetBounds(472, 10, 130, UiScale.Px(28));
             _kind.Items.AddRange(new object[] { "全部", "事件", "物品", "樓層", "出口", "結局", "商店" });
             _kind.SelectedIndex = 0;
             _kind.SelectedIndexChanged += delegate { ApplyFilter(); };
@@ -3081,7 +3116,7 @@ namespace ExpeditionRecorder
             Controls.Add(_reloadBtn); Controls.Add(_delBtn); Controls.Add(_openBtn); Controls.Add(_closeBtn);
 
             UiScale.Apply(this);
-            _list.ItemHeight = Math.Max(16, UiScale.Px(18));
+            _list.ItemHeight = Math.Max(18, UiScale.Px(28));
             LoadAll();
             LayoutRecords();
             Resize += delegate { LayoutRecords(); };
@@ -3090,10 +3125,17 @@ namespace ExpeditionRecorder
         void LayoutRecords()
         {
             int pad = UiScale.Px(12);
-            int top = Math.Max(UiScale.Px(42), UiScale.Px(10) + UiScale.Px(24) + UiScale.Px(8));
-            int bottom = UiScale.Px(52);
+            int top = Math.Max(UiScale.Px(42), UiScale.Px(10) + UiScale.Px(28) + UiScale.Px(8));
+            int bottom = UiScale.Px(92);
             int w = ClientSize.Width;
             int h = ClientSize.Height;
+            int searchW = Math.Max(180, Math.Min(400, w - 300));
+            _search.SetBounds(pad, UiScale.Px(10), searchW, UiScale.Px(28));
+            int tipW = UiScale.Px(56);
+            int tipX = pad + searchW + UiScale.Px(8);
+            _searchTip.SetBounds(tipX, UiScale.Px(10), tipW, UiScale.Px(28));
+            int kindX = tipX + tipW + UiScale.Px(8);
+            _kind.SetBounds(kindX, UiScale.Px(10), Math.Max(100, w - kindX - pad), UiScale.Px(28));
             int listW = Math.Max(240, Math.Min(460, (w - pad * 3) * 34 / 100));
             if (w < 760) listW = Math.Max(200, (w - pad * 3) / 2);
             int detailX = pad + listW + 12;
@@ -3101,12 +3143,12 @@ namespace ExpeditionRecorder
             int contentH = Math.Max(120, h - top - bottom - 8);
             _list.SetBounds(pad, top, listW, contentH);
             _editorHost.SetBounds(detailX, top, detailW, contentH);
-            _count.SetBounds(pad, h - UiScale.Px(20), Math.Max(200, w - pad * 2), UiScale.Px(18));
-            int by = h - UiScale.Px(48);
-            if (_reloadBtn != null) _reloadBtn.SetBounds(pad, by, UiScale.Px(90), UiScale.Px(28));
-            if (_delBtn != null) _delBtn.SetBounds(pad + UiScale.Px(98), by, UiScale.Px(100), UiScale.Px(28));
-            if (_openBtn != null) _openBtn.SetBounds(pad + UiScale.Px(206), by, UiScale.Px(110), UiScale.Px(28));
-            if (_closeBtn != null) _closeBtn.SetBounds(pad + UiScale.Px(324), by, UiScale.Px(90), UiScale.Px(28));
+            _count.SetBounds(pad, h - UiScale.Px(44), Math.Max(200, w - pad * 2), UiScale.Px(40));
+            int by = h - UiScale.Px(80);
+            if (_reloadBtn != null) _reloadBtn.SetBounds(pad, by, UiScale.Px(90), UiScale.Px(32));
+            if (_delBtn != null) _delBtn.SetBounds(pad + UiScale.Px(98), by, UiScale.Px(100), UiScale.Px(32));
+            if (_openBtn != null) _openBtn.SetBounds(pad + UiScale.Px(206), by, UiScale.Px(110), UiScale.Px(32));
+            if (_closeBtn != null) _closeBtn.SetBounds(pad + UiScale.Px(324), by, UiScale.Px(90), UiScale.Px(32));
         }
 
         Button MkBtn(string text, int x, int y, int w)
@@ -3203,7 +3245,7 @@ namespace ExpeditionRecorder
                 else if (e.Kind == "結局") nd++;
                 else if (e.Kind == "商店") ns++;
             }
-            _count.Text = "事件 " + ne + " · 物品 " + ni + " · 樓層 " + nf + " · 出口 " + nx + " · 結局 " + nd + " · 商店 " + ns
+            _count.Text = "事件 " + ne + " · 物品 " + ni + " · 樓層 " + nf + "\r\n出口 " + nx + " · 結局 " + nd + " · 商店 " + ns
                 + "（目前顯示 " + _shown.Count + "）";
             if (_list.Items.Count > 0) _list.SelectedIndex = 0;
         }
@@ -3580,6 +3622,12 @@ namespace ExpeditionRecorder
             }
             catch { }
             LoadAll();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (Instance == this) Instance = null;
+            base.OnFormClosed(e);
         }
     }
 
@@ -4958,7 +5006,11 @@ namespace ExpeditionRecorder
             recGroup.Controls.Add(CancelBtn);
 
             var keyBtn = Btn("按鍵設定", 14, 102, 120, 26);
-            keyBtn.Click += delegate { new KeysForm().ShowDialog(); };
+            keyBtn.Click += delegate
+            {
+                if (KeysForm.Instance != null && !KeysForm.Instance.IsDisposed) { KeysForm.Instance.Activate(); return; }
+                var kf = new KeysForm(); kf.TopMost = false; kf.Show();
+            };
             recGroup.Controls.Add(keyBtn);
             HotkeyBtn = Btn("快捷鍵：開", 142, 102, 120, 26);
             HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
@@ -4968,13 +5020,21 @@ namespace ExpeditionRecorder
 
             var viewGroup = Group("檢視與輸出", 12, 260, 406, 64);
             RecordsBtn = Btn("已記錄", 14, 24, 120, 26);
-            RecordsBtn.Click += delegate { new RecordsForm().ShowDialog(); };
+            RecordsBtn.Click += delegate
+            {
+                if (RecordsForm.Instance != null && !RecordsForm.Instance.IsDisposed) { RecordsForm.Instance.Activate(); return; }
+                var rf = new RecordsForm(); rf.TopMost = false; rf.Show();
+            };
             viewGroup.Controls.Add(RecordsBtn);
             PendingBtn = Btn("待處理", 140, 24, 120, 26);
             PendingBtn.Click += delegate { PendingDock.Toggle(); };
             viewGroup.Controls.Add(PendingBtn);
             var exportBtn = Btn("導出", 266, 24, 126, 26);
-            exportBtn.Click += delegate { new ExportForm().ShowDialog(); };
+            exportBtn.Click += delegate
+            {
+                if (ExportForm.Instance != null && !ExportForm.Instance.IsDisposed) { ExportForm.Instance.Activate(); return; }
+                var ef = new ExportForm(); ef.TopMost = false; ef.Show();
+            };
             viewGroup.Controls.Add(exportBtn);
 
             StateLabel = new Label();
@@ -4985,7 +5045,11 @@ namespace ExpeditionRecorder
 
             var settingsGroup = Group("設置", 12, 360, 406, 88);
             HelpBtn = Btn("說明", 14, 22, 80, 26);
-            HelpBtn.Click += delegate { new HelpForm().ShowDialog(); };
+            HelpBtn.Click += delegate
+            {
+                if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) { HelpForm.Instance.Activate(); return; }
+                var hf = new HelpForm(); hf.TopMost = false; hf.Show();
+            };
             settingsGroup.Controls.Add(HelpBtn);
             TradBtn = Btn("繁體", 102, 22, 84, 26);
             TradBtn.Click += delegate { SetUiLang(UiLang.Traditional); };
