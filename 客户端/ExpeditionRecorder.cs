@@ -3335,12 +3335,12 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = text;
-            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(28));
+            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(24));
             l.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             l.ForeColor = Color.FromArgb(255, 214, 120);
             l.Font = new Font("Microsoft JhengHei UI", 10F, FontStyle.Bold);
             _panel.Controls.Add(l);
-            _y += UiScale.Px(34);
+            _y += UiScale.Px(28);
             return l;
         }
 
@@ -3348,16 +3348,16 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(24));
+            l.SetBounds(14, _y + 3, UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(UiScale.Px(150), _y + 4, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), UiScale.Px(24));
+            v.SetBounds(UiScale.Px(108), _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(122)), UiScale.Px(22));
             v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
-            _y += UiScale.Px(34);
+            _y += UiScale.Px(28);
         }
 
         static string S(Dictionary<string, object> d, string k)
@@ -3393,22 +3393,22 @@ namespace ExpeditionRecorder
             bool narrow = avail < UiScale.Px(430);
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(130), UiScale.Px(24));
+            l.SetBounds(14, _y + 3, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
-            int h = UiScale.Px(multi ? height : 28);
+            int h = UiScale.Px(multi ? height : 24);
             var t = new TextBox();
             t.Multiline = multi;
             t.ScrollBars = multi ? ScrollBars.Vertical : ScrollBars.None;
             if (narrow)
             {
-                t.SetBounds(14, _y + UiScale.Px(28), Math.Max(UiScale.Px(120), avail - UiScale.Px(28)), h);
-                _y += UiScale.Px(28) + h + UiScale.Px(12);
+                t.SetBounds(14, _y + UiScale.Px(24), Math.Max(UiScale.Px(120), avail - UiScale.Px(28)), h);
+                _y += UiScale.Px(24) + h + UiScale.Px(6);
             }
             else
             {
-                t.SetBounds(UiScale.Px(150), _y, Math.Max(UiScale.Px(120), avail - UiScale.Px(166)), h);
-                _y += h + UiScale.Px(12);
+                t.SetBounds(UiScale.Px(108), _y, Math.Max(UiScale.Px(120), avail - UiScale.Px(122)), h);
+                _y += h + UiScale.Px(6);
             }
             t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             t.BackColor = Color.FromArgb(40, 40, 44);
@@ -3430,12 +3430,12 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = "事件標籤";
-            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(24));
+            l.SetBounds(14, _y + 3, UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var cb = new CheckBox();
             cb.Text = "休息處";
-            cb.SetBounds(UiScale.Px(150), _y, UiScale.Px(180), UiScale.Px(24));
+            cb.SetBounds(UiScale.Px(108), _y, UiScale.Px(180), UiScale.Px(22));
             cb.ForeColor = Color.FromArgb(225, 225, 230);
             string tags = A(d, "tags");
             cb.Checked = tags.IndexOf("rest", StringComparison.Ordinal) >= 0;
@@ -3448,7 +3448,7 @@ namespace ExpeditionRecorder
                 if (cb.Checked) arr.Add("rest");
                 d["tags"] = arr;
             });
-            _y += UiScale.Px(34);
+            _y += UiScale.Px(28);
         }
 
         void AddOptionText(Dictionary<string, object> d)
@@ -3474,19 +3474,19 @@ namespace ExpeditionRecorder
             bool narrow = avail < UiScale.Px(430);
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 5, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(130), UiScale.Px(24));
+            l.SetBounds(14, _y + 4, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int n = Math.Max(1, values.Length);
-            int bh = UiScale.Px(28);
+            int bh = UiScale.Px(24);
             string current = S(d, key);
             int selected = Array.IndexOf(values, current);
             var buttons = new List<Button>();
             var table = new TableLayoutPanel();
             table.ColumnCount = n;
             table.RowCount = 1;
-            table.SetBounds(narrow ? 14 : UiScale.Px(150), narrow ? _y + UiScale.Px(28) : _y,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Max(UiScale.Px(120), avail - UiScale.Px(166)), bh);
+            table.SetBounds(narrow ? 14 : UiScale.Px(108), narrow ? _y + UiScale.Px(24) : _y,
+                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Max(UiScale.Px(120), avail - UiScale.Px(122)), bh);
             table.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             for (int i = 0; i < n; i++) table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / n));
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, bh));
@@ -3523,7 +3523,7 @@ namespace ExpeditionRecorder
             }
             _panel.Controls.Add(table);
             _savers.Add(delegate { if (d != null && selected >= 0) d[key] = values[selected]; });
-            _y += (narrow ? UiScale.Px(28) : 0) + bh + UiScale.Px(12);
+            _y += (narrow ? UiScale.Px(24) : 0) + bh + UiScale.Px(6);
         }
 
         void AddFloorFields(Dictionary<string, object> o)
@@ -3537,21 +3537,21 @@ namespace ExpeditionRecorder
             bool narrow = avail < UiScale.Px(430);
             var typeLabel = new Label();
             typeLabel.Text = "類型";
-            typeLabel.SetBounds(14, _y + (narrow ? 0 : 5), narrow ? avail - UiScale.Px(28) : UiScale.Px(120), UiScale.Px(24));
+            typeLabel.SetBounds(14, _y + (narrow ? 0 : 4), narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
             typeLabel.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(typeLabel);
             int typeY = narrow ? _y + UiScale.Px(26) : _y;
             bool normal = ft == "normal";
             var normalBtn = new Button();
             normalBtn.Text = "常規樓層";
-            normalBtn.SetBounds(narrow ? 14 : UiScale.Px(120), typeY, UiScale.Px(100), UiScale.Px(26));
+            normalBtn.SetBounds(narrow ? 14 : UiScale.Px(108), typeY, UiScale.Px(100), UiScale.Px(26));
             normalBtn.FlatStyle = FlatStyle.Flat;
             normalBtn.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
             normalBtn.ForeColor = Color.White;
             _panel.Controls.Add(normalBtn);
             var anomalousBtn = new Button();
             anomalousBtn.Text = "異常樓層";
-            anomalousBtn.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(226), typeY, UiScale.Px(100), UiScale.Px(26));
+            anomalousBtn.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(214), typeY, UiScale.Px(100), UiScale.Px(26));
             anomalousBtn.FlatStyle = FlatStyle.Flat;
             anomalousBtn.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
             anomalousBtn.ForeColor = Color.White;
@@ -3572,24 +3572,24 @@ namespace ExpeditionRecorder
             int rowY = _y;
             var floorLabel = new Label();
             floorLabel.Text = "樓層";
-            floorLabel.SetBounds(14, rowY + 5, UiScale.Px(120), UiScale.Px(24));
+            floorLabel.SetBounds(14, rowY + 4, UiScale.Px(90), UiScale.Px(22));
             floorLabel.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(floorLabel);
             var prefix = new Label();
             prefix.Text = "Level";
-            prefix.SetBounds(narrow ? 14 : UiScale.Px(120), rowY + (narrow ? UiScale.Px(26) : 4), UiScale.Px(42), UiScale.Px(22));
+            prefix.SetBounds(narrow ? 14 : UiScale.Px(108), rowY + (narrow ? UiScale.Px(24) : 3), UiScale.Px(56), UiScale.Px(22));
             prefix.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(prefix);
             var idBox = new TextBox();
-            idBox.SetBounds(narrow ? UiScale.Px(56) : UiScale.Px(165), rowY + (narrow ? UiScale.Px(26) : 0), narrow ? UiScale.Px(90) : UiScale.Px(100), UiScale.Px(24));
+            idBox.SetBounds(narrow ? UiScale.Px(56) : UiScale.Px(166), rowY + (narrow ? UiScale.Px(24) : 0), narrow ? UiScale.Px(90) : UiScale.Px(80), UiScale.Px(24));
             idBox.BackColor = Color.FromArgb(40, 40, 44);
             idBox.ForeColor = Color.White;
             idBox.BorderStyle = BorderStyle.FixedSingle;
             idBox.Text = S(o, "floorId");
             _panel.Controls.Add(idBox);
             var nameBox = new TextBox();
-            nameBox.SetBounds(narrow ? 14 : UiScale.Px(273), narrow ? rowY + UiScale.Px(58) : rowY,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(300), Math.Max(UiScale.Px(100), avail - UiScale.Px(287))), UiScale.Px(24));
+            nameBox.SetBounds(narrow ? 14 : UiScale.Px(252), narrow ? rowY + UiScale.Px(54) : rowY,
+                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(360), Math.Max(UiScale.Px(100), avail - UiScale.Px(266))), UiScale.Px(24));
             nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
@@ -3602,19 +3602,19 @@ namespace ExpeditionRecorder
                 prefix.Visible = normal;
                 if (narrow)
                 {
-                    prefix.SetBounds(14, rowY + UiScale.Px(26), UiScale.Px(42), UiScale.Px(22));
-                    idBox.SetBounds(normal ? UiScale.Px(56) : 14, rowY + UiScale.Px(26), normal ? UiScale.Px(90) : UiScale.Px(110), UiScale.Px(24));
-                    nameBox.SetBounds(14, rowY + UiScale.Px(58), Math.Max(UiScale.Px(120), avail - UiScale.Px(28)), UiScale.Px(24));
+                    prefix.SetBounds(14, rowY + UiScale.Px(24), UiScale.Px(56), UiScale.Px(22));
+                    idBox.SetBounds(normal ? UiScale.Px(56) : 14, rowY + UiScale.Px(24), normal ? UiScale.Px(90) : UiScale.Px(110), UiScale.Px(24));
+                    nameBox.SetBounds(14, rowY + UiScale.Px(54), Math.Max(UiScale.Px(120), avail - UiScale.Px(28)), UiScale.Px(24));
                 }
                 else if (normal)
                 {
-                    idBox.SetBounds(UiScale.Px(165), rowY, UiScale.Px(100), UiScale.Px(24));
-                    nameBox.SetBounds(UiScale.Px(273), rowY, Math.Min(UiScale.Px(300), Math.Max(UiScale.Px(100), avail - UiScale.Px(287))), UiScale.Px(24));
+                    idBox.SetBounds(UiScale.Px(166), rowY, UiScale.Px(80), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(252), rowY, Math.Min(UiScale.Px(360), Math.Max(UiScale.Px(100), avail - UiScale.Px(266))), UiScale.Px(24));
                 }
                 else
                 {
-                    idBox.SetBounds(UiScale.Px(120), rowY, UiScale.Px(160), UiScale.Px(24));
-                    nameBox.SetBounds(UiScale.Px(288), rowY, Math.Min(UiScale.Px(300), Math.Max(UiScale.Px(100), avail - UiScale.Px(302))), UiScale.Px(24));
+                    idBox.SetBounds(UiScale.Px(108), rowY, UiScale.Px(110), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(224), rowY, Math.Min(UiScale.Px(360), Math.Max(UiScale.Px(100), avail - UiScale.Px(238))), UiScale.Px(24));
                 }
             };
             idBox.KeyPress += delegate (object s, KeyPressEventArgs e)
@@ -3629,7 +3629,7 @@ namespace ExpeditionRecorder
                 o["floorName"] = nameBox.Text.Trim();
             });
             layout();
-            _y = rowY + (narrow ? UiScale.Px(92) : UiScale.Px(36));
+            _y = rowY + (narrow ? UiScale.Px(88) : UiScale.Px(30));
         }
 
         void AddCompactFloorRow(Dictionary<string, object> o)
@@ -3639,28 +3639,28 @@ namespace ExpeditionRecorder
             int rowY = _y;
             var floorLabel = new Label();
             floorLabel.Text = "樓層";
-            floorLabel.SetBounds(14, rowY + (narrow ? 0 : 5), narrow ? avail - UiScale.Px(28) : UiScale.Px(120), UiScale.Px(24));
+            floorLabel.SetBounds(14, rowY + (narrow ? 0 : 4), narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
             floorLabel.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(floorLabel);
             bool normal = Parse.IsNormalFloorId(S(o, "floorId"));
-            int floorLineY = narrow ? rowY + UiScale.Px(26) : rowY;
+            int floorLineY = narrow ? rowY + UiScale.Px(24) : rowY;
             var prefix = new Label();
             prefix.Text = "Level";
-            prefix.SetBounds(narrow ? 14 : UiScale.Px(120), floorLineY + (narrow ? 0 : 4), UiScale.Px(42), UiScale.Px(22));
+            prefix.SetBounds(narrow ? 14 : UiScale.Px(108), floorLineY + (narrow ? 0 : 3), UiScale.Px(56), UiScale.Px(22));
             prefix.ForeColor = Color.FromArgb(220, 220, 226);
             prefix.Visible = normal;
             _panel.Controls.Add(prefix);
             var idBox = new TextBox();
-            idBox.SetBounds(narrow ? UiScale.Px(56) : (normal ? UiScale.Px(165) : UiScale.Px(120)), floorLineY,
-                narrow ? UiScale.Px(90) : (normal ? UiScale.Px(100) : UiScale.Px(160)), UiScale.Px(24));
+            idBox.SetBounds(narrow ? UiScale.Px(56) : (normal ? UiScale.Px(166) : UiScale.Px(108)), floorLineY,
+                narrow ? UiScale.Px(90) : (normal ? UiScale.Px(80) : UiScale.Px(110)), UiScale.Px(24));
             idBox.BackColor = Color.FromArgb(40, 40, 44);
             idBox.ForeColor = Color.White;
             idBox.BorderStyle = BorderStyle.FixedSingle;
             idBox.Text = S(o, "floorId");
             _panel.Controls.Add(idBox);
             var nameBox = new TextBox();
-            nameBox.SetBounds(narrow ? 14 : (normal ? UiScale.Px(273) : UiScale.Px(288)), narrow ? rowY + UiScale.Px(58) : rowY,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(300), Math.Max(UiScale.Px(100), avail - UiScale.Px(normal ? 287 : 302))), UiScale.Px(24));
+            nameBox.SetBounds(narrow ? 14 : (normal ? UiScale.Px(252) : UiScale.Px(224)), narrow ? rowY + UiScale.Px(54) : rowY,
+                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(340), Math.Max(UiScale.Px(100), avail - UiScale.Px(normal ? 266 : 238))), UiScale.Px(24));
             nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
@@ -3672,7 +3672,7 @@ namespace ExpeditionRecorder
                 o["floorId"] = idBox.Text.Trim();
                 o["floorName"] = nameBox.Text.Trim();
             });
-            _y = rowY + (narrow ? UiScale.Px(92) : UiScale.Px(36));
+            _y = rowY + (narrow ? UiScale.Px(88) : UiScale.Px(30));
         }
 
         void AddThemeButtons(Dictionary<string, object> o)
@@ -3681,19 +3681,19 @@ namespace ExpeditionRecorder
             bool narrow = avail < UiScale.Px(430);
             var label = new Label();
             label.Text = "主題";
-            label.SetBounds(14, _y + (narrow ? 0 : 5), narrow ? avail - UiScale.Px(28) : UiScale.Px(120), UiScale.Px(24));
+            label.SetBounds(14, _y + (narrow ? 0 : 4), narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
             label.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(label);
-            int btnY = narrow ? _y + UiScale.Px(26) : _y;
+            int btnY = narrow ? _y + UiScale.Px(24) : _y;
             var light = new Button();
             light.Text = "明亮";
-            light.SetBounds(narrow ? 14 : UiScale.Px(120), btnY, UiScale.Px(100), UiScale.Px(26));
+            light.SetBounds(narrow ? 14 : UiScale.Px(108), btnY, UiScale.Px(100), UiScale.Px(26));
             light.FlatStyle = FlatStyle.Flat;
             light.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
             _panel.Controls.Add(light);
             var dark = new Button();
             dark.Text = "昏暗";
-            dark.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(226), btnY, UiScale.Px(100), UiScale.Px(26));
+            dark.SetBounds(narrow ? UiScale.Px(120) : UiScale.Px(214), btnY, UiScale.Px(100), UiScale.Px(26));
             dark.FlatStyle = FlatStyle.Flat;
             dark.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
             _panel.Controls.Add(dark);
@@ -3711,7 +3711,7 @@ namespace ExpeditionRecorder
             dark.Click += delegate { o["theme"] = "dark"; refresh(); };
             _savers.Add(delegate { if (S(o, "theme") != "light" && S(o, "theme") != "dark") o["theme"] = "dark"; });
             refresh();
-            _y += (narrow ? UiScale.Px(26) : 0) + UiScale.Px(34);
+            _y += (narrow ? UiScale.Px(24) : 0) + UiScale.Px(32);
         }
 
         void AddPalettePreview(Dictionary<string, object> o)
@@ -4162,7 +4162,7 @@ namespace ExpeditionRecorder
             Instance = this;
             Text = "已記錄";
             AutoScaleMode = AutoScaleMode.None;
-            ClientSize = UiScale.FitSize(920, 580);
+            ClientSize = UiScale.FitSize(820, 560);
             DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
@@ -4255,7 +4255,7 @@ namespace ExpeditionRecorder
 
         public void ApplyScale()
         {
-            ClientSize = UiScale.FitSize(920, 580);
+            ClientSize = UiScale.FitSize(820, 560);
             UiScale.Apply(this);
             _list.ItemHeight = Math.Max(18, UiScale.Px(28));
             LayoutRecords();
