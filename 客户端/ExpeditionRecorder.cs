@@ -1629,9 +1629,13 @@ namespace ExpeditionRecorder
 
         public static void SyncOpenForms()
         {
+            var forms = new List<Form>();
             foreach (Form f in Application.OpenForms)
             {
-                if (f == null || f.IsDisposed) continue;
+                if (f != null && !f.IsDisposed) forms.Add(f);
+            }
+            foreach (var f in forms)
+            {
                 if (f is LayeredForm || f is BusyForm) continue;
                 if (f is RecordsForm || f is RecordEditForm) continue;
                 ApplyWindow(f);
@@ -1643,6 +1647,7 @@ namespace ExpeditionRecorder
             Value = value;
             SyncOpenForms();
             if (RecordsForm.Instance != null && !RecordsForm.Instance.IsDisposed) RecordsForm.Instance.ApplyScale();
+            if (CurrentDock.Instance != null && !CurrentDock.Instance.IsDisposed) CurrentDock.Instance.RefreshScale();
         }
 
         public static void Apply(Control root)
@@ -2073,6 +2078,12 @@ namespace ExpeditionRecorder
                 var wa = Screen.FromPoint(new Point(pt.X + 10, pt.Y + 10)).WorkingArea;
                 int x = pt.X + cw + 8;
                 if (x + Width > wa.Right) x = pt.X + cw - Width - 8;
+                var cur = CurrentDock.Instance;
+                if (cur != null && !cur.IsDisposed && cur.Visible)
+                {
+                    int leftOfCurrent = cur.Left - Width - 8;
+                    if (leftOfCurrent >= pt.X) x = leftOfCurrent;
+                }
                 if (x < wa.Left) x = wa.Left;
                 int y = Math.Max(wa.Top, Math.Min(pt.Y, wa.Bottom - Height));
                 if (Location.X != x || Location.Y != y) Location = new Point(x, y);
@@ -2317,6 +2328,260 @@ namespace ExpeditionRecorder
                 }
             }
             catch { }
+        }
+    }
+
+    /* ══ 本輪記錄：貼在遊戲右側，預設編輯最後一筆 ═══════════ */
+    class CurrentDock : Form
+    {
+        public static CurrentDock Instance;
+        static System.Windows.Forms.Timer _follow;
+        ListBox _list;
+        Label _title;
+        Panel _editorHost;
+        RecordEditForm _editor;
+        bool _closingEditor;
+        bool _loading;
+        readonly List<RecordEntry> _entries = new List<RecordEntry>();
+
+        public static void ShowDock()
+        {
+            if (Instance == null || Instance.IsDisposed)
+            {
+                Instance = new CurrentDock();
+                Instance.Show();
+                UiScale.SyncOpenForms();
+                Instance.RefreshScale();
+            }
+            else
+            {
+                Instance.Show();
+                Instance.Activate();
+                Instance.Reload(true);
+            }
+        }
+
+        public static void Notify()
+        {
+            try
+            {
+                if (Instance != null && !Instance.IsDisposed)
+                    Instance.BeginInvoke((Action)delegate { Instance.Reload(true); });
+            }
+            catch { }
+        }
+
+        protected override bool ShowWithoutActivation { get { return true; } }
+
+        public CurrentDock()
+        {
+            Instance = this;
+            Text = "本次記錄";
+            ClientSize = new Size(420, 620);
+            FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            TopMost = true;
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.Manual;
+            BackColor = Color.FromArgb(24, 24, 27);
+            ForeColor = Color.FromArgb(230, 230, 235);
+
+            _title = new Label();
+            _title.SetBounds(10, 8, 300, 22);
+            _title.ForeColor = Color.FromArgb(232, 232, 236);
+            Controls.Add(_title);
+
+            var refresh = new Button();
+            refresh.Text = "重整";
+            refresh.SetBounds(320, 6, 90, 24);
+            refresh.FlatStyle = FlatStyle.Flat;
+            refresh.BackColor = Color.FromArgb(44, 44, 47);
+            refresh.ForeColor = Color.White;
+            refresh.Click += delegate { Reload(false); };
+            Controls.Add(refresh);
+
+            _list = new ListBox();
+            _list.SetBounds(10, 36, 400, 120);
+            _list.BackColor = Color.FromArgb(36, 36, 40);
+            _list.ForeColor = Color.FromArgb(226, 226, 232);
+            _list.IntegralHeight = false;
+            _list.SelectedIndexChanged += delegate { ShowEntry(); };
+            Controls.Add(_list);
+
+            _editorHost = new Panel();
+            _editorHost.SetBounds(10, 164, 400, 446);
+            _editorHost.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+            _editorHost.AutoScroll = true;
+            _editorHost.BackColor = Color.FromArgb(24, 24, 27);
+            _editorHost.BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(_editorHost);
+
+            _follow = new System.Windows.Forms.Timer();
+            _follow.Interval = 400;
+            _follow.Tick += delegate { FollowGame(); };
+            _follow.Start();
+            FollowGame();
+            Reload(true);
+            _list.ItemHeight = Math.Max(16, UiScale.Px(20));
+        }
+
+        void FollowGame()
+        {
+            try
+            {
+                var wa = Screen.PrimaryScreen.WorkingArea;
+                IntPtr h = Program.GameHandle;
+                if (h != IntPtr.Zero)
+                {
+                    RECT cr;
+                    if (Native.GetClientRect(h, out cr))
+                    {
+                        var pt = new POINT { X = cr.Left, Y = cr.Top };
+                        Native.ClientToScreen(h, ref pt);
+                        int cw = cr.Right - cr.Left, ch = cr.Bottom - cr.Top;
+                        if (cw >= 100 && ch >= 100)
+                        {
+                            wa = Screen.FromPoint(new Point(pt.X + 10, pt.Y + 10)).WorkingArea;
+                            int x = pt.X + cw + 8;
+                            if (x + Width > wa.Right) x = pt.X - Width - 8;
+                            if (x < wa.Left) x = wa.Left;
+                            int y = Math.Max(wa.Top, Math.Min(pt.Y, wa.Bottom - Height));
+                            if (Location.X != x || Location.Y != y) Location = new Point(x, y);
+                            return;
+                        }
+                    }
+                }
+                int rx = wa.Right - Width - 12;
+                int ry = wa.Top + 80;
+                if (Location.X != rx || Location.Y != ry) Location = new Point(rx, ry);
+            }
+            catch { }
+        }
+
+        static List<RecordEntry> LoadSession()
+        {
+            var list = new List<RecordEntry>();
+            try
+            {
+                foreach (var f in Directory.GetFiles(Program.DataDir(), "*.jsonl"))
+                {
+                    string name = Path.GetFileName(f);
+                    if (name.StartsWith("draft-") || name.StartsWith("pending-") || name.StartsWith("floor-lengths-")) continue;
+                    string kind = name.StartsWith("events-") ? "事件" : name.StartsWith("items-") ? "物品" : name.StartsWith("floors-") ? "樓層" : name.StartsWith("exits-") ? "出口" : name.StartsWith("endings-") ? "結局" : name.StartsWith("shops-") ? "商店" : "其他";
+                    foreach (var line in File.ReadAllLines(f))
+                    {
+                        if (line.Trim().Length == 0) continue;
+                        try
+                        {
+                            var o = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(line);
+                            if (o == null) continue;
+                            string ts = o.ContainsKey("ts") ? Convert.ToString(o["ts"]) : "";
+                            DateTimeOffset at;
+                            if (!DateTimeOffset.TryParse(ts, out at)) continue;
+                            if (at.LocalDateTime < Program.SessionStart) continue;
+                            var e = new RecordEntry { File = f, Line = line, Data = o, Kind = kind, At = at.LocalDateTime };
+                            e.Time = at.LocalDateTime.ToString("HH:mm");
+                            e.Title = RecordsForm.TitleOf(kind, o);
+                            list.Add(e);
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch { }
+            list.Sort(delegate (RecordEntry a, RecordEntry b) { return a.At.CompareTo(b.At); });
+            return list;
+        }
+
+        void Reload(bool selectLast)
+        {
+            if (_loading) return;
+            _loading = true;
+            try
+            {
+                int old = _list.SelectedIndex;
+                string oldLine = old >= 0 && old < _entries.Count ? _entries[old].Line : null;
+                var entries = LoadSession();
+                _entries.Clear();
+                _entries.AddRange(entries);
+                _list.Items.Clear();
+                foreach (var e in _entries) _list.Items.Add(e.Kind + "　" + e.Title + "　" + e.Time);
+                _title.Text = "本次記錄 · " + _entries.Count + " 筆";
+                if (_entries.Count == 0)
+                {
+                    _list.Items.Add("（本次尚無記錄）");
+                    _list.SelectedIndex = -1;
+                }
+                else
+                {
+                    int idx = _entries.Count - 1;
+                    if (!selectLast && oldLine != null)
+                    {
+                        for (int i = 0; i < _entries.Count; i++) if (_entries[i].Line == oldLine) { idx = i; break; }
+                    }
+                    _list.SelectedIndex = idx;
+                }
+            }
+            catch { }
+            finally { _loading = false; }
+            ShowEntry();
+        }
+
+        void ClearEditor()
+        {
+            _closingEditor = true;
+            try
+            {
+                if (_editor != null)
+                {
+                    try { if (!_editor.IsDisposed) _editor.Close(); } catch { }
+                    try { if (!_editor.IsDisposed) _editor.Dispose(); } catch { }
+                    _editor = null;
+                }
+                _editorHost.Controls.Clear();
+            }
+            finally { _closingEditor = false; }
+        }
+
+        void ShowEntry()
+        {
+            ClearEditor();
+            int i = _list.SelectedIndex;
+            if (i < 0 || i >= _entries.Count)
+            {
+                var tip = new Label();
+                tip.Text = "本次還沒有記錄；完成一條後會自動出現在這裡。";
+                tip.SetBounds(14, 14, 370, 24);
+                tip.ForeColor = Color.FromArgb(160, 160, 168);
+                _editorHost.Controls.Add(tip);
+                return;
+            }
+            var f = new RecordEditForm(_entries[i]);
+            f.TopLevel = false;
+            f.FormBorderStyle = FormBorderStyle.None;
+            f.TopMost = false;
+            f.ShowInTaskbar = false;
+            f.Dock = DockStyle.Fill;
+            f.FormClosed += delegate
+            {
+                if (_editor == f) _editor = null;
+                if (!_closingEditor && !IsDisposed) BeginInvoke((Action)delegate { Reload(false); });
+            };
+            _editor = f;
+            _editorHost.Controls.Add(f);
+            f.Show();
+        }
+
+        public void RefreshScale()
+        {
+            _list.ItemHeight = Math.Max(16, UiScale.Px(20));
+            Reload(false);
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            try { if (_follow != null) _follow.Stop(); } catch { }
+            if (Instance == this) Instance = null;
+            base.OnFormClosed(e);
         }
     }
 
@@ -2593,6 +2858,7 @@ namespace ExpeditionRecorder
     class RecordEntry
     {
         public string File, Line, Kind, Title, Time;
+        public DateTime At;
         public Dictionary<string, object> Data;
     }
 
@@ -3300,6 +3566,8 @@ namespace ExpeditionRecorder
                             e.Kind = name.StartsWith("events-") ? "事件" : name.StartsWith("items-") ? "物品" : name.StartsWith("floors-") ? "樓層" : name.StartsWith("exits-") ? "出口" : name.StartsWith("endings-") ? "結局" : name.StartsWith("shops-") ? "商店" : "其他";
                             e.Title = TitleOf(e.Kind, o);
                             e.Time = o.ContainsKey("ts") ? Convert.ToString(o["ts"]) : "";
+                            DateTimeOffset at;
+                            if (DateTimeOffset.TryParse(e.Time, out at)) e.At = at.LocalDateTime;
                             if (e.Time.Length >= 16) e.Time = e.Time.Substring(11, 5);
                             _all.Add(e);
                         }
@@ -3312,7 +3580,7 @@ namespace ExpeditionRecorder
             ApplyFilter();
         }
 
-        static string TitleOf(string kind, Dictionary<string, object> o)
+        internal static string TitleOf(string kind, Dictionary<string, object> o)
         {
             if (kind == "事件")
             {
@@ -4938,6 +5206,7 @@ namespace ExpeditionRecorder
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
+        internal static DateTime SessionStart = DateTime.Now;
         public static int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
 
         static OcrService Ocr = new OcrService();
@@ -5130,6 +5399,9 @@ namespace ExpeditionRecorder
             HotkeyBtn = Btn("快捷鍵：開", 142, 102, 120, 26);
             HotkeyBtn.Click += delegate { SetHotkeysEnabled(!HotkeysEnabled); };
             recGroup.Controls.Add(HotkeyBtn);
+            var currentBtn = Btn("本次記錄", 270, 102, 120, 26);
+            currentBtn.Click += delegate { CurrentDock.ShowDock(); };
+            recGroup.Controls.Add(currentBtn);
             UpdateRecordButtons();
             UpdateHotkeyButton();
 
@@ -5559,6 +5831,7 @@ namespace ExpeditionRecorder
                 ClientOwned = false;
                 SetState("狀態：已接上客戶端");
                 try { ScanPartyAsync(); } catch { }
+                try { CurrentDock.ShowDock(); } catch { }
                 return true;
             }
             catch { return false; }
@@ -6120,6 +6393,7 @@ namespace ExpeditionRecorder
                     if (Convert.ToString(old.ContainsKey("character") ? old["character"] : "") == "" && Convert.ToString(item["character"]) != "") old["character"] = item["character"];
                     lines[i] = ser.Serialize(old);
                     File.WriteAllLines(file, lines.ToArray(), new UTF8Encoding(false));
+                    CurrentDock.Notify();
                     return;
                 }
                 var rec = new Dictionary<string, object>();
@@ -6138,6 +6412,7 @@ namespace ExpeditionRecorder
                 rec["character"] = item["character"];
                 lines.Add(ser.Serialize(rec));
                 File.WriteAllLines(file, lines.ToArray(), new UTF8Encoding(false));
+                CurrentDock.Notify();
                 if (name == "" || Convert.ToString(item["desc"]) == "") WritePending("item-incomplete", rec);
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
@@ -6243,6 +6518,7 @@ namespace ExpeditionRecorder
                 rec["items"] = items;
                 File.AppendAllText(Path.Combine(DataDir(), "shops-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     new JavaScriptSerializer().Serialize(rec) + "\r\n", new UTF8Encoding(false));
+                CurrentDock.Notify();
                 if (items.Count == 0 && intro == "") WritePending("shop-incomplete", rec);
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
@@ -6403,6 +6679,7 @@ namespace ExpeditionRecorder
                 o["palette"] = rec.ContainsKey("palette") ? rec["palette"] : "";
                 File.AppendAllText(Path.Combine(DataDir(), "floors-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     new JavaScriptSerializer().Serialize(o) + "\r\n", new UTF8Encoding(false));
+                CurrentDock.Notify();
                 if (Convert.ToString(rec["floorId"]) == "") WritePending("floor-unknown", o);
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
@@ -6426,6 +6703,7 @@ namespace ExpeditionRecorder
                 o["pending"] = target == "";
                 File.AppendAllText(Path.Combine(DataDir(), "exits-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     new JavaScriptSerializer().Serialize(o) + "\r\n", new UTF8Encoding(false));
+                CurrentDock.Notify();
                 if (target == "") WritePending("exit-target", o);
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
@@ -6448,6 +6726,7 @@ namespace ExpeditionRecorder
                 o["floorName"] = Parse.FloorName;
                 File.AppendAllText(Path.Combine(DataDir(), "endings-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     new JavaScriptSerializer().Serialize(o) + "\r\n", new UTF8Encoding(false));
+                CurrentDock.Notify();
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); }
         }
@@ -6805,12 +7084,14 @@ namespace ExpeditionRecorder
                             }
                             lines[i] = ser.Serialize(old);
                             File.WriteAllLines(f, lines.ToArray(), new UTF8Encoding(false));
+                            CurrentDock.Notify();
                             return true;
                         }
                     }
                 }
                 File.AppendAllText(Path.Combine(dir, "events-" + DateTime.Now.ToString("yyyyMMdd") + ".jsonl"),
                     ser.Serialize(rec) + "\r\n", new UTF8Encoding(false));
+                CurrentDock.Notify();
                 return true;
             }
             catch (Exception ex) { SetState("寫入失敗：" + ex.Message); return false; }
