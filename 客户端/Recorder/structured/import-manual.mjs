@@ -277,6 +277,8 @@ for (const rec of floors) {
   const f = fl.data;
   const intro = T(rec.intro).trim();
   if (!intro) { report.skipped++; continue; }
+  if (T(rec.floorName)) f.name = T(rec.floorName);
+  if (rec.floorType === 'normal' || rec.floorType === 'anomalous') f.floorType = rec.floorType;
   if (!String(f.doc || '').replace(/<[^>]*>/g, '').trim()) f.doc = '<p>' + intro.replace(/\n/g, '<br>') + '</p>';
   if (rec.palette && typeof rec.palette === 'object') {
     f.palette = Object.assign({}, f.palette || {}, rec.palette, { mode: rec.theme || 'dark' });

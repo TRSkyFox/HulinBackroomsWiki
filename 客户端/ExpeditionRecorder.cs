@@ -439,6 +439,12 @@ namespace ExpeditionRecorder
     {
         public static readonly string[] Attrs = { "力量", "敏捷", "體質", "体质", "感知", "智力", "魅力" };
         public static string FloorId, FloorName;
+        public static string FloorType = "normal";
+
+        public static bool IsNormalFloorId(string id)
+        {
+            return System.Text.RegularExpressions.Regex.IsMatch((id ?? "").Trim(), @"^\d+(?:\.\d+)?$");
+        }
 
         public static bool IsChrome(string t)
         {
@@ -485,7 +491,7 @@ namespace ExpeditionRecorder
 
         public static void Classify(List<OcrLine> lines, int imgH)
         {
-            FloorId = ""; FloorName = "";
+            FloorId = ""; FloorName = ""; FloorType = "normal";
             foreach (var l in lines)
             {
                 l.IsFloor = l.IsTitle = l.IsOption = l.IsChrome = l.IsCondition = l.IsSpecial = false;
@@ -499,14 +505,15 @@ namespace ExpeditionRecorder
                 string t = (l.Text ?? "").Trim();
                 if (IsChrome(t) || IsFooterLine(l, t, imgH)) { l.IsChrome = true; continue; }
                 if (IsGoldText(l.TextColor) || t.TrimStart().StartsWith("★")) l.IsSpecial = true;
-                var mf = System.Text.RegularExpressions.Regex.Match(t, @"Level\s*([0-9A-Za-z.]+)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
+                var mf = System.Text.RegularExpressions.Regex.Match(t, @"Level\s*([^「『\[\n]+?)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
                 if (mf.Success && l.Y < imgH * 0.16)
                 {
                     l.IsFloor = true;
-                    FloorId = mf.Groups[1].Value;
+                    FloorId = mf.Groups[1].Value.Trim();
                     if (FloorId == "O" || FloorId == "o") FloorId = "0";
                     if (FloorId == "I" || FloorId == "l") FloorId = "1";
                     FloorName = mf.Groups[2].Value;
+                    FloorType = IsNormalFloorId(FloorId) ? "normal" : "anomalous";
                     continue;
                 }
                 if (t.IndexOf('【') >= 0 && t.IndexOf('】') > t.IndexOf('【')) l.IsTitle = true;
@@ -1143,28 +1150,152 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* ══ 樓層主題（亮/暗）════════════════════════════════════ */
+    /* ══ 樓層記錄：常規／異常＋樓層 ID／名稱＋主題 ═══════════ */
     class ThemeForm : Form
     {
         public string Theme = "dark";
-        public ThemeForm(string floorName)
+        public string FloorType = "normal";
+        public string FloorId = "";
+        public string FloorName = "";
+        RadioButton _normal, _anomalous;
+        Label _prefix, _idLabel;
+        TextBox _idBox, _nameBox;
+
+        public ThemeForm(string floorId, string floorName, string floorType = "")
         {
-            Text = "樓層配色";
-            ClientSize = new Size(360, 160);
+            FloorId = floorId ?? "";
+            FloorName = floorName ?? "";
+            if (floorType != "normal" && floorType != "anomalous")
+                floorType = Parse.IsNormalFloorId(FloorId) ? "normal" : "anomalous";
+            FloorType = floorType;
+
+            Text = "樓層記錄";
+            ClientSize = new Size(460, 310);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(28, 28, 31);
             ForeColor = Color.FromArgb(230, 230, 235);
-            var l = new Label(); l.Text = floorName; l.SetBounds(12, 10, 330, 22); l.ForeColor = Color.FromArgb(220, 220, 226); Controls.Add(l);
-            var dark = new RadioButton(); dark.Text = "暗色主題"; dark.SetBounds(12, 42, 150, 24); dark.Checked = true; dark.ForeColor = Color.White; Controls.Add(dark);
-            var light = new RadioButton(); light.Text = "亮色主題"; light.SetBounds(170, 42, 150, 24); light.ForeColor = Color.White; Controls.Add(light);
-            var save = new Button(); save.Text = "保存"; save.SetBounds(12, 86, 120, 30); save.FlatStyle = FlatStyle.Flat; save.BackColor = Color.FromArgb(44, 44, 47); save.ForeColor = Color.White;
-            save.Click += delegate { Theme = light.Checked ? "light" : "dark"; DialogResult = DialogResult.OK; Close(); };
+
+            var typeLabel = new Label();
+            typeLabel.Text = "樓層類型";
+            typeLabel.SetBounds(12, 8, 120, 20);
+            typeLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(typeLabel);
+            _normal = new RadioButton();
+            _normal.Text = "常規樓層";
+            _normal.SetBounds(12, 30, 120, 24);
+            _normal.Checked = FloorType == "normal";
+            _normal.ForeColor = Color.White;
+            Controls.Add(_normal);
+            _anomalous = new RadioButton();
+            _anomalous.Text = "異常樓層";
+            _anomalous.SetBounds(142, 30, 120, 24);
+            _anomalous.Checked = FloorType == "anomalous";
+            _anomalous.ForeColor = Color.White;
+            Controls.Add(_anomalous);
+
+            _idLabel = new Label();
+            _idLabel.Text = "樓層 ID";
+            _idLabel.SetBounds(12, 64, 120, 20);
+            _idLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(_idLabel);
+            _prefix = new Label();
+            _prefix.Text = "Level";
+            _prefix.SetBounds(12, 88, 42, 22);
+            _prefix.ForeColor = Color.FromArgb(220, 220, 226);
+            Controls.Add(_prefix);
+            _idBox = MkBox(60, 86, 180);
+            _idBox.Text = FloorId;
+            _idBox.KeyPress += delegate (object s, KeyPressEventArgs e)
+            {
+                if (!_normal.Checked || char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar) || e.KeyChar == '.') return;
+                e.Handled = true;
+            };
+
+            var nameLabel = new Label();
+            nameLabel.Text = "樓層名稱";
+            nameLabel.SetBounds(12, 120, 120, 20);
+            nameLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(nameLabel);
+            _nameBox = MkBox(12, 142, 430);
+            _nameBox.Text = FloorName;
+
+            var themeLabel = new Label();
+            themeLabel.Text = "主題";
+            themeLabel.SetBounds(12, 176, 120, 20);
+            themeLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(themeLabel);
+            var dark = new RadioButton();
+            dark.Text = "暗色主題";
+            dark.SetBounds(12, 198, 150, 24);
+            dark.Checked = true;
+            dark.ForeColor = Color.White;
+            Controls.Add(dark);
+            var light = new RadioButton();
+            light.Text = "亮色主題";
+            light.SetBounds(170, 198, 150, 24);
+            light.ForeColor = Color.White;
+            Controls.Add(light);
+
+            _normal.CheckedChanged += delegate { UpdateType(); };
+            _anomalous.CheckedChanged += delegate { UpdateType(); };
+            UpdateType();
+
+            var save = new Button();
+            save.Text = "保存";
+            save.SetBounds(12, 254, 120, 30);
+            save.FlatStyle = FlatStyle.Flat;
+            save.BackColor = Color.FromArgb(44, 44, 47);
+            save.ForeColor = Color.White;
+            save.Click += delegate
+            {
+                string id = _idBox.Text.Trim();
+                if (id.StartsWith("Level ", StringComparison.OrdinalIgnoreCase)) id = id.Substring(6).Trim();
+                if (_normal.Checked)
+                {
+                    if (id != "" && !Parse.IsNormalFloorId(id))
+                    {
+                        MessageBox.Show("常規樓層只能填數字（可含小數點）。", "樓層記錄", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    FloorType = "normal";
+                }
+                else FloorType = "anomalous";
+                FloorId = id;
+                FloorName = _nameBox.Text.Trim();
+                Theme = light.Checked ? "light" : "dark";
+                DialogResult = DialogResult.OK;
+                Close();
+            };
             Controls.Add(save);
-            var cancel = new Button(); cancel.Text = "取消"; cancel.SetBounds(144, 86, 120, 30); cancel.FlatStyle = FlatStyle.Flat; cancel.BackColor = Color.FromArgb(44, 44, 47); cancel.ForeColor = Color.White;
+            var cancel = new Button();
+            cancel.Text = "取消";
+            cancel.SetBounds(144, 254, 120, 30);
+            cancel.FlatStyle = FlatStyle.Flat;
+            cancel.BackColor = Color.FromArgb(44, 44, 47);
+            cancel.ForeColor = Color.White;
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancel);
+        }
+
+        void UpdateType()
+        {
+            bool normal = _normal.Checked;
+            _prefix.Visible = normal;
+            _idLabel.Text = normal ? "樓層數字" : "樓層 ID";
+            _idBox.SetBounds(normal ? 60 : 12, 86, normal ? 180 : 430, 24);
+        }
+
+        TextBox MkBox(int x, int y, int w)
+        {
+            var t = new TextBox();
+            t.SetBounds(x, y, w, 24);
+            t.BackColor = Color.FromArgb(40, 40, 44);
+            t.ForeColor = Color.White;
+            t.BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(t);
+            return t;
         }
     }
 
@@ -3233,7 +3364,8 @@ namespace ExpeditionRecorder
                     AddFixed("類型", "事件");
                     AddFixed("事件類型", Program.EventKindText(S(o, "eventKind")));
                     AddFixed("事件名", EventTitleOf(o));
-                    AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
+                    AddText(o, "floorId", "樓層 ID");
+                    AddText(o, "floorName", "樓層名稱");
                     string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
                     string chars = A(o, "characters"); if (chars == "") chars = S(o, "character");
                     AddFixed("歸屬", scopes + (chars != "" ? "　角色：" + chars : ""));
@@ -3392,17 +3524,14 @@ namespace ExpeditionRecorder
             }
             else if (_kind == "樓層")
             {
-                if (_lockIdentity)
-                {
-                    AddFixed("類型", "樓層");
-                    AddFixed("樓層 ID", S(o, "floorId"));
-                    AddFixed("樓層名稱", S(o, "floorName"));
-                }
-                else
-                {
-                    AddText(o, "floorId", "樓層 ID");
-                    AddText(o, "floorName", "樓層名稱");
-                }
+                AddFixed("類型", "樓層");
+                string ft = S(o, "floorType");
+                if (ft != "normal" && ft != "anomalous")
+                    ft = Parse.IsNormalFloorId(S(o, "floorId")) ? "normal" : "anomalous";
+                o["floorType"] = ft;
+                AddChoice(o, "floorType", "樓層類型", new[] { "normal", "anomalous" }, new[] { "常規樓層", "異常樓層" });
+                AddText(o, "floorId", "樓層 ID");
+                AddText(o, "floorName", "樓層名稱");
                 AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "亮色", "暗色" });
                 AddLongText(o, "intro", "樓層介紹");
                 Dictionary<string, object> pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
@@ -4072,6 +4201,7 @@ namespace ExpeditionRecorder
         static void FormatFloor(StringBuilder sb, Dictionary<string, object> o)
         {
             sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
+            sb.AppendLine("樓層類型：" + (Str(o, "floorType") == "anomalous" ? "異常樓層" : "常規樓層"));
             sb.AppendLine("主題：" + Str(o, "theme"));
             var pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
             if (pal != null) sb.AppendLine("配色：底色 " + Str(pal, "bg") + "　標題 " + Str(pal, "title") + "　正文 " + Str(pal, "text"));
@@ -4522,10 +4652,10 @@ namespace ExpeditionRecorder
             var rec = new Dictionary<string, object>();
             /* 左上角识别到的楼层优先；框选内容只用来补充简介。 */
             string fid = Parse.FloorId, fname = Parse.FloorName;
-            var mf = System.Text.RegularExpressions.Regex.Match(first, @"Level\s*([0-9A-Za-z.]+)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
+            var mf = System.Text.RegularExpressions.Regex.Match(first, @"Level\s*([^「『\[\n]+?)\s*[「『\[]([^」』\]\n]*)[」』\]]?");
             if (fid == "" && mf.Success)
             {
-                fid = mf.Groups[1].Value;
+                fid = mf.Groups[1].Value.Trim();
                 if (fid == "O" || fid == "o") fid = "0";
                 if (fid == "I" || fid == "l") fid = "1";
                 fname = mf.Groups[2].Value;
@@ -4533,6 +4663,7 @@ namespace ExpeditionRecorder
             rec["floorRaw"] = fid != "" ? ("Level " + fid + "「" + fname + "」") : first;
             rec["floorId"] = fid;
             rec["floorName"] = fname;
+            rec["floorType"] = Parse.IsNormalFloorId(fid) ? "normal" : "anomalous";
             var rest = new List<string>();
             for (int i = 1; i < lines.Count; i++) rest.Add(lines[i]);
             rec["intro"] = string.Join("\n", rest.ToArray());
@@ -7066,6 +7197,7 @@ namespace ExpeditionRecorder
                 o["id"] = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 o["ts"] = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 o["kind"] = "floor";
+                o["floorType"] = Convert.ToString(rec.ContainsKey("floorType") ? rec["floorType"] : "") == "anomalous" ? "anomalous" : "normal";
                 o["floorId"] = Convert.ToString(rec["floorId"]);
                 o["floorName"] = Convert.ToString(rec["floorName"]);
                 o["intro"] = Convert.ToString(rec["intro"]);
@@ -7180,8 +7312,18 @@ namespace ExpeditionRecorder
                 if (Steps.Count == 0) { Mode = ""; SetState("已離開"); return; }
                 NormalizeSteps();
                 var floorRec = Steps[0];
-                var tf = new ThemeForm(Convert.ToString(floorRec["floorName"]));
-                if (tf.ShowDialog() == DialogResult.OK) { WriteFloor(floorRec, tf.Theme); SetState("已存樓層介紹（" + tf.Theme + "）"); }
+                var tf = new ThemeForm(
+                    Convert.ToString(floorRec.ContainsKey("floorId") ? floorRec["floorId"] : ""),
+                    Convert.ToString(floorRec.ContainsKey("floorName") ? floorRec["floorName"] : ""),
+                    Convert.ToString(floorRec.ContainsKey("floorType") ? floorRec["floorType"] : ""));
+                if (tf.ShowDialog() == DialogResult.OK)
+                {
+                    floorRec["floorType"] = tf.FloorType;
+                    floorRec["floorId"] = tf.FloorId;
+                    floorRec["floorName"] = tf.FloorName;
+                    WriteFloor(floorRec, tf.Theme);
+                    SetState("已存樓層介紹（" + (tf.FloorType == "normal" ? "常規" : "異常") + "／" + tf.Theme + "）");
+                }
                 else SetState("已取消");
                 Mode = ""; Step = 0; Steps.Clear();
                 return;

@@ -202,6 +202,7 @@ content\新增条目.bat floor 197 打烊的量贩店
 ```
 
 - `length` 是该层“出口进度 N/M”的总数 M；由记录器的 `floor-lengths-*.jsonl` 独立导入，不属于事件。
+- `floorType` 可选 `normal`（常规楼层，显示 `Level`＋数字 ID）或 `anomalous`（异常楼层，ID／名称可自由填写）；只作为记录和显示提示，不改变楼层目录 key。
 - `doc` 只放楼层页真的会显示的“环境”引言 HTML；旧事件记录、表格、`<code>`、未显示段落一律不要放。
 - 这一层的专属设计写在**同文件夹的 `design.css`**，重建时会一起塞进网页。
 - `design.css` 只作用于 `html[data-pal="…"]`，不要引用其他楼层。
