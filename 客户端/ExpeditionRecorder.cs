@@ -1536,11 +1536,113 @@ namespace ExpeditionRecorder
             set { Scale = Math.Max(1.0f, Math.Min(2.0f, value)); }
         }
 
+        public static Form MainWindow;
+        class WinSnap
+        {
+            public Size Client;
+            public Dictionary<Control, Rectangle> Bounds = new Dictionary<Control, Rectangle>();
+            public Dictionary<Control, Font> Fonts = new Dictionary<Control, Font>();
+        }
+        static readonly Dictionary<Form, WinSnap> Windows = new Dictionary<Form, WinSnap>();
+        static readonly Dictionary<Form, float> Applied = new Dictionary<Form, float>();
+
+        public static Size FitSize(int w, int h)
+        {
+            int tw = Math.Max(200, (int)Math.Round(w * Scale));
+            int th = Math.Max(160, (int)Math.Round(h * Scale));
+            var wa = Screen.PrimaryScreen.WorkingArea;
+            tw = Math.Min(tw, Math.Max(240, wa.Width - 60));
+            th = Math.Min(th, Math.Max(180, wa.Height - 100));
+            return new Size(tw, th);
+        }
+
         static void Collect(Control c, List<Control> list)
         {
             if (c == null) return;
             list.Add(c);
             foreach (Control child in c.Controls) Collect(child, list);
+        }
+
+        static void ApplyWindow(Form f)
+        {
+            if (f == null || f.IsDisposed) return;
+            if (f is LayeredForm || f is BusyForm) return;
+            if (f is RecordsForm || f is RecordEditForm) return;
+            float applied;
+            if (Applied.TryGetValue(f, out applied) && Math.Abs(applied - Scale) < 0.001f) return;
+            bool main = f == MainWindow;
+            WinSnap snap;
+            if (!Windows.TryGetValue(f, out snap))
+            {
+                snap = new WinSnap();
+                snap.Client = f.ClientSize;
+                var controls = new List<Control>();
+                Collect(f, controls);
+                foreach (var c in controls)
+                {
+                    if (c == f) continue;
+                    snap.Bounds[c] = c.Bounds;
+                    snap.Fonts[c] = c.Font;
+                }
+                Windows[f] = snap;
+            }
+            f.SuspendLayout();
+            try
+            {
+                if (!main && f.FormBorderStyle != FormBorderStyle.None)
+                {
+                    f.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+                    f.MaximizeBox = true;
+                    f.AutoScroll = true;
+                }
+                if (main) f.AutoScroll = true;
+                f.ClientSize = FitSize(snap.Client.Width, snap.Client.Height);
+                foreach (var kv in snap.Bounds)
+                {
+                    var c = kv.Key;
+                    if (c == null || c.IsDisposed || c.Dock != DockStyle.None) continue;
+                    var b = kv.Value;
+                    c.SetBounds((int)Math.Round(b.X * Scale), (int)Math.Round(b.Y * Scale),
+                        Math.Max(1, (int)Math.Round(b.Width * Scale)),
+                        Math.Max(1, (int)Math.Round(b.Height * Scale)));
+                }
+                foreach (var kv in snap.Fonts)
+                {
+                    var c = kv.Key;
+                    if (c == null || c.IsDisposed || c is TrackBar) continue;
+                    var b = kv.Value;
+                    if (b == null) continue;
+                    try { c.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
+                    catch { }
+                }
+            }
+            finally { f.ResumeLayout(true); }
+            if (main)
+            {
+                var wa = Screen.FromControl(f).WorkingArea;
+                int x = Math.Min(f.Left, wa.Right - f.Width - 12);
+                int y = Math.Min(f.Top, wa.Bottom - f.Height - 12);
+                f.Location = new Point(Math.Max(wa.Left + 12, x), Math.Max(wa.Top + 12, y));
+            }
+            Applied[f] = Scale;
+        }
+
+        public static void SyncOpenForms()
+        {
+            foreach (Form f in Application.OpenForms)
+            {
+                if (f == null || f.IsDisposed) continue;
+                if (f is LayeredForm || f is BusyForm) continue;
+                if (f is RecordsForm || f is RecordEditForm) continue;
+                ApplyWindow(f);
+            }
+        }
+
+        public static void SetScale(float value)
+        {
+            Value = value;
+            SyncOpenForms();
+            if (RecordsForm.Instance != null && !RecordsForm.Instance.IsDisposed) RecordsForm.Instance.ApplyScale();
         }
 
         public static void Apply(Control root)
@@ -1698,6 +1800,7 @@ namespace ExpeditionRecorder
             _text.ScrollBars = ScrollBars.Vertical;
             _text.WordWrap = true;
             _text.SetBounds(12, 12, 536, 456);
+            _text.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
             _text.BackColor = Color.FromArgb(22, 22, 25);
             _text.ForeColor = Color.FromArgb(224, 224, 230);
             _text.BorderStyle = BorderStyle.FixedSingle;
@@ -1707,6 +1810,7 @@ namespace ExpeditionRecorder
             _close = new Button();
             UiText.SetText(_close, "關閉");
             _close.SetBounds(448, 476, 100, 30);
+            _close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             _close.FlatStyle = FlatStyle.Flat;
             _close.BackColor = Color.FromArgb(44, 44, 47);
             _close.ForeColor = Color.White;
@@ -2523,7 +2627,7 @@ namespace ExpeditionRecorder
             _externalSave = externalSave;
             _lockIdentity = lockIdentity;
             Text = "編輯記錄：" + kind;
-            ClientSize = new Size(780, 700);
+            ClientSize = UiScale.FitSize(780, 700);
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterParent;
@@ -3062,7 +3166,7 @@ namespace ExpeditionRecorder
         {
             Instance = this;
             Text = "已記錄";
-            ClientSize = new Size(920, 580);
+            ClientSize = UiScale.FitSize(920, 580);
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -3150,6 +3254,15 @@ namespace ExpeditionRecorder
             if (_delBtn != null) _delBtn.SetBounds(pad + UiScale.Px(98), by, UiScale.Px(100), UiScale.Px(32));
             if (_openBtn != null) _openBtn.SetBounds(pad + UiScale.Px(206), by, UiScale.Px(110), UiScale.Px(32));
             if (_closeBtn != null) _closeBtn.SetBounds(pad + UiScale.Px(324), by, UiScale.Px(90), UiScale.Px(32));
+        }
+
+        public void ApplyScale()
+        {
+            ClientSize = UiScale.FitSize(920, 580);
+            UiScale.Apply(this);
+            _list.ItemHeight = Math.Max(18, UiScale.Px(28));
+            LayoutRecords();
+            ShowDetail();
         }
 
         Button MkBtn(string text, int x, int y, int w)
@@ -4949,6 +5062,7 @@ namespace ExpeditionRecorder
         static void CreateUi()
         {
             ControlWindow = new Form();
+            UiScale.MainWindow = ControlWindow;
             ControlWindow.Text = "Expedition Recorder";
             ControlWindow.ClientSize = new Size(430, 460);
             ControlWindow.StartPosition = FormStartPosition.Manual;
@@ -5010,7 +5124,7 @@ namespace ExpeditionRecorder
             keyBtn.Click += delegate
             {
                 if (KeysForm.Instance != null && !KeysForm.Instance.IsDisposed) { KeysForm.Instance.Activate(); return; }
-                var kf = new KeysForm(); kf.TopMost = false; kf.Show();
+                var kf = new KeysForm(); kf.TopMost = false; kf.Show(); UiScale.SyncOpenForms();
             };
             recGroup.Controls.Add(keyBtn);
             HotkeyBtn = Btn("快捷鍵：開", 142, 102, 120, 26);
@@ -5024,7 +5138,7 @@ namespace ExpeditionRecorder
             RecordsBtn.Click += delegate
             {
                 if (RecordsForm.Instance != null && !RecordsForm.Instance.IsDisposed) { RecordsForm.Instance.Activate(); return; }
-                var rf = new RecordsForm(); rf.TopMost = false; rf.Show();
+                var rf = new RecordsForm(); rf.TopMost = false; rf.Show(); UiScale.SyncOpenForms();
             };
             viewGroup.Controls.Add(RecordsBtn);
             PendingBtn = Btn("待處理", 140, 24, 120, 26);
@@ -5034,7 +5148,7 @@ namespace ExpeditionRecorder
             exportBtn.Click += delegate
             {
                 if (ExportForm.Instance != null && !ExportForm.Instance.IsDisposed) { ExportForm.Instance.Activate(); return; }
-                var ef = new ExportForm(); ef.TopMost = false; ef.Show();
+                var ef = new ExportForm(); ef.TopMost = false; ef.Show(); UiScale.SyncOpenForms();
             };
             viewGroup.Controls.Add(exportBtn);
 
@@ -5049,7 +5163,7 @@ namespace ExpeditionRecorder
             HelpBtn.Click += delegate
             {
                 if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) { HelpForm.Instance.Activate(); return; }
-                var hf = new HelpForm(); hf.TopMost = false; hf.Show();
+                var hf = new HelpForm(); hf.TopMost = false; hf.Show(); UiScale.SyncOpenForms();
             };
             settingsGroup.Controls.Add(HelpBtn);
             TradBtn = Btn("繁體", 102, 22, 84, 26);
@@ -5150,6 +5264,7 @@ namespace ExpeditionRecorder
             {
                 try { if (!Ocr.Ready) Ocr.Start(AppDomain.CurrentDomain.BaseDirectory); } catch { }
             });
+            Application.Idle += delegate { UiScale.SyncOpenForms(); };
         }
 
         static GroupBox Group(string text, int x, int y, int w, int h)
@@ -5273,7 +5388,7 @@ namespace ExpeditionRecorder
 
         static void SetTextScale(float value)
         {
-            UiScale.Value = value;
+            UiScale.SetScale(value);
             UpdateScaleLabel();
             SaveHotkeys();
         }
