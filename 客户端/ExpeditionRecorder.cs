@@ -3094,6 +3094,7 @@ namespace ExpeditionRecorder
             _list.BackColor = Color.FromArgb(36, 36, 40);
             _list.ForeColor = Color.FromArgb(226, 226, 232);
             _list.IntegralHeight = false;
+            _list.HorizontalScrollbar = true;
             _list.SelectedIndexChanged += delegate { ShowDetail(); };
             Controls.Add(_list);
 
