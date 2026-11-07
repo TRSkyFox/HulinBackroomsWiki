@@ -1434,6 +1434,7 @@ namespace ExpeditionRecorder
             string s = ToTraditional(raw);
             string v;
             if (En.TryGetValue(s, out v)) return v;
+            if (s.StartsWith("字號 ")) return "Text " + s.Substring(3);
             if (s.StartsWith("已記錄 ")) return "Recorded " + s.Substring(4);
             if (s.StartsWith("待處理 ")) return "Pending " + s.Substring(4);
             if (s.StartsWith("按 ") && s.EndsWith(" 開始記錄"))
@@ -1510,6 +1511,44 @@ namespace ExpeditionRecorder
             {
                 try { Apply(f); } catch { }
             }
+        }
+    }
+
+    /* ══ 記錄視窗字號（1.0–2.0，每格 0.1） ═══════════════ */
+    static class UiScale
+    {
+        public static float Scale = 1.0f;
+        static readonly Dictionary<Control, Font> BaseFonts = new Dictionary<Control, Font>();
+
+        public static int Px(int value)
+        {
+            return Math.Max(1, (int)Math.Round(value * Scale));
+        }
+
+        public static float Value
+        {
+            get { return Scale; }
+            set { Scale = Math.Max(1.0f, Math.Min(2.0f, value)); }
+        }
+
+        public static void Apply(Control root)
+        {
+            if (root == null) return;
+            if (!(root is TrackBar))
+            {
+                Font b;
+                if (!BaseFonts.TryGetValue(root, out b))
+                {
+                    b = root.Font;
+                    BaseFonts[root] = b;
+                }
+                if (b != null)
+                {
+                    try { root.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
+                    catch { }
+                }
+            }
+            foreach (Control child in root.Controls) Apply(child);
         }
     }
 
@@ -2457,12 +2496,12 @@ namespace ExpeditionRecorder
 
             var bottom = new Panel();
             bottom.Dock = DockStyle.Bottom;
-            bottom.Height = 48;
+            bottom.Height = UiScale.Px(48);
             bottom.BackColor = Color.FromArgb(24, 24, 27);
 
             var save = new Button();
             save.Text = "保存修改";
-            save.SetBounds(12, 10, 120, 28);
+            save.SetBounds(12, UiScale.Px(10), UiScale.Px(120), UiScale.Px(28));
             save.FlatStyle = FlatStyle.Flat;
             save.BackColor = Color.FromArgb(44, 44, 47);
             save.ForeColor = Color.White;
@@ -2472,7 +2511,7 @@ namespace ExpeditionRecorder
 
             var cancel = new Button();
             cancel.Text = "取消";
-            cancel.SetBounds(144, 10, 100, 28);
+            cancel.SetBounds(UiScale.Px(144), UiScale.Px(10), UiScale.Px(100), UiScale.Px(28));
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.BackColor = Color.FromArgb(44, 44, 47);
             cancel.ForeColor = Color.White;
@@ -2482,7 +2521,7 @@ namespace ExpeditionRecorder
 
             var tip = new Label();
             tip.Text = "只改结构字段；原始 JSONL 由程序重写，不需要手动改原文。";
-            tip.SetBounds(260, 15, 500, 20);
+            tip.SetBounds(UiScale.Px(260), UiScale.Px(15), UiScale.Px(500), UiScale.Px(20));
             tip.ForeColor = Color.FromArgb(160, 160, 168);
             bottom.Controls.Add(tip);
 
@@ -2496,6 +2535,7 @@ namespace ExpeditionRecorder
             bottom.BringToFront();
 
             BuildFields();
+            UiScale.Apply(this);
             KeyDown += delegate (object s, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
@@ -2507,11 +2547,12 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = text;
-            l.SetBounds(14, _y, 720, 24);
+            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(24));
+            l.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             l.ForeColor = Color.FromArgb(255, 214, 120);
             l.Font = new Font("Microsoft JhengHei UI", 10F, FontStyle.Bold);
             _panel.Controls.Add(l);
-            _y += 30;
+            _y += UiScale.Px(30);
             return l;
         }
 
@@ -2519,15 +2560,16 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, 130, 20);
+            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(20));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(150, _y + 4, 580, 20);
+            v.SetBounds(UiScale.Px(150), _y + 4, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), UiScale.Px(20));
+            v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
-            _y += 28;
+            _y += UiScale.Px(28);
         }
 
         static string S(Dictionary<string, object> d, string k)
@@ -2561,19 +2603,21 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, 130, 20);
+            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(20));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
+            int h = UiScale.Px(multi ? height : 24);
             var t = new TextBox();
             t.Multiline = multi;
             t.ScrollBars = multi ? ScrollBars.Vertical : ScrollBars.None;
-            t.SetBounds(150, _y, 560, multi ? height : 24);
+            t.SetBounds(UiScale.Px(150), _y, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), h);
+            t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             t.BackColor = Color.FromArgb(40, 40, 44);
             t.ForeColor = Color.White;
             t.BorderStyle = BorderStyle.FixedSingle;
             t.Text = value ?? "";
             _panel.Controls.Add(t);
-            _y += (multi ? height : 24) + 10;
+            _y += h + UiScale.Px(10);
             return t;
         }
 
@@ -2582,6 +2626,61 @@ namespace ExpeditionRecorder
             string val = d != null && d.ContainsKey(key) ? Convert.ToString(d[key]) : "";
             var t = AddRaw(label, val, false, 24);
             _savers.Add(delegate { if (d != null) d[key] = t.Text; });
+        }
+
+        void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
+        {
+            var l = new Label();
+            l.Text = label;
+            l.SetBounds(14, _y + 5, UiScale.Px(130), UiScale.Px(20));
+            l.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(l);
+            int n = Math.Max(1, values.Length);
+            int bh = UiScale.Px(24);
+            string current = S(d, key);
+            int selected = Array.IndexOf(values, current);
+            var buttons = new List<Button>();
+            var table = new TableLayoutPanel();
+            table.ColumnCount = n;
+            table.RowCount = 1;
+            table.SetBounds(UiScale.Px(150), _y, Math.Max(UiScale.Px(160), _panel.ClientSize.Width - UiScale.Px(166)), bh);
+            table.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            for (int i = 0; i < n; i++) table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / n));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, bh));
+            for (int i = 0; i < values.Length; i++)
+            {
+                int idx = i;
+                var b = new Button();
+                b.Text = texts[i];
+                b.Dock = DockStyle.Fill;
+                b.Margin = new Padding(UiScale.Px(2), 0, UiScale.Px(2), 0);
+                b.FlatStyle = FlatStyle.Flat;
+                b.BackColor = Color.FromArgb(44, 44, 47);
+                b.ForeColor = Color.FromArgb(232, 232, 236);
+                b.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+                b.Click += delegate
+                {
+                    selected = idx;
+                    for (int j = 0; j < buttons.Count; j++)
+                    {
+                        bool on = j == selected;
+                        buttons[j].BackColor = on ? Color.FromArgb(42, 72, 48) : Color.FromArgb(44, 44, 47);
+                        buttons[j].ForeColor = on ? Color.FromArgb(190, 240, 190) : Color.FromArgb(232, 232, 236);
+                        buttons[j].FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(78, 78, 84);
+                    }
+                };
+                if (i == selected)
+                {
+                    b.BackColor = Color.FromArgb(42, 72, 48);
+                    b.ForeColor = Color.FromArgb(190, 240, 190);
+                    b.FlatAppearance.BorderColor = Color.FromArgb(80, 160, 90);
+                }
+                table.Controls.Add(b, i, 0);
+                buttons.Add(b);
+            }
+            _panel.Controls.Add(table);
+            _savers.Add(delegate { if (d != null && selected >= 0) d[key] = values[selected]; });
+            _y += bh + UiScale.Px(10);
         }
 
         void AddLongText(Dictionary<string, object> d, string key, string label)
@@ -2709,7 +2808,10 @@ namespace ExpeditionRecorder
                             if (ck != null)
                             {
                                 AddText(ck, "attribute", "判定屬性");
-                                AddText(ck, "outcome", "判定結果（成功／失敗）");
+                                var outs = new List<string> { "成功", "失敗" };
+                                string cur = S(ck, "outcome");
+                                if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
+                                AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
                             }
                             AddList(st, "results", "結果文本", false);
                             var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
@@ -2744,7 +2846,14 @@ namespace ExpeditionRecorder
                     if (matched) continue;
                     AddHeading("選中（未匹配選項）：" + c);
                     var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
-                    if (ck != null) { AddText(ck, "attribute", "判定屬性"); AddText(ck, "outcome", "判定結果"); }
+                    if (ck != null)
+                    {
+                        AddText(ck, "attribute", "判定屬性");
+                        var outs = new List<string> { "成功", "失敗" };
+                        string cur = S(ck, "outcome");
+                        if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
+                        AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
+                    }
                     AddList(st, "results", "結果文本", false);
                     var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
                     if (eff != null)
@@ -2790,7 +2899,7 @@ namespace ExpeditionRecorder
                     AddText(o, "floorId", "樓層 ID");
                     AddText(o, "floorName", "樓層名稱");
                 }
-                AddText(o, "theme", "主題（light／dark）");
+                AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "亮色", "暗色" });
                 AddLongText(o, "intro", "樓層介紹");
                 Dictionary<string, object> pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
                 if (pal != null)
@@ -2906,6 +3015,7 @@ namespace ExpeditionRecorder
         ListBox _list;
         Label _count;
         ComboBox _kind;
+        Button _reloadBtn, _delBtn, _openBtn, _closeBtn;
         List<RecordEntry> _all = new List<RecordEntry>();
         List<RecordEntry> _shown = new List<RecordEntry>();
 
@@ -2920,7 +3030,7 @@ namespace ExpeditionRecorder
             ForeColor = Color.FromArgb(230, 230, 235);
 
             _search = new TextBox();
-            _search.SetBounds(12, 10, 400, 24);
+            _search.SetBounds(12, 10, 400, UiScale.Px(24));
             _search.BackColor = Color.FromArgb(40, 40, 44);
             _search.ForeColor = Color.White;
             _search.BorderStyle = BorderStyle.FixedSingle;
@@ -2928,12 +3038,12 @@ namespace ExpeditionRecorder
             Controls.Add(_search);
             var tip = new Label();
             tip.Text = "搜尋";
-            tip.SetBounds(420, 13, 40, 20);
+            tip.SetBounds(420, UiScale.Px(13), 48, UiScale.Px(20));
             tip.ForeColor = Color.FromArgb(140, 140, 148);
             Controls.Add(tip);
             _kind = new ComboBox();
             _kind.DropDownStyle = ComboBoxStyle.DropDownList;
-            _kind.SetBounds(462, 10, 130, 24);
+            _kind.SetBounds(472, 10, 130, UiScale.Px(24));
             _kind.Items.AddRange(new object[] { "全部", "事件", "物品", "樓層", "出口", "結局", "商店" });
             _kind.SelectedIndex = 0;
             _kind.SelectedIndexChanged += delegate { ApplyFilter(); };
@@ -2959,13 +3069,39 @@ namespace ExpeditionRecorder
             _count.ForeColor = Color.FromArgb(170, 170, 178);
             Controls.Add(_count);
 
-            var reload = MkBtn("重整", 12, 528, 90); reload.Click += delegate { LoadAll(); };
-            var del = MkBtn("刪除選中", 110, 528, 100); del.Click += delegate { DeleteSelected(); };
-            var open = MkBtn("開啟資料夾", 218, 528, 110); open.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
-            var close = MkBtn("關閉", 336, 528, 90); close.Click += delegate { Close(); };
-            Controls.Add(reload); Controls.Add(del); Controls.Add(open); Controls.Add(close);
+            _reloadBtn = MkBtn("重整", 12, 528, 90); _reloadBtn.Click += delegate { LoadAll(); };
+            _delBtn = MkBtn("刪除選中", 110, 528, 100); _delBtn.Click += delegate { DeleteSelected(); };
+            _openBtn = MkBtn("開啟資料夾", 218, 528, 110); _openBtn.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
+            _closeBtn = MkBtn("關閉", 336, 528, 90); _closeBtn.Click += delegate { Close(); };
+            Controls.Add(_reloadBtn); Controls.Add(_delBtn); Controls.Add(_openBtn); Controls.Add(_closeBtn);
 
+            UiScale.Apply(this);
+            _list.ItemHeight = Math.Max(16, UiScale.Px(18));
             LoadAll();
+            LayoutRecords();
+            Resize += delegate { LayoutRecords(); };
+        }
+
+        void LayoutRecords()
+        {
+            int pad = UiScale.Px(12);
+            int top = Math.Max(UiScale.Px(42), UiScale.Px(10) + UiScale.Px(24) + UiScale.Px(8));
+            int bottom = UiScale.Px(52);
+            int w = ClientSize.Width;
+            int h = ClientSize.Height;
+            int listW = Math.Max(240, Math.Min(460, (w - pad * 3) * 34 / 100));
+            if (w < 760) listW = Math.Max(200, (w - pad * 3) / 2);
+            int detailX = pad + listW + 12;
+            int detailW = Math.Max(220, w - detailX - pad);
+            int contentH = Math.Max(120, h - top - bottom - 8);
+            _list.SetBounds(pad, top, listW, contentH);
+            _editorHost.SetBounds(detailX, top, detailW, contentH);
+            _count.SetBounds(pad, h - UiScale.Px(20), Math.Max(200, w - pad * 2), UiScale.Px(18));
+            int by = h - UiScale.Px(48);
+            if (_reloadBtn != null) _reloadBtn.SetBounds(pad, by, UiScale.Px(90), UiScale.Px(28));
+            if (_delBtn != null) _delBtn.SetBounds(pad + UiScale.Px(98), by, UiScale.Px(100), UiScale.Px(28));
+            if (_openBtn != null) _openBtn.SetBounds(pad + UiScale.Px(206), by, UiScale.Px(110), UiScale.Px(28));
+            if (_closeBtn != null) _closeBtn.SetBounds(pad + UiScale.Px(324), by, UiScale.Px(90), UiScale.Px(28));
         }
 
         Button MkBtn(string text, int x, int y, int w)
@@ -4630,6 +4766,8 @@ namespace ExpeditionRecorder
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
         static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn;
+        static TrackBar ScaleBar;
+        static Label ScaleLabel;
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
@@ -4758,7 +4896,7 @@ namespace ExpeditionRecorder
         {
             ControlWindow = new Form();
             ControlWindow.Text = "Expedition Recorder";
-            ControlWindow.ClientSize = new Size(430, 428);
+            ControlWindow.ClientSize = new Size(430, 460);
             ControlWindow.StartPosition = FormStartPosition.Manual;
             ControlWindow.FormBorderStyle = FormBorderStyle.FixedSingle;
             ControlWindow.MaximizeBox = false;
@@ -4836,7 +4974,7 @@ namespace ExpeditionRecorder
             UiText.SetText(StateLabel, "狀態：—");
             ControlWindow.Controls.Add(StateLabel);
 
-            var settingsGroup = Group("設置", 12, 360, 406, 56);
+            var settingsGroup = Group("設置", 12, 360, 406, 88);
             HelpBtn = Btn("說明", 14, 22, 80, 26);
             HelpBtn.Click += delegate { new HelpForm().ShowDialog(); };
             settingsGroup.Controls.Add(HelpBtn);
@@ -4849,7 +4987,25 @@ namespace ExpeditionRecorder
             EngBtn = Btn("English", 282, 22, 108, 26);
             EngBtn.Click += delegate { SetUiLang(UiLang.English); };
             settingsGroup.Controls.Add(EngBtn);
+
+            ScaleBar = new TrackBar();
+            ScaleBar.Minimum = 10;
+            ScaleBar.Maximum = 20;
+            ScaleBar.TickFrequency = 1;
+            ScaleBar.SmallChange = 1;
+            ScaleBar.LargeChange = 1;
+            ScaleBar.Value = Math.Max(10, Math.Min(20, (int)Math.Round(UiScale.Scale * 10)));
+            ScaleBar.SetBounds(14, 56, 220, 28);
+            ScaleBar.BackColor = Color.FromArgb(28, 28, 31);
+            ScaleBar.ForeColor = Color.FromArgb(220, 220, 226);
+            ScaleBar.ValueChanged += delegate { SetTextScale(ScaleBar.Value / 10f); };
+            settingsGroup.Controls.Add(ScaleBar);
+            ScaleLabel = new Label();
+            ScaleLabel.SetBounds(242, 62, 150, 22);
+            ScaleLabel.ForeColor = Color.FromArgb(210, 210, 218);
+            settingsGroup.Controls.Add(ScaleLabel);
             UpdateLanguageButtons();
+            UpdateScaleLabel();
 
             ControlWindow.FormClosing += delegate
             {
@@ -5034,11 +5190,25 @@ namespace ExpeditionRecorder
             catch { }
         }
 
+        static void SetTextScale(float value)
+        {
+            UiScale.Value = value;
+            UpdateScaleLabel();
+            SaveHotkeys();
+        }
+
+        static void UpdateScaleLabel()
+        {
+            if (ScaleLabel == null) return;
+            UiText.SetText(ScaleLabel, "字號 " + UiScale.Scale.ToString("0.0") + "x");
+        }
+
         static void SetUiLang(UiLang lang)
         {
             UiText.SetLang(lang);
             if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) HelpForm.Instance.RefreshLanguage();
             UpdateLanguageButtons();
+            UpdateScaleLabel();
             UpdateRecordButtons();
             UpdateHotkeyButton();
             SetState(lang == UiLang.Simplified ? "狀態：已切換成簡體"
@@ -6460,6 +6630,12 @@ namespace ExpeditionRecorder
                 if (d != null && d.ContainsKey("mode")) ModeVk = Convert.ToInt32(d["mode"]);
                 if (d != null && d.ContainsKey("step")) StepVk = Convert.ToInt32(d["step"]);
                 if (d != null && d.ContainsKey("cancel")) CancelVk = Convert.ToInt32(d["cancel"]);
+                if (d != null && d.ContainsKey("textScale"))
+                {
+                    float sc;
+                    if (float.TryParse(Convert.ToString(d["textScale"]), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sc))
+                        UiScale.Value = sc;
+                }
             }
             catch { }
         }
@@ -6472,6 +6648,7 @@ namespace ExpeditionRecorder
                 d["mode"] = ModeVk;
                 d["step"] = StepVk;
                 d["cancel"] = CancelVk;
+                d["textScale"] = Math.Round(UiScale.Scale, 1);
                 File.WriteAllText(HotkeyFile(), new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }
