@@ -1576,6 +1576,13 @@ namespace ExpeditionRecorder
         public static bool Simplified { get { return Lang == UiLang.Simplified; } }
         static Dictionary<char, char> _t2s;
         static Dictionary<Control, string> _source = new Dictionary<Control, string>();
+        static readonly HashSet<Control> NoTranslate = new HashSet<Control>();
+        static readonly HashSet<Form> SeenForms = new HashSet<Form>();
+
+        public static void KeepText(Control c)
+        {
+            if (c != null) NoTranslate.Add(c);
+        }
         static readonly Dictionary<string, string> En = new Dictionary<string, string>
         {
             { "客戶端", "Clients" },
@@ -1735,7 +1742,7 @@ namespace ExpeditionRecorder
         {
             if (c == null) return;
             /* 下拉選單／文字輸入的內容不是 UI 標籤，不能翻譯。 */
-            if (!(c is ComboBox) && !(c is TextBox))
+            if (!(c is ComboBox) && !(c is TextBox) && !NoTranslate.Contains(c))
             {
                 string source;
                 if (!_source.TryGetValue(c, out source))
@@ -1759,6 +1766,8 @@ namespace ExpeditionRecorder
         {
             Apply(root);
             ApplyFonts(root);
+            var f = root as Form;
+            if (f != null) SeenForms.Add(f);
         }
 
         public static void SetLang(UiLang lang)
@@ -1766,6 +1775,19 @@ namespace ExpeditionRecorder
             Lang = lang;
             foreach (Form f in Application.OpenForms)
             {
+                try { Apply(f); } catch { }
+                try { ApplyFonts(f); } catch { }
+                SeenForms.Add(f);
+            }
+        }
+
+        public static void ApplyOpenForms()
+        {
+            var forms = new List<Form>();
+            foreach (Form f in Application.OpenForms) if (f != null && !f.IsDisposed) forms.Add(f);
+            foreach (var f in forms)
+            {
+                if (!SeenForms.Add(f)) continue;
                 try { Apply(f); } catch { }
                 try { ApplyFonts(f); } catch { }
             }
@@ -1880,8 +1902,10 @@ namespace ExpeditionRecorder
                     if (b == null) continue;
                     try
                     {
-                        string fam = b.FontFamily.Name.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
-                            ? UiText.FontFamily : b.FontFamily.Name;
+                        string bn = b.FontFamily.Name;
+                        string fam = (bn.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
+                            || bn.IndexOf("YaHei", StringComparison.OrdinalIgnoreCase) >= 0)
+                            ? UiText.FontFamily : bn;
                         c.Font = new Font(fam, b.Size * Scale, b.Style, GraphicsUnit.Point);
                     }
                     catch { }
@@ -1896,6 +1920,7 @@ namespace ExpeditionRecorder
                 f.Location = new Point(Math.Max(wa.Left + 12, x), Math.Max(wa.Top + 12, y));
             }
             Applied[f] = Scale;
+            try { f.Invalidate(true); } catch { }
         }
 
         public static void SyncOpenForms()
@@ -1946,13 +1971,26 @@ namespace ExpeditionRecorder
                 {
                     try
                     {
-                        string fam = b.FontFamily.Name.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
-                            ? UiText.FontFamily : b.FontFamily.Name;
+                        string bn = b.FontFamily.Name;
+                        string fam = (bn.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
+                            || bn.IndexOf("YaHei", StringComparison.OrdinalIgnoreCase) >= 0)
+                            ? UiText.FontFamily : bn;
                         c.Font = new Font(fam, b.Size * Scale, b.Style, GraphicsUnit.Point);
                     }
                     catch { }
                 }
             }
+            try { root.Invalidate(true); } catch { }
+        }
+    }
+
+    class BufferedPanel : Panel
+    {
+        public BufferedPanel()
+        {
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+            UpdateStyles();
         }
     }
 
@@ -2669,6 +2707,7 @@ namespace ExpeditionRecorder
             Instance = this;
             Text = "本次記錄";
             ClientSize = new Size(420, 620);
+            DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             ShowInTaskbar = false;
@@ -2696,7 +2735,7 @@ namespace ExpeditionRecorder
             _list.SelectedIndexChanged += delegate { ShowEntry(); };
             Controls.Add(_list);
 
-            _editorHost = new Panel();
+            _editorHost = new BufferedPanel();
             _editorHost.AutoScroll = true;
             _editorHost.BackColor = Color.FromArgb(24, 24, 27);
             _editorHost.BorderStyle = BorderStyle.FixedSingle;
@@ -2892,6 +2931,8 @@ namespace ExpeditionRecorder
             _editor = f;
             _editorHost.Controls.Add(f);
             f.Show();
+            UiText.ApplyTo(f);
+            _editorHost.Invalidate(true);
         }
 
         public void RefreshScale()
@@ -3228,6 +3269,7 @@ namespace ExpeditionRecorder
             _lockIdentity = lockIdentity;
             Text = "編輯記錄：" + kind;
             ClientSize = UiScale.FitSize(780, 700);
+            DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterParent;
@@ -3235,15 +3277,17 @@ namespace ExpeditionRecorder
             ForeColor = Color.FromArgb(230, 230, 235);
             KeyPreview = true;
 
-            _panel = new Panel();
+            _panel = new BufferedPanel();
             _panel.Dock = DockStyle.Fill;
             _panel.AutoScroll = true;
             _panel.Padding = new Padding(10);
             _panel.BackColor = Color.FromArgb(32, 32, 36);
+            _panel.Resize += delegate { _panel.Invalidate(true); };
             Controls.Add(_panel);
 
             BuildFields();
             UiScale.Apply(this);
+            _panel.Invalidate(true);
             HookAutoSave(_panel);
             _autoSave = new System.Windows.Forms.Timer();
             _autoSave.Interval = 600;
@@ -3600,10 +3644,12 @@ namespace ExpeditionRecorder
             Action refresh = delegate
             {
                 string th = S(o, "theme");
-                light.BackColor = th == "light" ? Color.FromArgb(52, 90, 60) : Color.FromArgb(44, 44, 47);
-                dark.BackColor = th == "dark" ? Color.FromArgb(52, 90, 60) : Color.FromArgb(44, 44, 47);
+                light.BackColor = th == "light" ? Color.FromArgb(66, 70, 78) : Color.FromArgb(44, 44, 47);
+                dark.BackColor = th == "dark" ? Color.FromArgb(66, 70, 78) : Color.FromArgb(44, 44, 47);
                 light.ForeColor = Color.White;
                 dark.ForeColor = Color.White;
+                light.FlatAppearance.BorderColor = th == "light" ? Color.FromArgb(130, 170, 215) : Color.FromArgb(78, 78, 84);
+                dark.FlatAppearance.BorderColor = th == "dark" ? Color.FromArgb(130, 170, 215) : Color.FromArgb(78, 78, 84);
             };
             light.Click += delegate { o["theme"] = "light"; refresh(); };
             dark.Click += delegate { o["theme"] = "dark"; refresh(); };
@@ -3618,7 +3664,7 @@ namespace ExpeditionRecorder
             var pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
             string theme = S(o, "theme");
             int h = UiScale.Px(90);
-            var panel = new Panel();
+            var panel = new BufferedPanel();
             panel.SetBounds(14, _y, UiScale.Px(520), h);
             panel.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             panel.BorderStyle = BorderStyle.FixedSingle;
@@ -4025,6 +4071,7 @@ namespace ExpeditionRecorder
             Instance = this;
             Text = "已記錄";
             ClientSize = UiScale.FitSize(920, 580);
+            DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -4060,7 +4107,7 @@ namespace ExpeditionRecorder
             _list.SelectedIndexChanged += delegate { ShowDetail(); };
             Controls.Add(_list);
 
-            _editorHost = new Panel();
+            _editorHost = new BufferedPanel();
             _editorHost.SetBounds(424, 42, 484, 480);
             _editorHost.AutoScroll = true;
             _editorHost.BackColor = Color.FromArgb(24, 24, 27);
@@ -4270,6 +4317,8 @@ namespace ExpeditionRecorder
             _inlineEditor = f;
             _editorHost.Controls.Add(f);
             f.Show();
+            UiText.ApplyTo(f);
+            _editorHost.Invalidate(true);
         }
 
         static string Str(Dictionary<string, object> d, string k)
@@ -6316,7 +6365,7 @@ namespace ExpeditionRecorder
 
             UiTimer = new System.Windows.Forms.Timer();
             UiTimer.Interval = 500;
-            UiTimer.Tick += delegate { RefreshStatus(); HookWatchdog(); };
+            UiTimer.Tick += delegate { UiText.ApplyOpenForms(); RefreshStatus(); HookWatchdog(); };
             UiTimer.Start();
 
             /* 预热 OCR 服务，并让空闲时的队伍扫描提前完成，避免第一次 E
@@ -6447,9 +6496,12 @@ namespace ExpeditionRecorder
             try
             {
                 UiText.SetText(HelpBtn, "說明");
-                UiText.SetText(TradBtn, "繁體");
-                UiText.SetText(SimpBtn, "簡體");
-                UiText.SetText(EngBtn, "English");
+                UiText.KeepText(TradBtn);
+                UiText.KeepText(SimpBtn);
+                UiText.KeepText(EngBtn);
+                TradBtn.Text = "繁體";
+                SimpBtn.Text = "簡體";
+                EngBtn.Text = "English";
                 var buttons = new[] { TradBtn, SimpBtn, EngBtn };
                 for (int i = 0; i < buttons.Length; i++)
                 {
