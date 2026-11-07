@@ -587,7 +587,7 @@ namespace ExpeditionRecorder
         public static bool TryParseCheck(string t, out string attr, out string dc, out string roll, out string outcome, out string player)
         {
             attr = dc = roll = outcome = player = "";
-            var m = System.Text.RegularExpressions.Regex.Match(t, @"[（(\[〔]\s*(力量|敏捷|體質|体质|感知|智力|魅力)\s*(?:難度|难度)\s*([0-9Xx]+)\s*[）)\]〕]");
+            var m = System.Text.RegularExpressions.Regex.Match(t, @"[（(\[〔【]\s*(力量|敏捷|體質|体质|感知|智力|魅力)\s*(?:難度|难度)\s*([0-9Xx]+)\s*[）)\]〕】]");
             if (!m.Success) return false;
             attr = m.Groups[1].Value;
             dc = m.Groups[2].Value;
@@ -4824,7 +4824,7 @@ namespace ExpeditionRecorder
                     {
                         /* 只有队伍栏没识别出本地玩家时才拿检定角色当 fallback；
                            不能把“狐天”这种其他玩家误设成本地玩家，否则会写成“你”。 */
-                        if (Party.LocalName == "") Party.SetLocal(cPl);
+                        if (Party.LocalName == "" && cPl != "你" && cPl != "妳" && cPl != "全员" && cPl != "全員") Party.SetLocal(cPl);
                         if (actor == "") actor = cPl;
                     }
                     continue;
