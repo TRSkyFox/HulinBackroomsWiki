@@ -3720,14 +3720,14 @@ namespace ExpeditionRecorder
             return S(o, "title");
         }
 
-        TextBox AddRaw(string label, string value, bool multi, int height)
+        TextBox AddRaw(string label, string value, bool multi, int height, Color? labelColor = null, Color? textColor = null)
         {
             int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
             var l = new Label();
             l.Text = label;
             l.SetBounds(14, _y + 3, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
-            l.ForeColor = Color.FromArgb(170, 170, 178);
+            l.ForeColor = labelColor ?? Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int fieldW = narrow
                 ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
@@ -3750,7 +3750,7 @@ namespace ExpeditionRecorder
             }
             t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             t.BackColor = Color.FromArgb(40, 40, 44);
-            t.ForeColor = Color.White;
+            t.ForeColor = textColor ?? Color.White;
             t.BorderStyle = BorderStyle.FixedSingle;
             _panel.Controls.Add(t);
             if (multi) t.TextChanged += delegate { AdjustTextHeight(t); };
@@ -4015,9 +4015,12 @@ namespace ExpeditionRecorder
         void AddOptionText(Dictionary<string, object> d)
         {
             string val = S(d, "text");
-            var t = AddRaw("選項", val, false, 24);
+            bool cond = IsConditionOption(d);
+            var t = AddRaw(cond ? "條件選項" : "選項", val, false, 24,
+                cond ? Color.FromArgb(255, 196, 92) : (Color?)null,
+                cond ? Color.FromArgb(255, 226, 150) : (Color?)null);
             string col = S(d, "color");
-            if (col != "")
+            if (!cond && col != "")
             {
                 try
                 {
@@ -4027,6 +4030,73 @@ namespace ExpeditionRecorder
                 catch { }
             }
             _savers.Add(delegate { if (d != null) d["text"] = t.Text; });
+        }
+
+        static readonly string[] CondTypes = { "item", "attribute", "character", "status", "skill", "event" };
+        static readonly string[] CondLabels = { "物品", "屬性", "角色", "狀態", "技能", "事件" };
+
+        static string InferConditionType(Dictionary<string, object> od)
+        {
+            var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+            string t = req != null ? S(req, "type") : "";
+            if (t == "attr") t = "attribute";
+            if (Array.IndexOf(CondTypes, t) >= 0) return t;
+            string reason = S(od, "specialReason");
+            if (reason == "attr") reason = "attribute";
+            if (Array.IndexOf(CondTypes, reason) >= 0) return reason;
+            if (S(od, "check") != "") return "attribute";
+            return "event";
+        }
+
+        static string ConditionRequirement(Dictionary<string, object> od)
+        {
+            string v = S(od, "conditionText");
+            if (v != "") return v;
+            var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+            if (req != null && S(req, "name") != "") return S(req, "name");
+            return S(od, "check");
+        }
+
+        void AddConditionRow(Dictionary<string, object> od)
+        {
+            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            bool narrow = avail < UiScale.Px(430);
+            var l = new Label();
+            l.Text = "條件";
+            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
+            l.ForeColor = Color.FromArgb(255, 196, 92);
+            _panel.Controls.Add(l);
+            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int cy = narrow ? _y + UiScale.Px(24) : _y;
+            string type = InferConditionType(od);
+            int idx = Array.IndexOf(CondTypes, type);
+            if (idx < 0) idx = 0;
+            int cw = Math.Min(UiScale.Px(150), ComboWidth(CondLabels));
+            var cb = AddComboCore(fieldX, cy, cw, CondLabels, idx, Color.FromArgb(255, 226, 150));
+            int bx = fieldX + cw + UiScale.Px(6);
+            int bw = Math.Max(UiScale.Px(100), avail - bx - UiScale.Px(14));
+            var box = new TextBox();
+            box.SetBounds(bx, cy, bw, UiScale.Px(24));
+            box.BackColor = Color.FromArgb(40, 40, 44);
+            box.ForeColor = Color.FromArgb(255, 226, 150);
+            box.BorderStyle = BorderStyle.FixedSingle;
+            box.Text = ConditionRequirement(od);
+            _panel.Controls.Add(box);
+            _y = cy + UiScale.Px(28) + UiScale.Px(6);
+
+            _savers.Add(delegate
+            {
+                string t = cb.SelectedIndex >= 0 && cb.SelectedIndex < CondTypes.Length ? CondTypes[cb.SelectedIndex] : "event";
+                string name = box.Text.Trim();
+                var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+                if (req == null) { req = new Dictionary<string, object>(); od["requirement"] = req; }
+                req["type"] = t;
+                req["name"] = name;
+                od["special"] = true;
+                od["specialReason"] = t;
+                if (name != "") od["conditionText"] = name;
+                else od.Remove("conditionText");
+            });
         }
 
         void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
@@ -4086,6 +4156,52 @@ namespace ExpeditionRecorder
             }
             _savers.Add(delegate { if (d != null && selected >= 0) d[key] = values[selected]; });
             _y = y + bh + UiScale.Px(6);
+        }
+
+        int ComboWidth(string[] texts)
+        {
+            int max = 0;
+            foreach (var s in texts)
+            {
+                int w = (int)Math.Ceiling(TextRenderer.MeasureText(s, Font).Width * UiScale.Scale) + UiScale.Px(34);
+                if (w > max) max = w;
+            }
+            return Math.Max(UiScale.Px(84), max);
+        }
+
+        DarkComboBox AddComboCore(int x, int y, int width, string[] labels, int selected, Color fore)
+        {
+            var cb = new DarkComboBox();
+            cb.DropDownStyle = ComboBoxStyle.DropDownList;
+            UiText.StyleCombo(cb);
+            UiText.SetComboItems(cb, labels);
+            cb.SetBounds(x, y, width, UiScale.Px(26));
+            if (selected >= 0 && selected < cb.Items.Count) cb.SelectedIndex = selected;
+            cb.ForeColor = fore;
+            _panel.Controls.Add(cb);
+            return cb;
+        }
+
+        void AddComboField(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
+        {
+            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            bool narrow = avail < UiScale.Px(430);
+            var l = new Label();
+            l.Text = label;
+            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
+            l.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(l);
+            int idx = Array.IndexOf(values, S(d, key));
+            if (idx < 0) idx = 0;
+            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int cw = Math.Min(avail - fieldX - UiScale.Px(14), ComboWidth(texts));
+            int cy = narrow ? _y + UiScale.Px(24) : _y;
+            var cb = AddComboCore(fieldX, cy, cw, texts, idx, Color.White);
+            cb.SelectedIndexChanged += delegate
+            {
+                if (cb.SelectedIndex >= 0 && cb.SelectedIndex < values.Length) d[key] = values[cb.SelectedIndex];
+            };
+            _y = cy + UiScale.Px(26) + UiScale.Px(6);
         }
 
         void AddFloorFields(Dictionary<string, object> o)
@@ -4377,7 +4493,7 @@ namespace ExpeditionRecorder
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
                 string eventKind = S(o, "eventKind");
                 if (eventKind == "") { eventKind = "normal"; o["eventKind"] = eventKind; }
-                AddChoice(o, "eventKind", "事件類型",
+                AddComboField(o, "eventKind", "事件類型",
                     new[] { "normal", "free", "junction", "character", "cooperation", "common" },
                     new[] { "普通事件", "自由事件", "岔路事件", "角色事件", "合力事件", "通用事件" });
                 AddRestTag(o);
@@ -4420,26 +4536,13 @@ namespace ExpeditionRecorder
                         var od = opts[oi] as Dictionary<string, object>;
                         if (od == null) continue;
                         int optTop = _y;
-                        string optName = IsConditionOption(od) ? "條件選項⭐" : "選項 " + (oi + 1);
+                        string optName = "選項 " + (oi + 1);
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         if (od.ContainsKey("check"))
                             AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
-                        if (od.ContainsKey("conditionText")) AddLongText(od, "conditionText", "選項條件");
-                        var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
-                        if (req != null)
-                        {
-                            AddText(req, "type", "需求類型");
-                            if (S(req, "type") == "attr")
-                                AddChoice(req, "name", "需求屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
-                            else
-                                AddText(req, "name", "需求名稱");
-                            if (req.ContainsKey("min")) AddText(req, "min", "需求數值");
-                            if (req.ContainsKey("consume")) AddText(req, "consume", "是否消耗");
-                        }
-                        else if (od.ContainsKey("requirement"))
-                            AddText(od, "requirement", "需求文字");
+                        if (IsConditionOption(od)) AddConditionRow(od);
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
                         foreach (var st in branches)
