@@ -3361,13 +3361,13 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(typeLabel);
             var normalRadio = new RadioButton();
             normalRadio.Text = "常規樓層";
-            normalRadio.SetBounds(UiScale.Px(150), _y, UiScale.Px(100), UiScale.Px(24));
+            normalRadio.SetBounds(UiScale.Px(120), _y, UiScale.Px(100), UiScale.Px(24));
             normalRadio.ForeColor = Color.White;
             normalRadio.Checked = ft == "normal";
             _panel.Controls.Add(normalRadio);
             var anomalousRadio = new RadioButton();
             anomalousRadio.Text = "異常樓層";
-            anomalousRadio.SetBounds(UiScale.Px(256), _y, UiScale.Px(100), UiScale.Px(24));
+            anomalousRadio.SetBounds(UiScale.Px(226), _y, UiScale.Px(100), UiScale.Px(24));
             anomalousRadio.ForeColor = Color.White;
             anomalousRadio.Checked = ft == "anomalous";
             _panel.Controls.Add(anomalousRadio);
@@ -3381,19 +3381,19 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(floorLabel);
             var prefix = new Label();
             prefix.Text = "Level";
-            prefix.SetBounds(UiScale.Px(150), rowY + 4, UiScale.Px(42), UiScale.Px(22));
+            prefix.SetBounds(UiScale.Px(120), rowY + 4, UiScale.Px(42), UiScale.Px(22));
             prefix.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(prefix);
             var idBox = new TextBox();
-            idBox.SetBounds(UiScale.Px(195), rowY, UiScale.Px(180), UiScale.Px(24));
+            idBox.SetBounds(UiScale.Px(165), rowY, UiScale.Px(100), UiScale.Px(24));
             idBox.BackColor = Color.FromArgb(40, 40, 44);
             idBox.ForeColor = Color.White;
             idBox.BorderStyle = BorderStyle.FixedSingle;
             idBox.Text = S(o, "floorId");
             _panel.Controls.Add(idBox);
             var nameBox = new TextBox();
-            nameBox.SetBounds(UiScale.Px(383), rowY, UiScale.Px(360), UiScale.Px(24));
-            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            nameBox.SetBounds(UiScale.Px(273), rowY, UiScale.Px(300), UiScale.Px(24));
+            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
             nameBox.BorderStyle = BorderStyle.FixedSingle;
@@ -3406,13 +3406,13 @@ namespace ExpeditionRecorder
                 prefix.Visible = normal;
                 if (normal)
                 {
-                    idBox.SetBounds(UiScale.Px(195), rowY, UiScale.Px(180), UiScale.Px(24));
-                    nameBox.SetBounds(UiScale.Px(383), rowY, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(397)), UiScale.Px(24));
+                    idBox.SetBounds(UiScale.Px(165), rowY, UiScale.Px(100), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(273), rowY, UiScale.Px(300), UiScale.Px(24));
                 }
                 else
                 {
-                    idBox.SetBounds(UiScale.Px(150), rowY, UiScale.Px(220), UiScale.Px(24));
-                    nameBox.SetBounds(UiScale.Px(378), rowY, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(392)), UiScale.Px(24));
+                    idBox.SetBounds(UiScale.Px(120), rowY, UiScale.Px(160), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(288), rowY, UiScale.Px(300), UiScale.Px(24));
                 }
             };
             normalRadio.CheckedChanged += delegate
@@ -3453,21 +3453,20 @@ namespace ExpeditionRecorder
             bool normal = Parse.IsNormalFloorId(S(o, "floorId"));
             var prefix = new Label();
             prefix.Text = "Level";
-            prefix.SetBounds(UiScale.Px(150), rowY + 4, UiScale.Px(42), UiScale.Px(22));
+            prefix.SetBounds(UiScale.Px(120), rowY + 4, UiScale.Px(42), UiScale.Px(22));
             prefix.ForeColor = Color.FromArgb(220, 220, 226);
             prefix.Visible = normal;
             _panel.Controls.Add(prefix);
             var idBox = new TextBox();
-            idBox.SetBounds(normal ? UiScale.Px(195) : UiScale.Px(150), rowY, normal ? UiScale.Px(180) : UiScale.Px(220), UiScale.Px(24));
+            idBox.SetBounds(normal ? UiScale.Px(165) : UiScale.Px(120), rowY, normal ? UiScale.Px(100) : UiScale.Px(160), UiScale.Px(24));
             idBox.BackColor = Color.FromArgb(40, 40, 44);
             idBox.ForeColor = Color.White;
             idBox.BorderStyle = BorderStyle.FixedSingle;
             idBox.Text = S(o, "floorId");
             _panel.Controls.Add(idBox);
             var nameBox = new TextBox();
-            nameBox.SetBounds(normal ? UiScale.Px(383) : UiScale.Px(378), rowY,
-                Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(normal ? 397 : 392)), UiScale.Px(24));
-            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            nameBox.SetBounds(normal ? UiScale.Px(273) : UiScale.Px(288), rowY, UiScale.Px(300), UiScale.Px(24));
+            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
             nameBox.BorderStyle = BorderStyle.FixedSingle;
@@ -3481,6 +3480,40 @@ namespace ExpeditionRecorder
             _y += UiScale.Px(36);
         }
 
+        void AddThemeButtons(Dictionary<string, object> o)
+        {
+            var label = new Label();
+            label.Text = "主題";
+            label.SetBounds(14, _y + 5, UiScale.Px(120), UiScale.Px(24));
+            label.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(label);
+            var light = new Button();
+            light.Text = "明亮";
+            light.SetBounds(UiScale.Px(120), _y, UiScale.Px(100), UiScale.Px(26));
+            light.FlatStyle = FlatStyle.Flat;
+            light.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            _panel.Controls.Add(light);
+            var dark = new Button();
+            dark.Text = "昏暗";
+            dark.SetBounds(UiScale.Px(226), _y, UiScale.Px(100), UiScale.Px(26));
+            dark.FlatStyle = FlatStyle.Flat;
+            dark.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+            _panel.Controls.Add(dark);
+            Action refresh = delegate
+            {
+                string th = S(o, "theme");
+                light.BackColor = th == "light" ? Color.FromArgb(52, 90, 60) : Color.FromArgb(44, 44, 47);
+                dark.BackColor = th == "dark" ? Color.FromArgb(52, 90, 60) : Color.FromArgb(44, 44, 47);
+                light.ForeColor = Color.White;
+                dark.ForeColor = Color.White;
+            };
+            light.Click += delegate { o["theme"] = "light"; refresh(); };
+            dark.Click += delegate { o["theme"] = "dark"; refresh(); };
+            _savers.Add(delegate { if (S(o, "theme") != "light" && S(o, "theme") != "dark") o["theme"] = "dark"; });
+            refresh();
+            _y += UiScale.Px(34);
+        }
+
         void AddPalettePreview(Dictionary<string, object> o)
         {
             AddHeading("配色預覽");
@@ -3488,8 +3521,8 @@ namespace ExpeditionRecorder
             string theme = S(o, "theme");
             int h = UiScale.Px(90);
             var panel = new Panel();
-            panel.SetBounds(14, _y, Math.Max(UiScale.Px(260), _panel.ClientSize.Width - UiScale.Px(28)), h);
-            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panel.SetBounds(14, _y, UiScale.Px(520), h);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             panel.BorderStyle = BorderStyle.FixedSingle;
             panel.Paint += delegate (object s, PaintEventArgs e)
             {
@@ -3733,7 +3766,7 @@ namespace ExpeditionRecorder
             else if (_kind == "樓層")
             {
                 AddFloorFields(o);
-                AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "明亮", "昏暗" });
+                AddThemeButtons(o);
                 AddLongText(o, "intro", "樓層介紹");
                 AddPalettePreview(o);
             }
@@ -4304,6 +4337,7 @@ namespace ExpeditionRecorder
                     if (Str(od, "desc") != "") sb.AppendLine("    " + Str(od, "desc"));
                     if (od.ContainsKey("requirement")) sb.AppendLine("    需求：" + ReqText(od["requirement"]));
                     if (Str(od, "conditionText") != "") sb.AppendLine("    選項條件：" + Str(od, "conditionText"));
+                    if (Str(od, "check") != "") sb.AppendLine("    屬性檢定：" + Str(od, "check"));
                     bool needCheck = Str(od, "check") != "";
                     var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
                     if (req != null && Str(req, "type") == "attr") needCheck = true;
