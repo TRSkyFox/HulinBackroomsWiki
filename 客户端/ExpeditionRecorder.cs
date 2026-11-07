@@ -35,6 +35,35 @@ namespace ExpeditionRecorder
         [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hwnd, ref POINT p);
         [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
         [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
+        [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string app, string id);
+        [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+        public static void DarkScroll(Control c)
+        {
+            if (c == null) return;
+            Action apply = delegate
+            {
+                try
+                {
+                    SetWindowTheme(c.Handle, "DarkMode_Explorer", null);
+                    int on = 1;
+                    DwmSetWindowAttribute(c.Handle, 20, ref on, sizeof(int));
+                    var form = c.FindForm();
+                    if (form != null)
+                    {
+                        SetWindowTheme(form.Handle, "DarkMode_Explorer", null);
+                        DwmSetWindowAttribute(form.Handle, 20, ref on, sizeof(int));
+                    }
+                }
+                catch { }
+            };
+            if (c.IsHandleCreated)
+            {
+                apply();
+                try { c.BeginInvoke((Action)apply); } catch { }
+            }
+            else c.HandleCreated += delegate { apply(); };
+        }
         [DllImport("user32.dll")] public static extern bool RegisterHotKey(IntPtr hwnd, int id, uint mods, uint vk);
         [DllImport("user32.dll")] public static extern bool UnregisterHotKey(IntPtr hwnd, int id);
         [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
@@ -1702,6 +1731,28 @@ namespace ExpeditionRecorder
             foreach (Control child in root.Controls) ApplyFonts(child);
         }
 
+        public static void StyleCombo(ComboBox cb)
+        {
+            if (cb == null) return;
+            cb.FlatStyle = FlatStyle.Flat;
+            cb.BackColor = Color.FromArgb(44, 44, 47);
+            cb.ForeColor = Color.White;
+            cb.DrawMode = DrawMode.OwnerDrawFixed;
+            cb.ItemHeight = Math.Max(20, cb.Font.Height + 6);
+            Native.DarkScroll(cb);
+            cb.DrawItem += delegate (object s, DrawItemEventArgs e)
+            {
+                var box = (ComboBox)s;
+                bool on = (e.State & DrawItemState.Selected) != 0;
+                using (var bg = new SolidBrush(on ? Color.FromArgb(62, 68, 78) : Color.FromArgb(44, 44, 47)))
+                    e.Graphics.FillRectangle(bg, e.Bounds);
+                string text = e.Index >= 0 && e.Index < box.Items.Count ? System.Convert.ToString(box.Items[e.Index]) : "";
+                TextRenderer.DrawText(e.Graphics, text, box.Font, e.Bounds, Color.White,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                e.DrawFocusRectangle();
+            };
+        }
+
         public static void SetComboItems(ComboBox cb, params string[] items)
         {
             if (cb == null) return;
@@ -2065,6 +2116,40 @@ namespace ExpeditionRecorder
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
             UpdateStyles();
+        }
+    }
+
+    class DarkComboBox : ComboBox
+    {
+        public DarkComboBox()
+        {
+            DrawMode = DrawMode.OwnerDrawFixed;
+            FlatStyle = FlatStyle.Flat;
+            BackColor = Color.FromArgb(44, 44, 47);
+            ForeColor = Color.White;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            UpdateStyles();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            e.Graphics.Clear(BackColor);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.Clear(BackColor);
+            var r = ClientRectangle;
+            TextRenderer.DrawText(e.Graphics, Text, Font,
+                new Rectangle(6, 0, Math.Max(10, r.Width - 26), r.Height), ForeColor,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            using (var pen = new Pen(Color.FromArgb(150, 150, 158)))
+            {
+                int ax = r.Right - 16, ay = r.Top + r.Height / 2 - 2;
+                e.Graphics.DrawLine(pen, ax, ay, ax + 8, ay);
+                e.Graphics.DrawLine(pen, ax, ay, ax + 4, ay + 4);
+                e.Graphics.DrawLine(pen, ax + 8, ay, ax + 4, ay + 4);
+            }
         }
     }
 
@@ -2990,6 +3075,7 @@ namespace ExpeditionRecorder
                 tip.SetBounds(14, 14, 370, 24);
                 tip.ForeColor = Color.FromArgb(160, 160, 168);
                 _editorHost.Controls.Add(tip);
+                UiText.ApplyTo(tip);
                 return;
             }
             var f = new RecordEditForm(_entries[i]);
@@ -3317,9 +3403,11 @@ namespace ExpeditionRecorder
         Dictionary<string, object> _data;
         Action<Dictionary<string, object>> _externalSave;
         bool _lockIdentity;
+        class OptionFrame { public Rectangle Rect; }
         Panel _panel;
         int _y = 12;
         List<Action> _savers = new List<Action>();
+        List<OptionFrame> _optionFrames = new List<OptionFrame>();
         System.Windows.Forms.Timer _autoSave;
         System.Windows.Forms.Timer _relayout;
         int _lastPanelWidth;
@@ -3362,10 +3450,21 @@ namespace ExpeditionRecorder
             _panel.Padding = new Padding(10);
             _panel.BackColor = Color.FromArgb(32, 32, 36);
             _panel.Resize += delegate { _panel.Invalidate(true); };
+            _panel.Paint += delegate (object s, PaintEventArgs e)
+            {
+                int ox = _panel.AutoScrollPosition.X;
+                int oy = _panel.AutoScrollPosition.Y;
+                using (var pen = new Pen(Color.FromArgb(105, 108, 118)))
+                    foreach (var f in _optionFrames)
+                        if (f.Rect.Width > 2 && f.Rect.Height > 2)
+                            e.Graphics.DrawRectangle(pen, new Rectangle(f.Rect.X + ox, f.Rect.Y + oy, f.Rect.Width, f.Rect.Height));
+            };
+            Native.DarkScroll(_panel);
             Controls.Add(_panel);
 
             BuildFields();
             UiScale.Apply(this);
+            Native.DarkScroll(_panel);
             _panel.Invalidate(true);
             HookAutoSave(_panel);
             _autoSave = new System.Windows.Forms.Timer();
@@ -3402,6 +3501,24 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(l);
             _y += UiScale.Px(28);
             return l;
+        }
+
+        OptionFrame AddOptionFrame(int top, string caption)
+        {
+            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            var frame = new OptionFrame();
+            frame.Rect = new Rectangle(8, top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(16)), 0);
+            _optionFrames.Add(frame);
+
+            var cap = new Label();
+            cap.Text = caption;
+            cap.SetBounds(18, top, UiScale.Px(100), UiScale.Px(20));
+            cap.BackColor = _panel.BackColor;
+            cap.ForeColor = Color.FromArgb(255, 214, 120);
+            cap.Font = new Font("Microsoft JhengHei UI", 9F, FontStyle.Bold);
+            _panel.Controls.Add(cap);
+            _y = top + UiScale.Px(24);
+            return frame;
         }
 
         void AddFixed(string label, string value)
@@ -3456,27 +3573,42 @@ namespace ExpeditionRecorder
             l.SetBounds(14, _y + 3, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
-            int h = UiScale.Px(multi ? height : 24);
+            int fieldW = narrow
+                ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
+                : Math.Max(UiScale.Px(120), avail - UiScale.Px(122));
             var t = new TextBox();
             t.Multiline = multi;
-            t.ScrollBars = multi ? ScrollBars.Vertical : ScrollBars.None;
+            t.WordWrap = true;
+            t.ScrollBars = ScrollBars.None;
+            t.Text = value ?? "";
+            int h = multi ? WrappedHeight(t.Text, t.Font, fieldW) : UiScale.Px(24);
             if (narrow)
             {
-                t.SetBounds(14, _y + UiScale.Px(24), Math.Max(UiScale.Px(120), avail - UiScale.Px(28)), h);
+                t.SetBounds(14, _y + UiScale.Px(24), fieldW, h);
                 _y += UiScale.Px(24) + h + UiScale.Px(6);
             }
             else
             {
-                t.SetBounds(UiScale.Px(108), _y, Math.Max(UiScale.Px(120), avail - UiScale.Px(122)), h);
+                t.SetBounds(UiScale.Px(108), _y, fieldW, h);
                 _y += h + UiScale.Px(6);
             }
             t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             t.BackColor = Color.FromArgb(40, 40, 44);
             t.ForeColor = Color.White;
             t.BorderStyle = BorderStyle.FixedSingle;
-            t.Text = value ?? "";
             _panel.Controls.Add(t);
             return t;
+        }
+
+        int WrappedHeight(string text, Font font, int width)
+        {
+            if (string.IsNullOrEmpty(text)) return UiScale.Px(24);
+            float scale = Math.Max(0.1f, UiScale.Scale);
+            int baseW = Math.Max(40, (int)Math.Round((width - UiScale.Px(12)) / scale));
+            int measured = TextRenderer.MeasureText(text, font, new Size(baseW, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height;
+            int h = (int)Math.Ceiling(measured * scale) + UiScale.Px(8);
+            return Math.Max(UiScale.Px(24), h);
         }
 
         void AddText(Dictionary<string, object> d, string key, string label)
@@ -3860,6 +3992,7 @@ namespace ExpeditionRecorder
 
         void BuildFields()
         {
+            _optionFrames.Clear();
             var o = _data;
             if (_kind == "事件")
             {
@@ -3908,14 +4041,14 @@ namespace ExpeditionRecorder
 
                 Program.MoveChecksToOptions(o);
                 var opts = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
-                AddHeading("選項");
                 if (opts != null && opts.Count > 0)
                 {
                     for (int oi = 0; oi < opts.Count; oi++)
                     {
                         var od = opts[oi] as Dictionary<string, object>;
                         if (od == null) continue;
-                        AddHeading("選項 " + (oi + 1));
+                        int optTop = _y;
+                        var optFrame = AddOptionFrame(optTop, "選項 " + (oi + 1));
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         if (od.ContainsKey("check"))
@@ -3963,6 +4096,9 @@ namespace ExpeditionRecorder
                             var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
                             if (pg != null) AddText(pg, "delta", "出口進度增減");
                         }
+                        optFrame.Rect = new Rectangle(optFrame.Rect.X, optFrame.Rect.Y, optFrame.Rect.Width,
+                            Math.Max(UiScale.Px(40), _y - optTop + UiScale.Px(6)));
+                        _y += UiScale.Px(14);
                     }
                 }
                 else
@@ -4250,8 +4386,9 @@ namespace ExpeditionRecorder
             _filterLabel.Text = "篩選";
             _filterLabel.ForeColor = Color.FromArgb(140, 140, 148);
             Controls.Add(_filterLabel);
-            _kind = new ComboBox();
+            _kind = new DarkComboBox();
             _kind.DropDownStyle = ComboBoxStyle.DropDownList;
+            UiText.StyleCombo(_kind);
             _kind.SetBounds(472, 10, 130, UiScale.Px(28));
             UiText.SetComboItems(_kind, "全部", "事件", "物品", "樓層", "出口", "結局", "商店");
             _kind.SelectedIndex = 0;
@@ -4265,6 +4402,7 @@ namespace ExpeditionRecorder
             _list.IntegralHeight = false;
             _list.HorizontalScrollbar = true;
             _list.SelectedIndexChanged += delegate { ShowDetail(); };
+            Native.DarkScroll(_list);
             Controls.Add(_list);
 
             _editorHost = new BufferedPanel();
@@ -4272,6 +4410,7 @@ namespace ExpeditionRecorder
             _editorHost.AutoScroll = true;
             _editorHost.BackColor = Color.FromArgb(24, 24, 27);
             _editorHost.BorderStyle = BorderStyle.FixedSingle;
+            Native.DarkScroll(_editorHost);
             Controls.Add(_editorHost);
 
             _splitter = new Panel();
@@ -4329,8 +4468,9 @@ namespace ExpeditionRecorder
             _search.SetBounds(pad, top, searchW, rowH);
             _searchTip.SetBounds(pad + searchW + gap, top, labelW, rowH);
             int filterY = top + rowH + gap;
-            _filterLabel.SetBounds(pad, filterY, labelW, rowH);
-            _kind.SetBounds(pad + labelW, filterY, Math.Max(UiScale.Px(80), _listW - labelW), rowH);
+            int kindW = Math.Max(UiScale.Px(80), _listW - labelW - gap);
+            _kind.SetBounds(pad, filterY, kindW, rowH);
+            _filterLabel.SetBounds(pad + kindW + gap, filterY, labelW, rowH);
             int leftTop = filterY + rowH + gap;
             int detailX = pad + _listW + UiScale.Px(6);
             int detailW = Math.Max(UiScale.Px(220), w - detailX - pad);
@@ -4434,7 +4574,9 @@ namespace ExpeditionRecorder
             string q = _search.Text.Trim();
             _shown.Clear();
             _list.Items.Clear();
-            string kind = _kind == null || _kind.SelectedIndex <= 0 ? "全部" : Convert.ToString(_kind.SelectedItem);
+            string[] kindDefs = { "全部", "事件", "物品", "樓層", "出口", "結局", "商店" };
+            int ki = _kind == null ? 0 : _kind.SelectedIndex;
+            string kind = ki > 0 && ki < kindDefs.Length ? kindDefs[ki] : "全部";
             foreach (var e in _all)
             {
                 if (kind != "全部" && e.Kind != kind) continue;
@@ -4484,6 +4626,7 @@ namespace ExpeditionRecorder
                 tip.SetBounds(16, 16, 440, 24);
                 tip.ForeColor = Color.FromArgb(160, 160, 168);
                 _editorHost.Controls.Add(tip);
+                UiText.ApplyTo(tip);
                 return;
             }
             var f = new RecordEditForm(_shown[i]);
@@ -6368,8 +6511,9 @@ namespace ExpeditionRecorder
             resLabel.ForeColor = Color.FromArgb(200, 200, 206);
             resLabel.Text = "解析度";
             clientGroup.Controls.Add(resLabel);
-            var resCombo = new ComboBox();
+            var resCombo = new DarkComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            UiText.StyleCombo(resCombo);
             resCombo.SetBounds(74, 62, 192, 24);
             resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
