@@ -37,6 +37,7 @@ namespace ExpeditionRecorder
         [DllImport("user32.dll")] public static extern IntPtr SetThreadDpiAwarenessContext(IntPtr ctx);
         [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string app, string id);
         [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+        [DllImport("user32.dll")] public static extern bool ShowScrollBar(IntPtr hwnd, int bar, bool show);
 
         public static void DarkScroll(Control c)
         {
@@ -2153,6 +2154,99 @@ namespace ExpeditionRecorder
         }
     }
 
+    class DarkScrollBar : Control
+    {
+        readonly Panel _target;
+        bool _drag;
+        int _dragOffset;
+
+        public DarkScrollBar(Panel target)
+        {
+            _target = target;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            BackColor = Color.FromArgb(30, 30, 34);
+            Cursor = Cursors.Hand;
+            target.Scroll += delegate { Invalidate(); };
+            target.Resize += delegate { Invalidate(); };
+            target.ControlAdded += delegate { Invalidate(); };
+            target.MouseWheel += delegate { Invalidate(); };
+        }
+
+        int MaxValue
+        {
+            get
+            {
+                int max = _target.VerticalScroll.Maximum - _target.VerticalScroll.LargeChange + 1;
+                return Math.Max(0, max);
+            }
+        }
+
+        int ViewValue { get { return Math.Max(1, _target.VerticalScroll.LargeChange); } }
+        int CurrentValue { get { return Math.Max(0, _target.VerticalScroll.Value); } }
+
+        Rectangle ThumbRect()
+        {
+            int max = MaxValue;
+            if (max <= 0) return Rectangle.Empty;
+            int track = Height - 2;
+            int thumb = Math.Max(24, track * ViewValue / (max + ViewValue));
+            thumb = Math.Min(track, thumb);
+            int pos = (track - thumb) * CurrentValue / max;
+            return new Rectangle(2, 1 + pos, Math.Max(4, Width - 4), thumb);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.Clear(Color.FromArgb(30, 30, 34));
+            var thumb = ThumbRect();
+            if (thumb.IsEmpty) return;
+            using (var b = new SolidBrush(Color.FromArgb(105, 108, 118)))
+                e.Graphics.FillRectangle(b, thumb);
+        }
+
+        void SetFromY(int y)
+        {
+            int max = MaxValue;
+            if (max <= 0) return;
+            var thumb = ThumbRect();
+            if (thumb.IsEmpty) return;
+            int track = Height - 2;
+            int pos = Math.Max(0, Math.Min(track - thumb.Height, y - 1 - _dragOffset));
+            int val = (track - thumb.Height) <= 0 ? 0 : pos * max / (track - thumb.Height);
+            _target.AutoScrollPosition = new Point(0, val);
+            Invalidate();
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            var thumb = ThumbRect();
+            if (thumb.IsEmpty) return;
+            _drag = true;
+            _dragOffset = thumb.Contains(e.Location) ? e.Y - thumb.Top : thumb.Height / 2;
+            Capture = true;
+            SetFromY(e.Y);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            if (_drag) SetFromY(e.Y);
+        }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            _drag = false;
+            Capture = false;
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            int val = CurrentValue - e.Delta;
+            _target.AutoScrollPosition = new Point(0, Math.Max(0, val));
+            Invalidate();
+            base.OnMouseWheel(e);
+        }
+    }
+
     /* ══ 待處理清單 ═════════════════════════════════════════ */
     class PendingForm : Form
     {
@@ -3405,6 +3499,7 @@ namespace ExpeditionRecorder
         bool _lockIdentity;
         class OptionFrame { public Rectangle Rect; }
         Panel _panel;
+        DarkScrollBar _scrollbar;
         int _y = 12;
         List<Action> _savers = new List<Action>();
         List<OptionFrame> _optionFrames = new List<OptionFrame>();
@@ -3445,7 +3540,7 @@ namespace ExpeditionRecorder
             KeyPreview = true;
 
             _panel = new BufferedPanel();
-            _panel.Dock = DockStyle.Fill;
+            _panel.Dock = DockStyle.None;
             _panel.AutoScroll = true;
             _panel.Padding = new Padding(10);
             _panel.BackColor = Color.FromArgb(32, 32, 36);
@@ -3461,10 +3556,21 @@ namespace ExpeditionRecorder
             };
             Native.DarkScroll(_panel);
             Controls.Add(_panel);
+            _scrollbar = new DarkScrollBar(_panel);
+            _scrollbar.Dock = DockStyle.None;
+            _scrollbar.Width = UiScale.Px(10);
+            Controls.Add(_scrollbar);
+            _scrollbar.BringToFront();
+            _panel.HandleCreated += delegate { HideNativeScroll(); };
+            HideNativeScroll();
+            Resize += delegate { LayoutEditor(); };
+            Shown += delegate { LayoutEditor(); };
+            LayoutEditor();
 
             BuildFields();
             UiScale.Apply(this);
             Native.DarkScroll(_panel);
+            HideNativeScroll();
             _panel.Invalidate(true);
             HookAutoSave(_panel);
             _autoSave = new System.Windows.Forms.Timer();
@@ -3488,6 +3594,21 @@ namespace ExpeditionRecorder
                     SaveData(false);
                 }
             };
+        }
+
+        void LayoutEditor()
+        {
+            if (_panel == null || _scrollbar == null) return;
+            int sw = Math.Max(UiScale.Px(6), _scrollbar.Width);
+            _panel.SetBounds(0, 0, Math.Max(0, ClientSize.Width - sw), ClientSize.Height);
+            _scrollbar.SetBounds(ClientSize.Width - sw, 0, sw, ClientSize.Height);
+            _scrollbar.BringToFront();
+        }
+
+        void HideNativeScroll()
+        {
+            try { if (_panel != null && _panel.IsHandleCreated) Native.ShowScrollBar(_panel.Handle, 1, false); }
+            catch { }
         }
 
         Label AddHeading(string text)
@@ -4252,6 +4373,7 @@ namespace ExpeditionRecorder
                 BuildFields();
                 UiText.ApplyTo(this);
                 HookAutoSave(_panel);
+                HideNativeScroll();
                 _panel.Invalidate(true);
             }
             catch { }
