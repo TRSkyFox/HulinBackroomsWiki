@@ -1174,6 +1174,9 @@ namespace ExpeditionRecorder
             FloorType = floorType;
 
             Text = "樓層記錄";
+            AutoScaleMode = AutoScaleMode.None;
+            DoubleBuffered = true;
+            Resize += delegate { Invalidate(true); };
             ClientSize = new Size(460, 356);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
@@ -1225,7 +1228,7 @@ namespace ExpeditionRecorder
             previewLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(previewLabel);
 
-            var preview = new Panel();
+            var preview = new BufferedPanel();
             preview.SetBounds(12, 142, 430, 76);
             preview.BorderStyle = BorderStyle.FixedSingle;
             preview.Paint += delegate (object s, PaintEventArgs e) { DrawPalettePreview(e.Graphics, preview.ClientSize); };
@@ -1649,6 +1652,8 @@ namespace ExpeditionRecorder
         public static void ApplyFonts(Control root)
         {
             if (root == null) return;
+            var form = root as Form;
+            if (form != null) form.AutoScaleMode = AutoScaleMode.None;
             try
             {
                 if (root.Font != null)
@@ -1856,6 +1861,7 @@ namespace ExpeditionRecorder
             if (f == null || f.IsDisposed) return;
             if (f is LayeredForm || f is BusyForm) return;
             if (f is RecordsForm || f is RecordEditForm) return;
+            f.AutoScaleMode = AutoScaleMode.None;
             float applied;
             if (Applied.TryGetValue(f, out applied) && Math.Abs(applied - Scale) < 0.001f) return;
             bool main = f == MainWindow;
@@ -2706,6 +2712,7 @@ namespace ExpeditionRecorder
         {
             Instance = this;
             Text = "本次記錄";
+            AutoScaleMode = AutoScaleMode.None;
             ClientSize = new Size(420, 620);
             DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
@@ -3271,6 +3278,7 @@ namespace ExpeditionRecorder
             _externalSave = externalSave;
             _lockIdentity = lockIdentity;
             Text = "編輯記錄：" + kind;
+            AutoScaleMode = AutoScaleMode.None;
             ClientSize = UiScale.FitSize(780, 700);
             DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
@@ -4140,6 +4148,7 @@ namespace ExpeditionRecorder
         {
             Instance = this;
             Text = "已記錄";
+            AutoScaleMode = AutoScaleMode.None;
             ClientSize = UiScale.FitSize(920, 580);
             DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
@@ -6225,6 +6234,7 @@ namespace ExpeditionRecorder
         {
             ControlWindow = new Form();
             UiScale.MainWindow = ControlWindow;
+            ControlWindow.AutoScaleMode = AutoScaleMode.None;
             ControlWindow.Text = "Expedition Recorder";
             ControlWindow.ClientSize = new Size(430, 460);
             ControlWindow.StartPosition = FormStartPosition.Manual;
