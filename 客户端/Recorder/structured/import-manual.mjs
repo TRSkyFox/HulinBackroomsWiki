@@ -1,4 +1,4 @@
-﻿// import-manual.mjs — 把手動記錄（Recorder/logs/manual/*.jsonl）合進 wiki。
+// import-manual.mjs — 把手動記錄（Recorder/logs/manual/*.jsonl）合進 wiki。
 // 用法：
 //   node import-manual.mjs             # 只報告（dry-run）
 //   node import-manual.mjs --confirm   # 真的寫入（先備份）
@@ -162,6 +162,7 @@ for (const rec of events) {
     intro: T(step1.intro),
     actions: (step1.options || []).map((o) => {
       const a = { text: T(o.text) };
+      if (o.color) a.color = o.color;
       if (o.check) a.check = { attribute: T(o.check) };
       if (o.requirement) a.requirement = typeof o.requirement === 'string' ? T(o.requirement) : o.requirement;
       if (o.special) {
@@ -190,7 +191,8 @@ for (const rec of events) {
     results: branch.results,
     _src: 'manual'
   };
-  if (step1.eventKind) ev.eventKind = step1.eventKind;
+  if (rec.eventKind || step1.eventKind) ev.eventKind = rec.eventKind || step1.eventKind;
+  if (Array.isArray(rec.tags)) ev.tags = rec.tags;
   if (stepBranches.length > 1) ev.branches = stepBranches;
   if (branch.check) ev.check = branch.check;
   if (branch.combat) ev.combat = branch.combat;

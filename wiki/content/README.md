@@ -71,6 +71,7 @@ events/common/events.json              通用事件
 - **角色事件**只写在该角色的 `characters/<角色>/events.json`；**通用事件**写在 `events/common/events.json`。两者不属于任何楼层。
 - `build.mjs` 会扫描楼层、角色、通用三种 events 来建立事件浏览器。
 - `event-import.mjs` 依楼层 ID 写回该楼层；`import-manual.mjs` 依 `scopes` 写楼层／角色／通用。
+- `eventKind`：`normal`／`free`／`junction`／`character`／`cooperation`／`common`。前三种进楼层事件，角色／合力进角色事件，通用进 `events/common`。`tags` 可记 `rest`（休息处）。
 
 ---
 

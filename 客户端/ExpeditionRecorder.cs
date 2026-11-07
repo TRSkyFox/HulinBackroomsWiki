@@ -869,117 +869,161 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* ══ 結束事件：分類＋結果 ═══════════════════════════════ */
+    /* ══ 結束事件：事件類型＋導向＋標籤 ═══════════════════ */
     class EndForm : Form
     {
         public List<string> Scopes = new List<string>();
         public List<string> Characters = new List<string>();
         public List<string> Outcomes = new List<string>();
+        public List<string> Tags = new List<string>();
+        public string EventKind = "normal";
         public string JumpTo = "";
         public string FloorId = "", FloorName = "";
         public string CombatEnemy = "";
 
-        CheckBox _floor, _char, _common;
-        RadioButton _curFloor, _customFloor;
-        TextBox _floorBox, _jumpBox, _enemyBox;
-        CheckBox _normal, _jump, _shop, _rest, _combat;
+        RadioButton _normal, _free, _junction, _character, _cooperation, _common;
+        TextBox _floorBox, _charBox, _jumpBox, _enemyBox;
+        CheckBox _jump, _combat, _rest;
+        Label _floorLabel, _charLabel;
         string _curId = "", _curName = "";
 
-        public EndForm(string curId, string curName, int steps, string prefill, bool characterEvent = false, string characterName = "")
+        static bool IsFloorKind(string k) { return k == "normal" || k == "free" || k == "junction"; }
+        static bool IsCharacterKind(string k) { return k == "character" || k == "cooperation"; }
+
+        public EndForm(string curId, string curName, int steps, string prefill, bool characterEvent = false, string characterName = "", string ocrKind = "")
         {
             _curId = curId ?? "";
             _curName = curName ?? "";
             Text = "結束事件（" + steps + " 步）";
             KeyPreview = true;
-            ClientSize = new Size(480, 396);
+            ClientSize = new Size(560, 452);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(28, 28, 31);
             ForeColor = Color.FromArgb(230, 230, 235);
 
-            var l1 = new Label(); l1.Text = "這條事件屬於（可多選）"; l1.SetBounds(12, 6, 450, 20); l1.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l1);
-            _floor = MkCheck("樓層事件", 12, 28, 110); _floor.Checked = true;
-            string curText = _curId == "" ? "當前樓層（未識別）" : "當前：Level " + _curId + " " + _curName;
-            _curFloor = MkRadio(curText, 28, 54, 330); _curFloor.Checked = true;
-            _customFloor = MkRadio("自己填：", 28, 80, 80);
-            _floorBox = new TextBox();
-            _floorBox.SetBounds(112, 82, 240, 24);
-            _floorBox.BackColor = Color.FromArgb(40, 40, 44);
-            _floorBox.ForeColor = Color.White;
-            _floorBox.BorderStyle = BorderStyle.FixedSingle;
-            _floorBox.Text = _curId;
-            _floorBox.Enabled = false;
-            Controls.Add(_floorBox);
-            _customFloor.CheckedChanged += delegate { _floorBox.Enabled = _customFloor.Checked; };
+            var l1 = new Label(); l1.Text = "事件類型（單選）"; l1.SetBounds(12, 8, 520, 20); l1.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l1);
+            _normal = MkRadio("普通事件", 12, 32, 105);
+            _free = MkRadio("自由事件", 120, 32, 105);
+            _junction = MkRadio("岔路事件", 228, 32, 105);
+            _character = MkRadio("角色事件", 12, 58, 105);
+            _cooperation = MkRadio("合力事件", 120, 58, 105);
+            _common = MkRadio("通用事件", 228, 58, 105);
+            string init = ocrKind;
+            if (init != "free" && init != "junction" && init != "character" && init != "cooperation" && init != "common") init = characterEvent ? "character" : "normal";
+            _normal.Checked = init == "normal"; _free.Checked = init == "free"; _junction.Checked = init == "junction";
+            _character.Checked = init == "character"; _cooperation.Checked = init == "cooperation"; _common.Checked = init == "common";
 
-            _char = MkCheck("角色事件", 12, 112, 90);
-            _char.Checked = characterEvent;
-            string chDetected = !string.IsNullOrEmpty(characterName)
-                ? characterName
-                : (characterEvent ? "" : Party.LocalCharacter);
-            var chLabel = new Label();
-            chLabel.Text = chDetected != "" ? "角色：" + chDetected : "角色：未識別（會進待處理）";
-            chLabel.SetBounds(110, 116, 320, 22);
-            chLabel.ForeColor = chDetected != "" ? Color.FromArgb(200, 220, 240) : Color.FromArgb(220, 150, 120);
-            Controls.Add(chLabel);
-            _common = MkCheck("通用事件", 12, 140, 140);
+            _floorLabel = new Label();
+            _floorLabel.Text = _curId == "" ? "事件出現樓層（OCR 未識別）" : "事件出現樓層（OCR：Level " + _curId + " " + _curName + "）";
+            _floorLabel.SetBounds(12, 94, 520, 20);
+            _floorLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(_floorLabel);
+            _floorBox = MkBox(12, 116, 300);
+            _floorBox.Text = (_curId + " " + _curName).Trim();
 
-            var l2 = new Label(); l2.Text = "事件導致（可多選）"; l2.SetBounds(12, 172, 450, 20); l2.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l2);
-            _normal = MkCheck("普通（數值／物品／狀態）", 12, 194, 330); _normal.Checked = true;
-            _jump = MkCheck("跳層 →", 12, 222, 70);
-            _jumpBox = new TextBox(); _jumpBox.SetBounds(88, 224, 160, 24); _jumpBox.BackColor = Color.FromArgb(40, 40, 44); _jumpBox.ForeColor = Color.White; _jumpBox.BorderStyle = BorderStyle.FixedSingle; Controls.Add(_jumpBox);
-            _shop = MkCheck("進入商店", 12, 250, 140);
-            _rest = MkCheck("進入休息處", 12, 278, 140);
-            _combat = MkCheck("進入戰鬥，實體名稱：", 12, 306, 200);
-            _enemyBox = new TextBox();
-            _enemyBox.SetBounds(220, 308, 248, 24);
-            _enemyBox.BackColor = Color.FromArgb(40, 40, 44);
-            _enemyBox.ForeColor = Color.White;
-            _enemyBox.BorderStyle = BorderStyle.FixedSingle;
-            Controls.Add(_enemyBox);
+            _charLabel = new Label();
+            _charLabel.Text = "角色（角色事件填一個，合力事件可填多個，用、分隔）";
+            _charLabel.SetBounds(12, 148, 520, 20);
+            _charLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(_charLabel);
+            _charBox = MkBox(12, 170, 500);
+            string ch = !string.IsNullOrEmpty(characterName) ? characterName : prefill;
+            _charBox.Text = ch ?? "";
 
-            var save = new Button(); save.Text = "保存"; save.SetBounds(12, 348, 120, 30); save.FlatStyle = FlatStyle.Flat; save.BackColor = Color.FromArgb(44, 44, 47); save.ForeColor = Color.White;
+            var l2 = new Label(); l2.Text = "選項導向"; l2.SetBounds(12, 206, 520, 20); l2.ForeColor = Color.FromArgb(255, 214, 120); Controls.Add(l2);
+            _jump = MkCheck("跳層 →", 12, 230, 70);
+            _jumpBox = MkBox(88, 230, 190);
+            _combat = MkCheck("進入戰鬥，實體名稱：", 12, 260, 180);
+            _enemyBox = MkBox(196, 260, 350);
+
+            var l3 = new Label(); l3.Text = "事件標籤"; l3.SetBounds(12, 296, 520, 20); l3.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l3);
+            _rest = MkCheck("休息處", 12, 320, 120);
+
+            _normal.CheckedChanged += delegate { UpdateEnabled(); };
+            _free.CheckedChanged += delegate { UpdateEnabled(); };
+            _junction.CheckedChanged += delegate { UpdateEnabled(); };
+            _character.CheckedChanged += delegate { UpdateEnabled(); };
+            _cooperation.CheckedChanged += delegate { UpdateEnabled(); };
+            _common.CheckedChanged += delegate { UpdateEnabled(); };
+
+            var save = new Button(); save.Text = "保存"; save.SetBounds(12, 400, 120, 30); save.FlatStyle = FlatStyle.Flat; save.BackColor = Color.FromArgb(44, 44, 47); save.ForeColor = Color.White;
             save.Click += delegate
             {
+                EventKind = _free.Checked ? "free" : _junction.Checked ? "junction" : _character.Checked ? "character"
+                    : _cooperation.Checked ? "cooperation" : _common.Checked ? "common" : "normal";
                 Scopes.Clear();
-                if (_floor.Checked) Scopes.Add("floor");
-                if (_char.Checked) Scopes.Add("character");
-                if (_common.Checked) Scopes.Add("common");
-                if (Scopes.Count == 0) Scopes.Add("floor");
+                if (IsFloorKind(EventKind)) Scopes.Add("floor");
+                else if (EventKind == "common") Scopes.Add("common");
+                else Scopes.Add("character");
 
-                if (_customFloor.Checked)
+                if (IsFloorKind(EventKind))
                 {
                     string raw = _floorBox.Text.Trim();
+                    if (raw.StartsWith("Level ", StringComparison.OrdinalIgnoreCase)) raw = raw.Substring(6).Trim();
                     int sp = raw.IndexOfAny(new char[] { ' ', '　', '|', '/' });
                     if (sp > 0) { FloorId = raw.Substring(0, sp).Trim(); FloorName = raw.Substring(sp + 1).Trim(); }
                     else { FloorId = raw; FloorName = ""; }
+                    if (FloorId == "") { FloorId = _curId; FloorName = _curName; }
                 }
-                else { FloorId = _curId; FloorName = _curName; }
+                else { FloorId = ""; FloorName = ""; }
 
                 Characters.Clear();
-                if (_char.Checked && chDetected != "") Characters.Add(chDetected);
+                if (IsCharacterKind(EventKind))
+                {
+                    foreach (var x in System.Text.RegularExpressions.Regex.Split(_charBox.Text, @"[、,，;；]"))
+                    {
+                        string c = (x ?? "").Trim();
+                        if (c != "" && !Characters.Contains(c)) Characters.Add(c);
+                    }
+                }
+
                 Outcomes.Clear();
-                if (_normal.Checked) Outcomes.Add("normal");
                 if (_jump.Checked) Outcomes.Add("floor-jump");
-                if (_shop.Checked) Outcomes.Add("shop");
-                if (_rest.Checked) Outcomes.Add("rest");
                 if (_combat.Checked) Outcomes.Add("combat");
+                if (_rest.Checked) Outcomes.Add("rest");
                 if (Outcomes.Count == 0) Outcomes.Add("normal");
-                JumpTo = _jumpBox.Text.Trim();
+                Tags.Clear();
+                if (_rest.Checked) Tags.Add("rest");
+                JumpTo = _jump.Checked ? _jumpBox.Text.Trim() : "";
                 CombatEnemy = _combat.Checked ? _enemyBox.Text.Trim() : "";
                 DialogResult = DialogResult.OK; Close();
             };
             Controls.Add(save);
-            var cancel = new Button(); cancel.Text = "取消"; cancel.SetBounds(144, 348, 120, 30); cancel.FlatStyle = FlatStyle.Flat; cancel.BackColor = Color.FromArgb(44, 44, 47); cancel.ForeColor = Color.White;
+            var cancel = new Button(); cancel.Text = "取消"; cancel.SetBounds(144, 400, 120, 30); cancel.FlatStyle = FlatStyle.Flat; cancel.BackColor = Color.FromArgb(44, 44, 47); cancel.ForeColor = Color.White;
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancel);
+            UpdateEnabled();
+        }
+
+        void UpdateEnabled()
+        {
+            string k = _free.Checked ? "free" : _junction.Checked ? "junction" : _character.Checked ? "character"
+                : _cooperation.Checked ? "cooperation" : _common.Checked ? "common" : "normal";
+            bool floor = IsFloorKind(k);
+            bool chr = IsCharacterKind(k);
+            _floorBox.Enabled = floor;
+            _floorLabel.ForeColor = floor ? Color.FromArgb(180, 180, 188) : Color.FromArgb(110, 110, 118);
+            _charBox.Enabled = chr;
+            _charLabel.ForeColor = chr ? Color.FromArgb(180, 180, 188) : Color.FromArgb(110, 110, 118);
         }
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
             base.OnKeyDown(e);
+        }
+
+        TextBox MkBox(int x, int y, int w)
+        {
+            var t = new TextBox();
+            t.SetBounds(x, y, w, 24);
+            t.BackColor = Color.FromArgb(40, 40, 44);
+            t.ForeColor = Color.White;
+            t.BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(t);
+            return t;
         }
 
         CheckBox MkCheck(string text, int x, int y, int w)
@@ -3035,6 +3079,48 @@ namespace ExpeditionRecorder
             _savers.Add(delegate { if (d != null) d[key] = t.Text; });
         }
 
+        void AddRestTag(Dictionary<string, object> d)
+        {
+            var l = new Label();
+            l.Text = "事件標籤";
+            l.SetBounds(14, _y + 4, UiScale.Px(130), UiScale.Px(24));
+            l.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(l);
+            var cb = new CheckBox();
+            cb.Text = "休息處";
+            cb.SetBounds(UiScale.Px(150), _y, UiScale.Px(180), UiScale.Px(24));
+            cb.ForeColor = Color.FromArgb(225, 225, 230);
+            string tags = A(d, "tags");
+            cb.Checked = tags.IndexOf("rest", StringComparison.Ordinal) >= 0;
+            _panel.Controls.Add(cb);
+            _savers.Add(delegate
+            {
+                var arr = new System.Collections.ArrayList();
+                var old = d.ContainsKey("tags") ? d["tags"] as System.Collections.ArrayList : null;
+                if (old != null) foreach (var x in old) { string s = Convert.ToString(x); if (s != "" && s != "rest") arr.Add(s); }
+                if (cb.Checked) arr.Add("rest");
+                d["tags"] = arr;
+            });
+            _y += UiScale.Px(34);
+        }
+
+        void AddOptionText(Dictionary<string, object> d)
+        {
+            string val = S(d, "text");
+            var t = AddRaw("選項文字", val, false, 24);
+            string col = S(d, "color");
+            if (col != "")
+            {
+                try
+                {
+                    var c = ColorTranslator.FromHtml(col);
+                    if (c != Color.Empty) t.ForeColor = c;
+                }
+                catch { }
+            }
+            _savers.Add(delegate { if (d != null) d["text"] = t.Text; });
+        }
+
         void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
         {
             var l = new Label();
@@ -3145,6 +3231,7 @@ namespace ExpeditionRecorder
                 if (_lockIdentity)
                 {
                     AddFixed("類型", "事件");
+                    AddFixed("事件類型", Program.EventKindText(S(o, "eventKind")));
                     AddFixed("事件名", EventTitleOf(o));
                     AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
                     string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
@@ -3165,6 +3252,7 @@ namespace ExpeditionRecorder
                 }
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
+                AddRestTag(o);
 
                 var branches = new List<Dictionary<string, object>>();
                 if (steps != null)
@@ -3192,15 +3280,18 @@ namespace ExpeditionRecorder
                         var od = opts[oi] as Dictionary<string, object>;
                         if (od == null) continue;
                         AddHeading("選項 " + (oi + 1));
-                        AddText(od, "text", "選項文字");
+                        AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        if (od.ContainsKey("check")) AddText(od, "check", "檢定屬性");
+                        if (od.ContainsKey("check")) AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                         if (od.ContainsKey("conditionText")) AddLongText(od, "conditionText", "出現條件");
                         var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
                         if (req != null)
                         {
                             AddText(req, "type", "需求類型");
-                            AddText(req, "name", "需求名稱");
+                            if (S(req, "type") == "attr")
+                                AddChoice(req, "name", "需求屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
+                            else
+                                AddText(req, "name", "需求名稱");
                             if (req.ContainsKey("min")) AddText(req, "min", "需求數值");
                             if (req.ContainsKey("consume")) AddText(req, "consume", "是否消耗");
                         }
@@ -3214,12 +3305,15 @@ namespace ExpeditionRecorder
                             var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
                             if (ck != null)
                             {
-                                AddText(ck, "attribute", "判定屬性");
+                                AddChoice(ck, "attribute", "判定屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                                 var outs = new List<string> { "成功", "失敗" };
                                 string cur = S(ck, "outcome");
                                 if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
                                 AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
+                                if (S(ck, "sameChoiceBonus") != "" && S(ck, "sameChoiceBonus") != "0")
+                                    AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
                             }
+                            if (S(st, "teamDecision").ToLower() == "true") AddFixed("決定方式", "隊伍決定");
                             AddList(st, "results", "結果文本", false);
                             var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
                             if (eff != null)
@@ -3255,12 +3349,15 @@ namespace ExpeditionRecorder
                     var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
                     if (ck != null)
                     {
-                        AddText(ck, "attribute", "判定屬性");
+                        AddChoice(ck, "attribute", "判定屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                         var outs = new List<string> { "成功", "失敗" };
                         string cur = S(ck, "outcome");
                         if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
                         AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
+                        if (S(ck, "sameChoiceBonus") != "" && S(ck, "sameChoiceBonus") != "0")
+                            AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
                     }
+                    if (S(st, "teamDecision").ToLower() == "true") AddFixed("決定方式", "隊伍決定");
                     AddList(st, "results", "結果文本", false);
                     var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
                     if (eff != null)
@@ -3807,6 +3904,7 @@ namespace ExpeditionRecorder
         static void FormatEvent(StringBuilder sb, Dictionary<string, object> o)
         {
             sb.AppendLine("事件名：" + EventTitle(o));
+            sb.AppendLine("事件類型：" + Program.EventKindText(Str(o, "eventKind")));
             sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
             string scopes = JoinArr(o, "scopes");
             if (scopes == "") scopes = Str(o, "scope");
@@ -3816,6 +3914,8 @@ namespace ExpeditionRecorder
             string outs = JoinArr(o, "outcomes");
             if (outs == "") outs = Str(o, "outcome");
             sb.AppendLine("結果類型：" + OutcomeText(outs) + (Str(o, "jumpTo") != "" ? " → " + Str(o, "jumpTo") : ""));
+            string tags = JoinArr(o, "tags");
+            if (tags != "") sb.AppendLine("事件標籤：" + tags);
             var s1 = EventStep1(o);
             string intro = s1 != null ? Str(s1, "intro") : Str(o, "intro");
             if (intro != "")
@@ -3853,7 +3953,10 @@ namespace ExpeditionRecorder
                             string attr = ck != null ? Str(ck, "attribute") : Str(od, "check");
                             string outv = ck != null ? Str(ck, "outcome") : "";
                             sb.AppendLine("    判定：" + (outv == "" ? "—" : (outv == "失敗" || outv == "失败" || outv == "failure" ? "失敗" : "成功")) + (attr != "" ? "（" + attr + "）" : ""));
+                            if (ck != null && Str(ck, "sameChoiceBonus") != "" && Str(ck, "sameChoiceBonus") != "0")
+                                sb.AppendLine("    同選加成：+" + Str(ck, "sameChoiceBonus"));
                         }
+                        if (Str(st, "teamDecision").ToLower() == "true") sb.AppendLine("    決定：隊伍決定");
                         var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
                         if (qt != null)
                         {
@@ -4402,6 +4505,61 @@ namespace ExpeditionRecorder
             return rec;
         }
 
+        static void ApplyFreeChoiceBonus(Dictionary<string, object> rec)
+        {
+            if (rec == null || Convert.ToString(rec.ContainsKey("eventKind") ? rec["eventKind"] : "") != "free") return;
+            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.ArrayList : null;
+            if (steps == null) return;
+            var branches = new List<Dictionary<string, object>>();
+            for (int i = 1; i < steps.Count; i++)
+            {
+                var st = steps[i] as Dictionary<string, object>;
+                if (st == null) continue;
+                var nested = st.ContainsKey("branches") ? st["branches"] as System.Collections.ArrayList : null;
+                if (nested != null)
+                    foreach (var n in nested) { var nd = n as Dictionary<string, object>; if (nd != null) branches.Add(nd); }
+                else branches.Add(st);
+            }
+            var counts = new Dictionary<string, int>();
+            foreach (var b in branches)
+            {
+                string c = Convert.ToString(b.ContainsKey("choice") ? b["choice"] : "");
+                if (c == "") continue;
+                counts[c] = (counts.ContainsKey(c) ? counts[c] : 0) + 1;
+            }
+            foreach (var b in branches)
+            {
+                string c = Convert.ToString(b.ContainsKey("choice") ? b["choice"] : "");
+                if (c == "" || !counts.ContainsKey(c)) continue;
+                var ck = b.ContainsKey("check") ? b["check"] as Dictionary<string, object> : null;
+                if (ck == null) continue;
+                ck["sameChoiceBonus"] = 2 * (counts[c] - 1);
+                ck["freeRule"] = "sameChoice";
+            }
+        }
+
+        internal static string EventKindText(string k)
+        {
+            if (k == "free") return "自由事件";
+            if (k == "junction") return "岔路事件";
+            if (k == "character") return "角色事件";
+            if (k == "cooperation") return "合力事件";
+            if (k == "common") return "通用事件";
+            return "普通事件";
+        }
+
+        static string NormalizeAttr(string s)
+        {
+            string t = (s ?? "").Trim();
+            if (t.Contains("力量") || t == "力") return "力量";
+            if (t.Contains("敏捷") || t == "敏") return "敏捷";
+            if (t.Contains("体质") || t.Contains("體質") || t == "體" || t == "体") return "體質";
+            if (t.Contains("感知") || t == "感") return "感知";
+            if (t.Contains("智力") || t.Contains("智") || t == "智") return "智力";
+            if (t.Contains("魅力") || t == "魅") return "魅力";
+            return "";
+        }
+
         Dictionary<string, object> BuildStep1(List<OcrLine> sel)
         {
             string title = Parse.TitleOf(sel);
@@ -4419,7 +4577,9 @@ namespace ExpeditionRecorder
             }
             bool junctionEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一条|一條)路");
             bool freeEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一个|一個|一条|一條)");
-            if (string.IsNullOrEmpty(allText)) freeEvent = false;
+            bool commonEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"通用事件");
+            bool coopEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"合力|合作|協力|团队合作|團隊合作");
+            if (string.IsNullOrEmpty(allText)) { freeEvent = false; commonEvent = false; coopEvent = false; }
 
             var intro = new List<string>();
             foreach (var l in sel)
@@ -4439,20 +4599,26 @@ namespace ExpeditionRecorder
                 var d = new Dictionary<string, object>();
                 d["text"] = Party.Normalize(o.Text.Trim());
                 if (o.Desc != "") d["desc"] = o.Desc;
-                if (o.Check != "") d["check"] = o.Check;
+                string attr = NormalizeAttr(o.Check);
+                if (attr != "") d["check"] = attr;
+                if (o.ReqType == "attr")
+                {
+                    string reqAttr = NormalizeAttr(o.ReqName);
+                    if (reqAttr != "" && !d.ContainsKey("check")) d["check"] = reqAttr;
+                }
+                if (o.TextColor != Color.Empty) d["color"] = ColorTranslator.ToHtml(o.TextColor);
                 if (o.IsSpecial)
                 {
                     d["special"] = true;
                     d["specialReason"] = SpecialReason(o);
                     if (o.Condition != "") d["conditionText"] = Party.Normalize(o.Condition);
                 }
-                if (o.ReqType != "")
+                if (o.ReqType != "" && o.ReqType != "attr")
                 {
                     var req = new Dictionary<string, object>();
                     req["type"] = o.ReqType;
                     req["name"] = o.ReqName;
                     if (o.ReqType == "item") req["consume"] = o.ReqConsume;
-                    if (o.ReqType == "attr") req["min"] = o.ReqMin;
                     d["requirement"] = req;
                 }
                 optionList.Add(d);
@@ -4469,7 +4635,10 @@ namespace ExpeditionRecorder
                 rec["characterPlayer"] = characterPlayer;
                 if (characterName != "") rec["character"] = characterName;
             }
-            if (junctionEvent) rec["eventKind"] = "junction";
+            if (characterEvent) rec["eventKind"] = "character";
+            else if (commonEvent) rec["eventKind"] = "common";
+            else if (coopEvent) rec["eventKind"] = "cooperation";
+            else if (junctionEvent) rec["eventKind"] = "junction";
             else if (freeEvent) rec["eventKind"] = "free";
             var mlead = System.Text.RegularExpressions.Regex.Match(rec["intro"] as string ?? "", @"(?:只有你察覺到了|只有你察觉到了).*?(?:通到|通往|通向)\s*Level\s*([0-9A-Za-z.]+)");
             if (mlead.Success) rec["leadsTo"] = mlead.Groups[1].Value;
@@ -4585,6 +4754,7 @@ namespace ExpeditionRecorder
 
             string choice = "";
             string actor = "";
+            bool teamDecision = false;
             string checkAttr = "", outcome = "", enemy = "", leadsTo = "";
             int progressDelta = 0, progressTotal = -1;
             bool hasProgress = false;
@@ -4604,6 +4774,8 @@ namespace ExpeditionRecorder
                 if (TryChoiceLine(t, out ca, out cc))
                 {
                     if (ca != "") actor = ca;
+                    if (t.IndexOf("队伍决定", StringComparison.Ordinal) >= 0 || t.IndexOf("隊伍決定", StringComparison.Ordinal) >= 0)
+                        teamDecision = true;
                     choice = Party.Normalize(cc);
                     continue;
                 }
@@ -4646,7 +4818,7 @@ namespace ExpeditionRecorder
                 string cAttr, cDc, cRoll, cOut, cPl;
                 if (Parse.TryParseCheck(t, out cAttr, out cDc, out cRoll, out cOut, out cPl))
                 {
-                    checkAttr = cAttr;
+                    checkAttr = NormalizeAttr(cAttr);
                     if (cOut != "") outcome = cOut;
                     if (cPl != "")
                     {
@@ -4685,7 +4857,6 @@ namespace ExpeditionRecorder
                 ck["attribute"] = checkAttr;
                 ck["hasCheck"] = true;
                 if (outcome != "") ck["outcome"] = outcome;
-                ck["difficulty"] = "variable";
                 rec["check"] = ck;
             }
             if (enemy != "") { var cb = new Dictionary<string, object>(); cb["enemy"] = enemy; rec["combat"] = cb; }
@@ -4704,7 +4875,8 @@ namespace ExpeditionRecorder
                 if (qtePlayers.Count > 0) qd["players"] = qtePlayers;
                 rec["qte"] = qd;
             }
-            string playerName = actor != "" ? actor : Party.LocalName;
+            if (teamDecision) rec["teamDecision"] = true;
+            string playerName = teamDecision && actor == "" ? "" : (actor != "" ? actor : Party.LocalName);
             if (playerName != "") rec["player"] = playerName;
             var players = SplitActors(playerName);
             if (players.Count > 0) rec["players"] = players;
@@ -5207,6 +5379,49 @@ namespace ExpeditionRecorder
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
         internal static DateTime SessionStart = DateTime.Now;
+
+        internal static string EventKindText(string k)
+        {
+            if (k == "free") return "自由事件";
+            if (k == "junction") return "岔路事件";
+            if (k == "character") return "角色事件";
+            if (k == "cooperation") return "合力事件";
+            if (k == "common") return "通用事件";
+            return "普通事件";
+        }
+
+        static void ApplyFreeChoiceBonus(Dictionary<string, object> rec)
+        {
+            if (rec == null || Convert.ToString(rec.ContainsKey("eventKind") ? rec["eventKind"] : "") != "free") return;
+            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.ArrayList : null;
+            if (steps == null) return;
+            var branches = new List<Dictionary<string, object>>();
+            for (int i = 1; i < steps.Count; i++)
+            {
+                var st = steps[i] as Dictionary<string, object>;
+                if (st == null) continue;
+                var nested = st.ContainsKey("branches") ? st["branches"] as System.Collections.ArrayList : null;
+                if (nested != null)
+                    foreach (var n in nested) { var nd = n as Dictionary<string, object>; if (nd != null) branches.Add(nd); }
+                else branches.Add(st);
+            }
+            var counts = new Dictionary<string, int>();
+            foreach (var b in branches)
+            {
+                string c = Convert.ToString(b.ContainsKey("choice") ? b["choice"] : "");
+                if (c == "") continue;
+                counts[c] = (counts.ContainsKey(c) ? counts[c] : 0) + 1;
+            }
+            foreach (var b in branches)
+            {
+                string c = Convert.ToString(b.ContainsKey("choice") ? b["choice"] : "");
+                if (c == "" || !counts.ContainsKey(c)) continue;
+                var ck = b.ContainsKey("check") ? b["check"] as Dictionary<string, object> : null;
+                if (ck == null) continue;
+                ck["sameChoiceBonus"] = 2 * (counts[c] - 1);
+                ck["freeRule"] = "sameChoice";
+            }
+        }
         public static int ModeVk = 0x51, StepVk = 0x45, CancelVk = 0x43;
 
         static OcrService Ocr = new OcrService();
@@ -5226,6 +5441,7 @@ namespace ExpeditionRecorder
         {
             try
             {
+                SessionStart = DateTime.Now;
                 Native.SetProcessDPIAware();
                 for (int i = 0; i < args.Length; i++)
                 {
@@ -6846,7 +7062,8 @@ namespace ExpeditionRecorder
             string curName = Steps.Count > 0 && Steps[0].ContainsKey("floorName") ? Convert.ToString(Steps[0]["floorName"]) : Parse.FloorName;
             bool characterEvent = Steps.Count > 0 && Steps[0].ContainsKey("characterEvent") && Convert.ToBoolean(Steps[0]["characterEvent"]);
             string characterName = Steps.Count > 0 && Steps[0].ContainsKey("character") ? Convert.ToString(Steps[0]["character"]) : "";
-            var ef = new EndForm(curId, curName, Steps.Count, Party.LocalCharacter, characterEvent, characterName);
+            string ocrKind = Steps.Count > 0 && Steps[0].ContainsKey("eventKind") ? Convert.ToString(Steps[0]["eventKind"]) : "";
+            var ef = new EndForm(curId, curName, Steps.Count, Party.LocalCharacter, characterEvent, characterName, ocrKind);
             var r = ef.ShowDialog();
             if (r != DialogResult.OK) { SetState("已取消結束；按 " + VkName(StepVk) + " 繼續記；按 " + VkName(ModeVk) + " 結束"); return; }
 
@@ -6855,11 +7072,14 @@ namespace ExpeditionRecorder
             rec["id"] = EventId;
             rec["ts"] = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
             rec["kind"] = "event";
+            rec["eventKind"] = ef.EventKind;
             rec["scopes"] = ef.Scopes;
             rec["characters"] = ef.Characters;
             rec["outcomes"] = ef.Outcomes;
+            rec["tags"] = ef.Tags;
             rec["scope"] = ef.Scopes[0];
             rec["outcome"] = ef.Outcomes[0];
+            if (ef.EventKind == "character" || ef.EventKind == "cooperation") rec["characterEvent"] = true;
             if (ef.JumpTo != "") rec["jumpTo"] = ef.JumpTo;
             rec["floorId"] = ef.FloorId;
             rec["floorName"] = ef.FloorName;
@@ -6885,6 +7105,7 @@ namespace ExpeditionRecorder
                 }
             }
             rec["steps"] = Steps.ToArray();
+            ApplyFreeChoiceBonus(rec);
             if (!WriteEvent(rec))
             {
                 UiText.SetText(StepLabel, "寫入失敗，尚未存檔");
@@ -7182,7 +7403,7 @@ namespace ExpeditionRecorder
             sb.AppendLine("[Event]");
             sb.AppendLine("  " + sk + " step 1: drag \"event name + intro\" -> release to save");
             sb.AppendLine("  " + sk + " step 2: drag \"choice + result\" -> release to save");
-            sb.AppendLine("  " + mk + " finish: choose floor/character/common + normal/jump/shop/rest/combat (multi-select; combat can fill the entity name)");
+            sb.AppendLine("  " + mk + " finish: choose one event type (normal/free/junction/character/cooperation/common); first three allow a floor; then jump/combat and the rest tag");
             sb.AppendLine();
             sb.AppendLine("[Item]");
             sb.AppendLine("  " + sk + " capture current item; " + mk + " finish");
@@ -7217,7 +7438,7 @@ namespace ExpeditionRecorder
             sb.AppendLine("【事件】");
             sb.AppendLine("  " + sk + " 第1步：拖「事件名＋介紹」→ 鬆手即存");
             sb.AppendLine("  " + sk + " 第2步：拖「決定＋結果」→ 鬆手即存");
-            sb.AppendLine("  " + mk + " 結束：選樓層/角色/通用 + 普通/跳層/商店/休息/戰鬥（可多選；戰鬥可填實體名稱）");
+            sb.AppendLine("  " + mk + " 結束：單選事件類型（普通/自由/岔路/角色/合力/通用）；前三種可填事件出現樓層；再選跳層/進入戰鬥與休息處標籤");
             sb.AppendLine();
             sb.AppendLine("【物品】");
             sb.AppendLine("  " + sk + " 收當前物品；" + mk + " 結束");
