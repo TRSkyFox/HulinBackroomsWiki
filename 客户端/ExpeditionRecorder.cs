@@ -1421,6 +1421,7 @@ namespace ExpeditionRecorder
             { "導出", "Export" },
             { "狀態：—", "Status: —" },
             { "設置", "Settings" },
+            { "字號", "Text" },
             { "操作說明", "Help" },
             { "關閉", "Close" },
             { "說明", "Help" },
@@ -1563,11 +1564,24 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* ══ 記錄視窗字號（1.0–2.0，每格 0.1） ═══════════════ */
+    /* ══ 記錄視窗字號（固定四檔：1.0／1.2／1.4／1.6） ═══════ */
     static class UiScale
     {
+        public static readonly float[] Options = { 1.0f, 1.2f, 1.4f, 1.6f };
         public static float Scale = 1.0f;
         static readonly Dictionary<Control, Font> BaseFonts = new Dictionary<Control, Font>();
+
+        public static float NearestScale(float value)
+        {
+            float best = Options[0];
+            float bestDiff = float.MaxValue;
+            foreach (float o in Options)
+            {
+                float d = Math.Abs(value - o);
+                if (d < bestDiff - 0.0001f) { best = o; bestDiff = d; }
+            }
+            return best;
+        }
 
         public static int Px(int value)
         {
@@ -1688,7 +1702,7 @@ namespace ExpeditionRecorder
 
         public static void SetScale(float value)
         {
-            Value = value;
+            Value = NearestScale(value);
             SyncOpenForms();
             if (RecordsForm.Instance != null && !RecordsForm.Instance.IsDisposed) RecordsForm.Instance.ApplyScale();
             if (CurrentDock.Instance != null && !CurrentDock.Instance.IsDisposed) CurrentDock.Instance.RefreshScale();
@@ -5373,7 +5387,7 @@ namespace ExpeditionRecorder
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
         static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn;
-        static TrackBar ScaleBar;
+        static Button[] ScaleBtns;
         static Label ScaleLabel;
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
@@ -5664,22 +5678,22 @@ namespace ExpeditionRecorder
             EngBtn.Click += delegate { SetUiLang(UiLang.English); };
             settingsGroup.Controls.Add(EngBtn);
 
-            ScaleBar = new TrackBar();
-            ScaleBar.Minimum = 10;
-            ScaleBar.Maximum = 20;
-            ScaleBar.TickFrequency = 1;
-            ScaleBar.SmallChange = 1;
-            ScaleBar.LargeChange = 1;
-            ScaleBar.Value = Math.Max(10, Math.Min(20, (int)Math.Round(UiScale.Scale * 10)));
-            ScaleBar.SetBounds(14, 56, 220, 28);
-            ScaleBar.BackColor = Color.FromArgb(28, 28, 31);
-            ScaleBar.ForeColor = Color.FromArgb(220, 220, 226);
-            ScaleBar.ValueChanged += delegate { SetTextScale(ScaleBar.Value / 10f); };
-            settingsGroup.Controls.Add(ScaleBar);
             ScaleLabel = new Label();
-            ScaleLabel.SetBounds(242, 62, 150, 22);
+            ScaleLabel.SetBounds(14, 62, 42, 22);
             ScaleLabel.ForeColor = Color.FromArgb(210, 210, 218);
+            UiText.SetText(ScaleLabel, "字號");
             settingsGroup.Controls.Add(ScaleLabel);
+
+            ScaleBtns = new Button[UiScale.Options.Length];
+            for (int i = 0; i < UiScale.Options.Length; i++)
+            {
+                float option = UiScale.Options[i];
+                var b = Btn(option.ToString("0.#") + "x", 60 + i * 84, 56, 78, 28);
+                b.Tag = option;
+                b.Click += delegate { SetTextScale((float)b.Tag); };
+                ScaleBtns[i] = b;
+                settingsGroup.Controls.Add(b);
+            }
             UpdateLanguageButtons();
             UpdateScaleLabel();
             /* 載入先前儲存的語言；靜態控制項在建構時是中文，這裡統一轉換。 */
@@ -5883,8 +5897,17 @@ namespace ExpeditionRecorder
 
         static void UpdateScaleLabel()
         {
-            if (ScaleLabel == null) return;
-            UiText.SetText(ScaleLabel, "字號 " + UiScale.Scale.ToString("0.0") + "x");
+            if (ScaleLabel != null) UiText.SetText(ScaleLabel, "字號");
+            if (ScaleBtns == null) return;
+            float selected = UiScale.NearestScale(UiScale.Scale);
+            foreach (var b in ScaleBtns)
+            {
+                if (b == null) continue;
+                bool on = Math.Abs(Convert.ToSingle(b.Tag) - selected) < 0.001f;
+                b.BackColor = on ? Color.FromArgb(70, 74, 82) : Color.FromArgb(44, 44, 47);
+                b.ForeColor = on ? Color.White : Color.FromArgb(232, 232, 236);
+                b.FlatAppearance.BorderColor = on ? Color.FromArgb(130, 170, 215) : Color.FromArgb(78, 78, 84);
+            }
         }
 
         static void SetUiLang(UiLang lang)
@@ -7333,7 +7356,7 @@ namespace ExpeditionRecorder
                 {
                     float sc;
                     if (float.TryParse(Convert.ToString(d["textScale"]), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sc))
-                        UiScale.Value = sc;
+                        UiScale.Value = UiScale.NearestScale(sc);
                 }
                 if (d != null && d.ContainsKey("preset"))
                 {
