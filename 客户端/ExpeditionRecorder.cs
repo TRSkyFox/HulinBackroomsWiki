@@ -1158,7 +1158,7 @@ namespace ExpeditionRecorder
         public string FloorId = "";
         public string FloorName = "";
         RadioButton _normal, _anomalous;
-        Label _prefix, _idLabel;
+        Label _prefix, _floorLabel;
         TextBox _idBox, _nameBox;
         Dictionary<string, object> _palette;
 
@@ -1174,7 +1174,7 @@ namespace ExpeditionRecorder
             FloorType = floorType;
 
             Text = "樓層記錄";
-            ClientSize = new Size(460, 410);
+            ClientSize = new Size(460, 356);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -1182,7 +1182,7 @@ namespace ExpeditionRecorder
             ForeColor = Color.FromArgb(230, 230, 235);
 
             var typeLabel = new Label();
-            typeLabel.Text = "樓層類型";
+            typeLabel.Text = "類型";
             typeLabel.SetBounds(12, 8, 120, 20);
             typeLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(typeLabel);
@@ -1199,11 +1199,11 @@ namespace ExpeditionRecorder
             _anomalous.ForeColor = Color.White;
             Controls.Add(_anomalous);
 
-            _idLabel = new Label();
-            _idLabel.Text = "樓層 ID";
-            _idLabel.SetBounds(12, 64, 120, 20);
-            _idLabel.ForeColor = Color.FromArgb(180, 180, 188);
-            Controls.Add(_idLabel);
+            _floorLabel = new Label();
+            _floorLabel.Text = "樓層";
+            _floorLabel.SetBounds(12, 64, 120, 20);
+            _floorLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(_floorLabel);
             _prefix = new Label();
             _prefix.Text = "Level";
             _prefix.SetBounds(12, 88, 42, 22);
@@ -1216,41 +1216,35 @@ namespace ExpeditionRecorder
                 if (!_normal.Checked || char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar) || e.KeyChar == '.') return;
                 e.Handled = true;
             };
-
-            var nameLabel = new Label();
-            nameLabel.Text = "樓層名稱";
-            nameLabel.SetBounds(12, 120, 120, 20);
-            nameLabel.ForeColor = Color.FromArgb(180, 180, 188);
-            Controls.Add(nameLabel);
-            _nameBox = MkBox(12, 142, 430);
+            _nameBox = MkBox(250, 86, 192);
             _nameBox.Text = FloorName;
 
             var previewLabel = new Label();
-            previewLabel.Text = "配色預覽（已記錄，只讀）";
-            previewLabel.SetBounds(12, 176, 300, 20);
+            previewLabel.Text = "配色預覽";
+            previewLabel.SetBounds(12, 120, 300, 20);
             previewLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(previewLabel);
 
             var preview = new Panel();
-            preview.SetBounds(12, 198, 430, 76);
+            preview.SetBounds(12, 142, 430, 76);
             preview.BorderStyle = BorderStyle.FixedSingle;
             preview.Paint += delegate (object s, PaintEventArgs e) { DrawPalettePreview(e.Graphics, preview.ClientSize); };
             Controls.Add(preview);
 
             var themeLabel = new Label();
             themeLabel.Text = "主題";
-            themeLabel.SetBounds(12, 286, 120, 20);
+            themeLabel.SetBounds(12, 230, 120, 20);
             themeLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(themeLabel);
             var light = new RadioButton();
             light.Text = "明亮";
-            light.SetBounds(12, 308, 150, 24);
+            light.SetBounds(12, 252, 150, 24);
             light.Checked = initialTheme == "light";
             light.ForeColor = Color.White;
             Controls.Add(light);
             var dark = new RadioButton();
             dark.Text = "昏暗";
-            dark.SetBounds(170, 308, 150, 24);
+            dark.SetBounds(170, 252, 150, 24);
             dark.Checked = initialTheme == "dark";
             dark.ForeColor = Color.White;
             Controls.Add(dark);
@@ -1263,7 +1257,7 @@ namespace ExpeditionRecorder
 
             var save = new Button();
             save.Text = "保存";
-            save.SetBounds(12, 360, 120, 30);
+            save.SetBounds(12, 304, 120, 30);
             save.FlatStyle = FlatStyle.Flat;
             save.BackColor = Color.FromArgb(44, 44, 47);
             save.ForeColor = Color.White;
@@ -1290,7 +1284,7 @@ namespace ExpeditionRecorder
             Controls.Add(save);
             var cancel = new Button();
             cancel.Text = "取消";
-            cancel.SetBounds(144, 360, 120, 30);
+            cancel.SetBounds(144, 304, 120, 30);
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.BackColor = Color.FromArgb(44, 44, 47);
             cancel.ForeColor = Color.White;
@@ -1304,13 +1298,13 @@ namespace ExpeditionRecorder
             Color title = PaletteColor("title", Theme == "light" ? Color.FromArgb(92, 82, 58) : Color.FromArgb(255, 214, 120));
             Color text = PaletteColor("text", Theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
             g.Clear(bg);
-            using (var titleFont = new Font("Microsoft JhengHei UI", 11F, FontStyle.Bold))
-            using (var textFont = new Font("Microsoft JhengHei UI", 9F))
+            float fs = Math.Max(9F, 10F * UiScale.Scale);
+            using (var font = new Font("Microsoft JhengHei UI", fs))
             using (var titleBrush = new SolidBrush(title))
             using (var textBrush = new SolidBrush(text))
             {
-                g.DrawString("範例標題", titleFont, titleBrush, 12, 8);
-                g.DrawString("這是樓層正文的範例文字，只供預覽。", textFont, textBrush, 12, 38);
+                g.DrawString("範例標題", font, titleBrush, UiScale.Px(12), UiScale.Px(10));
+                g.DrawString("這是樓層正文的範例文字。", font, textBrush, UiScale.Px(12), UiScale.Px(40));
             }
         }
 
@@ -1329,8 +1323,8 @@ namespace ExpeditionRecorder
         {
             bool normal = _normal.Checked;
             _prefix.Visible = normal;
-            _idLabel.Text = normal ? "樓層數字" : "樓層 ID";
-            _idBox.SetBounds(normal ? 60 : 12, 86, normal ? 180 : 430, 24);
+            _idBox.SetBounds(normal ? 60 : 12, 86, normal ? 180 : 220, 24);
+            _nameBox.SetBounds(normal ? 250 : 240, 86, normal ? 192 : 202, 24);
         }
 
         TextBox MkBox(int x, int y, int w)
@@ -3353,9 +3347,104 @@ namespace ExpeditionRecorder
             _y += bh + UiScale.Px(12);
         }
 
+        void AddFloorFields(Dictionary<string, object> o)
+        {
+            string ft = S(o, "floorType");
+            if (ft != "normal" && ft != "anomalous")
+                ft = Parse.IsNormalFloorId(S(o, "floorId")) ? "normal" : "anomalous";
+            o["floorType"] = ft;
+
+            var typeLabel = new Label();
+            typeLabel.Text = "類型";
+            typeLabel.SetBounds(14, _y + 5, UiScale.Px(120), UiScale.Px(24));
+            typeLabel.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(typeLabel);
+            var normalRadio = new RadioButton();
+            normalRadio.Text = "常規樓層";
+            normalRadio.SetBounds(UiScale.Px(150), _y, UiScale.Px(100), UiScale.Px(24));
+            normalRadio.ForeColor = Color.White;
+            normalRadio.Checked = ft == "normal";
+            _panel.Controls.Add(normalRadio);
+            var anomalousRadio = new RadioButton();
+            anomalousRadio.Text = "異常樓層";
+            anomalousRadio.SetBounds(UiScale.Px(256), _y, UiScale.Px(100), UiScale.Px(24));
+            anomalousRadio.ForeColor = Color.White;
+            anomalousRadio.Checked = ft == "anomalous";
+            _panel.Controls.Add(anomalousRadio);
+            _y += UiScale.Px(34);
+
+            int rowY = _y;
+            var floorLabel = new Label();
+            floorLabel.Text = "樓層";
+            floorLabel.SetBounds(14, rowY + 5, UiScale.Px(120), UiScale.Px(24));
+            floorLabel.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(floorLabel);
+            var prefix = new Label();
+            prefix.Text = "Level";
+            prefix.SetBounds(UiScale.Px(150), rowY + 4, UiScale.Px(42), UiScale.Px(22));
+            prefix.ForeColor = Color.FromArgb(220, 220, 226);
+            _panel.Controls.Add(prefix);
+            var idBox = new TextBox();
+            idBox.SetBounds(UiScale.Px(195), rowY, UiScale.Px(180), UiScale.Px(24));
+            idBox.BackColor = Color.FromArgb(40, 40, 44);
+            idBox.ForeColor = Color.White;
+            idBox.BorderStyle = BorderStyle.FixedSingle;
+            idBox.Text = S(o, "floorId");
+            _panel.Controls.Add(idBox);
+            var nameBox = new TextBox();
+            nameBox.SetBounds(UiScale.Px(383), rowY, UiScale.Px(360), UiScale.Px(24));
+            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            nameBox.BackColor = Color.FromArgb(40, 40, 44);
+            nameBox.ForeColor = Color.White;
+            nameBox.BorderStyle = BorderStyle.FixedSingle;
+            nameBox.Text = S(o, "floorName");
+            _panel.Controls.Add(nameBox);
+
+            Action layout = delegate
+            {
+                bool normal = normalRadio.Checked;
+                prefix.Visible = normal;
+                if (normal)
+                {
+                    idBox.SetBounds(UiScale.Px(195), rowY, UiScale.Px(180), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(383), rowY, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(397)), UiScale.Px(24));
+                }
+                else
+                {
+                    idBox.SetBounds(UiScale.Px(150), rowY, UiScale.Px(220), UiScale.Px(24));
+                    nameBox.SetBounds(UiScale.Px(378), rowY, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(392)), UiScale.Px(24));
+                }
+            };
+            normalRadio.CheckedChanged += delegate
+            {
+                if (!normalRadio.Checked) return;
+                o["floorType"] = "normal";
+                layout();
+            };
+            anomalousRadio.CheckedChanged += delegate
+            {
+                if (!anomalousRadio.Checked) return;
+                o["floorType"] = "anomalous";
+                layout();
+            };
+            idBox.KeyPress += delegate (object s, KeyPressEventArgs e)
+            {
+                if (!normalRadio.Checked || char.IsControl(e.KeyChar) || char.IsDigit(e.KeyChar) || e.KeyChar == '.') return;
+                e.Handled = true;
+            };
+            _savers.Add(delegate
+            {
+                o["floorType"] = normalRadio.Checked ? "normal" : "anomalous";
+                o["floorId"] = idBox.Text.Trim();
+                o["floorName"] = nameBox.Text.Trim();
+            });
+            layout();
+            _y += UiScale.Px(36);
+        }
+
         void AddPalettePreview(Dictionary<string, object> o)
         {
-            AddHeading("配色預覽（已記錄，只讀）");
+            AddHeading("配色預覽");
             var pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
             string theme = S(o, "theme");
             int h = UiScale.Px(90);
@@ -3369,13 +3458,13 @@ namespace ExpeditionRecorder
                 Color title = PaletteColor(pal, "title", theme == "light" ? Color.FromArgb(92, 82, 58) : Color.FromArgb(255, 214, 120));
                 Color text = PaletteColor(pal, "text", theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
                 e.Graphics.Clear(bg);
-                using (var titleFont = new Font("Microsoft JhengHei UI", 11F, FontStyle.Bold))
-                using (var textFont = new Font("Microsoft JhengHei UI", 9F))
+                float fs = Math.Max(9F, 10F * UiScale.Scale);
+                using (var font = new Font("Microsoft JhengHei UI", fs))
                 using (var titleBrush = new SolidBrush(title))
                 using (var textBrush = new SolidBrush(text))
                 {
-                    e.Graphics.DrawString("範例標題", titleFont, titleBrush, UiScale.Px(12), UiScale.Px(10));
-                    e.Graphics.DrawString("這是樓層正文的範例文字，只供預覽。", textFont, textBrush, UiScale.Px(12), UiScale.Px(44));
+                    e.Graphics.DrawString("範例標題", font, titleBrush, UiScale.Px(12), UiScale.Px(10));
+                    e.Graphics.DrawString("這是樓層正文的範例文字。", font, textBrush, UiScale.Px(12), UiScale.Px(44));
                 }
             };
             _panel.Controls.Add(panel);
@@ -3610,14 +3699,7 @@ namespace ExpeditionRecorder
             }
             else if (_kind == "樓層")
             {
-                AddFixed("類型", "樓層");
-                string ft = S(o, "floorType");
-                if (ft != "normal" && ft != "anomalous")
-                    ft = Parse.IsNormalFloorId(S(o, "floorId")) ? "normal" : "anomalous";
-                o["floorType"] = ft;
-                AddChoice(o, "floorType", "樓層類型", new[] { "normal", "anomalous" }, new[] { "常規樓層", "異常樓層" });
-                AddText(o, "floorId", "樓層 ID");
-                AddText(o, "floorName", "樓層名稱");
+                AddFloorFields(o);
                 AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "明亮", "昏暗" });
                 AddLongText(o, "intro", "樓層介紹");
                 AddPalettePreview(o);
@@ -4281,7 +4363,7 @@ namespace ExpeditionRecorder
         static void FormatFloor(StringBuilder sb, Dictionary<string, object> o)
         {
             sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
-            sb.AppendLine("樓層類型：" + (Str(o, "floorType") == "anomalous" ? "異常樓層" : "常規樓層"));
+            sb.AppendLine("類型：" + (Str(o, "floorType") == "anomalous" ? "異常樓層" : "常規樓層"));
             sb.AppendLine("主題：" + (Str(o, "theme") == "light" ? "明亮" : "昏暗"));
             if (Str(o, "intro") != "") { sb.AppendLine("介紹："); foreach (var l in Str(o, "intro").Split('\n')) sb.AppendLine("  " + l); }
         }
@@ -7403,7 +7485,7 @@ namespace ExpeditionRecorder
                     floorRec["floorId"] = tf.FloorId;
                     floorRec["floorName"] = tf.FloorName;
                     WriteFloor(floorRec, tf.Theme);
-                    SetState("已存樓層介紹（" + (tf.FloorType == "normal" ? "常規" : "異常") + "／" + tf.Theme + "）");
+                    SetState("已存樓層介紹：" + (tf.FloorType == "normal" ? "常規" : "異常") + "／" + (tf.Theme == "light" ? "明亮" : "昏暗"));
                 }
                 else SetState("已取消");
                 Mode = ""; Step = 0; Steps.Clear();
