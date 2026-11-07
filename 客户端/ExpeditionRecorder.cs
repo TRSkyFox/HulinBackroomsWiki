@@ -1352,17 +1352,59 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* ══ UI 简繁切换 ═══════════════════════════════════════ */
+    /* ══ UI 繁／簡／English 切换 ═══════════════════════════ */
+    enum UiLang { Traditional, Simplified, English }
+
     static class UiText
     {
-        public static bool Simplified;
+        public static UiLang Lang = UiLang.Traditional;
+        public static bool Simplified { get { return Lang == UiLang.Simplified; } }
         static Dictionary<char, char> _t2s;
+        static Dictionary<Control, string> _source = new Dictionary<Control, string>();
+        static readonly Dictionary<string, string> En = new Dictionary<string, string>
+        {
+            { "客戶端", "Clients" },
+            { "開啟客戶端", "Open client" },
+            { "關閉客戶端", "Close client" },
+            { "解析度", "Resolution" },
+            { "記錄", "Recording" },
+            { "按鍵設定", "Hotkeys" },
+            { "快捷鍵：開", "Hotkeys: On" },
+            { "快捷鍵：關", "Hotkeys: Off" },
+            { "檢視與輸出", "View / export" },
+            { "已記錄", "Recorded" },
+            { "待處理", "Pending" },
+            { "導出", "Export" },
+            { "狀態：—", "Status: —" },
+            { "設置", "Settings" },
+            { "說明", "Help" },
+            { "繁體", "Traditional" },
+            { "簡體", "Simplified" },
+            { "English", "English" },
+            { "狀態：客戶端未接上（點「開啟客戶端」可接上）", "Status: client not connected (click \"Open client\")" },
+            { "快捷鍵已啟用（Q/E/C 可用）", "Hotkeys enabled (Q/E/C active)" },
+            { "快捷鍵已暫停（Q/E/C 直接給遊戲）", "Hotkeys paused (Q/E/C go to game)" },
+            { "狀態：已切換成簡體", "Status: Switched to Simplified" },
+            { "狀態：已切換成繁體", "Status: Switched to Traditional" },
+            { "狀態：已切換成英文", "Status: Switched to English" },
+            { "已存一條事件", "Event saved" },
+            { "寫入失敗，尚未存檔", "Write failed; not saved" }
+        };
 
         static void Ensure()
         {
             if (_t2s != null) return;
             _t2s = new Dictionary<char, char>();
             foreach (var kv in Party.S2T) _t2s[kv.Value] = kv.Key;
+        }
+
+        public static string ToTraditional(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            Ensure();
+            var sb = new StringBuilder(s.Length);
+            foreach (char ch in s) { char c; sb.Append(Party.S2T.TryGetValue(ch, out c) ? c : ch); }
+            return sb.ToString();
         }
 
         public static string Convert(string s, bool toSimplified)
@@ -1376,24 +1418,95 @@ namespace ExpeditionRecorder
             return sb.ToString();
         }
 
+        static string Between(string s, string left, string right)
+        {
+            int a = s.IndexOf(left, StringComparison.Ordinal);
+            if (a < 0) return "";
+            a += left.Length;
+            int b = s.IndexOf(right, a, StringComparison.Ordinal);
+            return b < 0 ? "" : s.Substring(a, b - a);
+        }
+
+        static string English(string raw)
+        {
+            string s = ToTraditional(raw);
+            string v;
+            if (En.TryGetValue(s, out v)) return v;
+            if (s.StartsWith("已記錄 ")) return "Recorded " + s.Substring(4);
+            if (s.StartsWith("待處理 ")) return "Pending " + s.Substring(4);
+            if (s.StartsWith("按 ") && s.EndsWith(" 開始記錄"))
+            {
+                string key = Between(s, "按 ", " 開始記錄");
+                if (key != "") return "Press " + key + " to start";
+            }
+            if (s.Length >= 3 && s[1] == ' ' && s.EndsWith(" 開始記錄")) return s.Substring(0, 1) + " Start";
+            if (s.Length >= 3 && s[1] == ' ' && s.EndsWith(" 結束記錄")) return s.Substring(0, 1) + " Stop";
+            if (s.Length >= 3 && s[1] == ' ' && s.EndsWith(" 記錄下一步")) return s.Substring(0, 1) + " Next step";
+            if (s.Length >= 3 && s[1] == ' ' && s.EndsWith(" 取消記錄")) return s.Substring(0, 1) + " Cancel";
+            if (s.StartsWith("已記 ") && s.EndsWith(" 步"))
+            {
+                string n = Between(s, "已記 ", " 步");
+                if (n != "") return "Recorded " + n + " steps";
+            }
+            if (s.StartsWith("狀態：客戶端已開，按 ") && s.EndsWith(" 開始"))
+            {
+                string key = Between(s, "按 ", " 開始");
+                if (key != "") return "Status: client connected, press " + key + " to start";
+            }
+            if (s.StartsWith("狀態：事件模式（已記 ") && s.EndsWith(" 步）"))
+            {
+                string n = Between(s, "已記 ", " 步");
+                if (n != "") return "Status: event mode (" + n + " steps recorded)";
+            }
+            if (s.StartsWith("狀態：")) return "Status: " + s.Substring(3);
+            if (s.StartsWith("狀態:")) return s;
+            return s;
+        }
+
         public static string T(string s)
         {
-            return Simplified ? Convert(s, true) : s;
+            if (Lang == UiLang.Simplified) return Convert(s, true);
+            if (Lang == UiLang.English) return English(s);
+            return s;
         }
 
-        static void Apply(Control c, bool toSimplified)
+        static string Translate(string s)
+        {
+            if (Lang == UiLang.Traditional) return s;
+            if (Lang == UiLang.Simplified) return Convert(s, true);
+            return English(s);
+        }
+
+        static void Apply(Control c)
         {
             if (c == null) return;
-            if (!string.IsNullOrEmpty(c.Text)) c.Text = Convert(c.Text, toSimplified);
-            foreach (Control child in c.Controls) Apply(child, toSimplified);
+            /* 下拉選單／文字輸入的內容不是 UI 標籤，不能翻譯。 */
+            if (!(c is ComboBox) && !(c is TextBox))
+            {
+                string source;
+                if (!_source.TryGetValue(c, out source))
+                {
+                    source = ToTraditional(c.Text);
+                    _source[c] = source;
+                }
+                if (!string.IsNullOrEmpty(source)) c.Text = Translate(source);
+            }
+            foreach (Control child in c.Controls) Apply(child);
         }
 
-        public static void SetSimplified(bool on)
+        public static void SetText(Control c, string traditional)
         {
-            Simplified = on;
+            if (c == null) return;
+            _source[c] = traditional;
+            c.Text = Translate(traditional);
+        }
+
+        public static void SetLang(UiLang lang)
+        {
+            Lang = lang;
             foreach (Form f in Application.OpenForms)
             {
-                try { Apply(f, on); } catch { }
+                try { Apply(f); } catch { }
             }
         }
     }
@@ -4381,7 +4494,7 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, LangBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn;
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
         static string Preset = "1600x900";
@@ -4528,13 +4641,13 @@ namespace ExpeditionRecorder
             clientGroup.Controls.Add(close);
 
             var resLabel = new Label();
-            resLabel.SetBounds(14, 64, 54, 20);
+            resLabel.SetBounds(14, 64, 70, 20);
             resLabel.ForeColor = Color.FromArgb(200, 200, 206);
             resLabel.Text = "解析度";
             clientGroup.Controls.Add(resLabel);
             var resCombo = new ComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            resCombo.SetBounds(72, 62, 334, 24);
+            resCombo.SetBounds(86, 62, 206, 24);
             resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
@@ -4548,7 +4661,7 @@ namespace ExpeditionRecorder
             StepLabel = new Label();
             StepLabel.SetBounds(14, 24, 378, 40);
             StepLabel.ForeColor = Color.FromArgb(232, 232, 236);
-            StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
+            UiText.SetText(StepLabel, "按 " + VkName(ModeVk) + " 開始記錄");
             recGroup.Controls.Add(StepLabel);
 
             /* Q／E／C 的 GUI 按钮；取消记录和快捷键设置分两排。 */
@@ -4558,7 +4671,7 @@ namespace ExpeditionRecorder
             EBtn = Btn(VkName(StepVk) + " 記錄下一步", 140, 70, 120, 26);
             EBtn.Click += delegate { OnHotkey(2); };
             recGroup.Controls.Add(EBtn);
-            CancelBtn = Btn(VkName(CancelVk) + " 取消記錄", 266, 70, 140, 26);
+            CancelBtn = Btn(VkName(CancelVk) + " 取消記錄", 266, 70, 120, 26);
             CancelBtn.Click += delegate { CancelRecording(); };
             recGroup.Controls.Add(CancelBtn);
 
@@ -4585,21 +4698,23 @@ namespace ExpeditionRecorder
             StateLabel = new Label();
             StateLabel.SetBounds(14, 332, 402, 26);
             StateLabel.ForeColor = Color.FromArgb(232, 232, 236);
-            StateLabel.Text = UiText.T("狀態：—");
+            UiText.SetText(StateLabel, "狀態：—");
             ControlWindow.Controls.Add(StateLabel);
 
-            var langGroup = Group("簡繁", 12, 360, 406, 56);
-            LangBtn = Btn("簡體", 14, 22, 140, 26);
-            LangBtn.Click += delegate
-            {
-                bool next = !UiText.Simplified;
-                UiText.SetSimplified(next);
-                LangBtn.Text = next ? "繁體" : "簡體";
-                UpdateHotkeyButton();
-                UpdateRecordButtons();
-                SetState(next ? "已切換為簡體" : "已切換為繁體");
-            };
-            langGroup.Controls.Add(LangBtn);
+            var settingsGroup = Group("設置", 12, 360, 406, 56);
+            HelpBtn = Btn("說明", 14, 22, 80, 26);
+            HelpBtn.Click += delegate { new HelpForm().ShowDialog(); };
+            settingsGroup.Controls.Add(HelpBtn);
+            TradBtn = Btn("繁體", 102, 22, 84, 26);
+            TradBtn.Click += delegate { SetUiLang(UiLang.Traditional); };
+            settingsGroup.Controls.Add(TradBtn);
+            SimpBtn = Btn("簡體", 192, 22, 84, 26);
+            SimpBtn.Click += delegate { SetUiLang(UiLang.Simplified); };
+            settingsGroup.Controls.Add(SimpBtn);
+            EngBtn = Btn("English", 282, 22, 108, 26);
+            EngBtn.Click += delegate { SetUiLang(UiLang.English); };
+            settingsGroup.Controls.Add(EngBtn);
+            UpdateLanguageButtons();
 
             ControlWindow.FormClosing += delegate
             {
@@ -4697,7 +4812,7 @@ namespace ExpeditionRecorder
             {
                 if (ControlWindow == null || ControlWindow.IsDisposed) return;
                 if (ControlWindow.InvokeRequired) { ControlWindow.BeginInvoke((Action)delegate { SetState(text); }); return; }
-                StateLabel.Text = UiText.T(text);
+                UiText.SetText(StateLabel, text);
                 UpdateRecordButtons();
             }
             catch { }
@@ -4714,18 +4829,18 @@ namespace ExpeditionRecorder
                     return;
                 }
                 bool recording = Mode != "";
-                string qText = UiText.T(VkName(ModeVk) + (recording ? " 結束記錄" : " 開始記錄"));
-                string eText = UiText.T(VkName(StepVk) + " 記錄下一步");
-                string cText = UiText.T(VkName(CancelVk) + " 取消記錄");
+                string qText = VkName(ModeVk) + (recording ? " 結束記錄" : " 開始記錄");
+                string eText = VkName(StepVk) + " 記錄下一步";
+                string cText = VkName(CancelVk) + " 取消記錄";
                 if (QBtn != null)
                 {
-                    if (QBtn.Text != qText) QBtn.Text = qText;
+                    UiText.SetText(QBtn, qText);
                     QBtn.BackColor = recording ? Color.FromArgb(96, 74, 38) : Color.FromArgb(44, 44, 47);
                     QBtn.ForeColor = recording ? Color.FromArgb(255, 232, 160) : Color.FromArgb(232, 232, 236);
                     QBtn.FlatAppearance.BorderColor = recording ? Color.FromArgb(230, 184, 72) : Color.FromArgb(78, 78, 84);
                 }
-                if (EBtn != null && EBtn.Text != eText) EBtn.Text = eText;
-                if (CancelBtn != null && CancelBtn.Text != cText) CancelBtn.Text = cText;
+                if (EBtn != null) UiText.SetText(EBtn, eText);
+                if (CancelBtn != null) UiText.SetText(CancelBtn, cText);
             }
             catch { }
         }
@@ -4748,12 +4863,51 @@ namespace ExpeditionRecorder
             try
             {
                 if (HotkeyBtn == null) return;
-                HotkeyBtn.Text = UiText.T(HotkeysEnabled ? "快捷鍵：開" : "快捷鍵：關");
+                UiText.SetText(HotkeyBtn, HotkeysEnabled ? "快捷鍵：開" : "快捷鍵：關");
                 HotkeyBtn.BackColor = HotkeysEnabled ? Color.FromArgb(42, 72, 48) : Color.FromArgb(76, 44, 44);
                 HotkeyBtn.ForeColor = HotkeysEnabled ? Color.FromArgb(190, 240, 190) : Color.FromArgb(255, 190, 180);
                 HotkeyBtn.FlatAppearance.BorderColor = HotkeysEnabled ? Color.FromArgb(80, 160, 90) : Color.FromArgb(180, 80, 70);
             }
             catch { }
+        }
+
+        static void UpdateLanguageButtons()
+        {
+            try
+            {
+                UiText.SetText(HelpBtn, "說明");
+                UiText.SetText(TradBtn, "繁體");
+                UiText.SetText(SimpBtn, "簡體");
+                UiText.SetText(EngBtn, "English");
+                var buttons = new[] { TradBtn, SimpBtn, EngBtn };
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] == null) continue;
+                    buttons[i].BackColor = Color.FromArgb(44, 44, 47);
+                    buttons[i].ForeColor = Color.FromArgb(232, 232, 236);
+                    buttons[i].FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
+                }
+                Button active = UiText.Lang == UiLang.Traditional ? TradBtn
+                    : UiText.Lang == UiLang.Simplified ? SimpBtn : EngBtn;
+                if (active != null)
+                {
+                    active.BackColor = Color.FromArgb(42, 72, 48);
+                    active.ForeColor = Color.FromArgb(190, 240, 190);
+                    active.FlatAppearance.BorderColor = Color.FromArgb(80, 160, 90);
+                }
+            }
+            catch { }
+        }
+
+        static void SetUiLang(UiLang lang)
+        {
+            UiText.SetLang(lang);
+            UpdateLanguageButtons();
+            UpdateRecordButtons();
+            UpdateHotkeyButton();
+            SetState(lang == UiLang.Simplified ? "狀態：已切換成簡體"
+                : lang == UiLang.English ? "狀態：已切換成英文"
+                : "狀態：已切換成繁體");
         }
 
         static int _lastFindClientTick;
@@ -4777,8 +4931,7 @@ namespace ExpeditionRecorder
                 string state = Mode == ""
                     ? (GameHwnd != IntPtr.Zero ? "狀態：客戶端已開，按 " + VkName(ModeVk) + " 開始" : "狀態：客戶端未接上（點「開啟客戶端」可接上）")
                     : "狀態：事件模式（已記 " + Step + " 步）";
-                state = UiText.T(state);
-                if (StateLabel.Text != state) StateLabel.Text = state;
+                UiText.SetText(StateLabel, state);
                 int n = 0, p = 0;
                 try
                 {
@@ -4791,9 +4944,9 @@ namespace ExpeditionRecorder
                     }
                 }
                 catch { }
-                string recText = UiText.T("已記錄 " + n), pendText = UiText.T("待處理 " + p);
-                if (RecordsBtn != null && RecordsBtn.Text != recText) RecordsBtn.Text = recText;
-                if (PendingBtn != null && PendingBtn.Text != pendText) PendingBtn.Text = pendText;
+                string recText = "已記錄 " + n, pendText = "待處理 " + p;
+                if (RecordsBtn != null) UiText.SetText(RecordsBtn, recText);
+                if (PendingBtn != null) UiText.SetText(PendingBtn, pendText);
                 if (GameHwnd != IntPtr.Zero && Mode == "") ScanPartyAsync();
             }
             catch { }
@@ -5100,7 +5253,7 @@ namespace ExpeditionRecorder
             else if (Mode == "ending") hint = "結局：按 " + VkName(StepVk) + " 拖結局名＋通用介紹；再按 " + VkName(StepVk) + " 拖後日談；按 " + VkName(ModeVk) + " 選分類";
             else if (Mode == "shop") hint = "商店模式：按 " + VkName(StepVk) + " 掃描貨架或商店文字；按 " + VkName(ModeVk) + " 結束";
             else hint = "事件模式：按 " + VkName(StepVk) + " 記第 1 步；按 " + VkName(ModeVk) + " 結束";
-            StepLabel.Text = UiText.T(hint);
+            UiText.SetText(StepLabel, hint);
             SetState("狀態：" + hint);
         }
 
@@ -5327,7 +5480,7 @@ namespace ExpeditionRecorder
                 Step++;
                 Steps.Add(f.Result);
                 WriteDraft(EventId, f.Result);
-                StepLabel.Text = UiText.T("已記 " + Step + " 步");
+                UiText.SetText(StepLabel, "已記 " + Step + " 步");
                 SetState("第 " + Step + " 步已存（辨識 " + sw.ElapsedMilliseconds + "ms）；按 " + VkName(StepVk) + " 記第 " + (Step + 1) + " 步");
             }
             else SetState("這一步已取消（" + sw.ElapsedMilliseconds + "ms）；按 " + VkName(StepVk) + " 重記");
@@ -5952,13 +6105,13 @@ namespace ExpeditionRecorder
             rec["steps"] = Steps.ToArray();
             if (!WriteEvent(rec))
             {
-                StepLabel.Text = UiText.T("寫入失敗，尚未存檔");
+                UiText.SetText(StepLabel, "寫入失敗，尚未存檔");
                 return;
             }
             if (ef.Outcomes.Contains("combat") && combatEnemy == "") WritePending("combat-enemy", rec);
             if (ef.Scopes.Contains("character") && ef.Characters.Count == 0) WritePending("character-missing", rec);
             Mode = ""; Step = 0; Steps.Clear();
-            StepLabel.Text = UiText.T("已存一條事件");
+            UiText.SetText(StepLabel, "已存一條事件");
             SetState("已存一條事件（" + string.Join("+", ef.Scopes.ToArray()) + " / " + string.Join("+", ef.Outcomes.ToArray()) + "），按 " + VkName(ModeVk) + " 再記");
         }
 
@@ -6245,7 +6398,7 @@ namespace ExpeditionRecorder
             try
             {
                 if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) HelpForm.Instance.SetText(HelpText());
-                if (StepLabel != null && Mode == "") StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
+                if (StepLabel != null && Mode == "") UiText.SetText(StepLabel, "按 " + VkName(ModeVk) + " 開始記錄");
             }
             catch { }
         }
@@ -6257,7 +6410,7 @@ namespace ExpeditionRecorder
             var p = Picker;
             Picker = null;
             if (p != null && !p.IsDisposed) { try { p.Close(); } catch { } }
-            StepLabel.Text = UiText.T("按 " + VkName(ModeVk) + " 開始記錄");
+            UiText.SetText(StepLabel, "按 " + VkName(ModeVk) + " 開始記錄");
             SetState(had ? "已取消這次記錄" : "沒有進行中的記錄");
         }
 
