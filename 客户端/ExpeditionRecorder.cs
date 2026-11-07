@@ -3758,11 +3758,12 @@ namespace ExpeditionRecorder
 
         int WrappedHeight(string text, Font font, int width)
         {
-            if (string.IsNullOrEmpty(text)) return UiScale.Px(24);
-            int baseW = Math.Max(40, width - UiScale.Px(12));
+            int minH = Math.Max(UiScale.Px(18), font.Height + UiScale.Px(6));
+            if (string.IsNullOrEmpty(text)) return minH;
+            int baseW = Math.Max(20, width - 4);
             int measured = TextRenderer.MeasureText(text, font, new Size(baseW, int.MaxValue),
-                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height;
-            return Math.Max(UiScale.Px(24), measured + UiScale.Px(8));
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding).Height;
+            return Math.Max(minH, measured + 4);
         }
 
         void AdjustTextHeight(TextBox t, bool force = false)
@@ -4180,7 +4181,7 @@ namespace ExpeditionRecorder
             _y = rowY + (narrow ? UiScale.Px(88) : UiScale.Px(30));
         }
 
-        void AddCompactFloorRow(Dictionary<string, object> o)
+        void AddCompactFloorRow(Dictionary<string, object> o, Dictionary<string, object> mirror = null)
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
@@ -4217,8 +4218,15 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(nameBox);
             _savers.Add(delegate
             {
-                o["floorId"] = idBox.Text.Trim();
-                o["floorName"] = nameBox.Text.Trim();
+                string fid = idBox.Text.Trim();
+                string fname = nameBox.Text.Trim();
+                o["floorId"] = fid;
+                o["floorName"] = fname;
+                if (mirror != null && mirror != o)
+                {
+                    mirror["floorId"] = fid;
+                    mirror["floorName"] = fname;
+                }
             });
             _y = rowY + (narrow ? UiScale.Px(88) : UiScale.Px(30));
         }
@@ -4354,28 +4362,21 @@ namespace ExpeditionRecorder
             {
                 var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
-                if (_lockIdentity)
+                string eventKind = S(o, "eventKind");
+                if (eventKind == "") { eventKind = "normal"; o["eventKind"] = eventKind; }
+                AddChoice(o, "eventKind", "事件類型",
+                    new[] { "normal", "free", "junction", "character", "cooperation", "common" },
+                    new[] { "普通事件", "自由事件", "岔路事件", "角色事件", "合力事件", "通用事件" });
+                AddRestTag(o);
+                string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : EventTitleOf(o);
+                var tt = AddRaw("事件名", title, false, 24);
+                _savers.Add(delegate
                 {
-                    AddFixed("事件類型", Program.EventKindText(S(o, "eventKind")));
-                    AddRestTag(o);
-                    AddFixed("事件名", EventTitleOf(o));
-                    AddCompactFloorRow(o);
-                    string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
-                    string chars = A(o, "characters"); if (chars == "") chars = S(o, "character");
-                    AddFixed("歸屬", scopes + (chars != "" ? "　角色：" + chars : ""));
-                }
-                else
-                {
-                    AddCompactFloorRow(o);
-                    string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
-                    var tt = AddRaw("事件名", title, false, 24);
-                    _savers.Add(delegate
-                    {
-                        if (s1 != null) s1["title"] = tt.Text;
-                        if (o.ContainsKey("title")) o["title"] = tt.Text;
-                    });
-                }
-                if (!_lockIdentity) AddRestTag(o);
+                    string v = tt.Text.Trim();
+                    if (s1 != null) s1["title"] = v;
+                    o["title"] = v;
+                });
+                AddCompactFloorRow(o, s1);
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
 
