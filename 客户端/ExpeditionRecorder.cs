@@ -6570,7 +6570,7 @@ namespace ExpeditionRecorder
                 UiText.KeepText(SimpBtn);
                 UiText.KeepText(EngBtn);
                 TradBtn.Text = "繁體";
-                SimpBtn.Text = "簡體";
+                SimpBtn.Text = "简体";
                 EngBtn.Text = "English";
                 var buttons = new[] { TradBtn, SimpBtn, EngBtn };
                 for (int i = 0; i < buttons.Length; i++)
