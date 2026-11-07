@@ -1160,17 +1160,21 @@ namespace ExpeditionRecorder
         RadioButton _normal, _anomalous;
         Label _prefix, _idLabel;
         TextBox _idBox, _nameBox;
+        Dictionary<string, object> _palette;
 
-        public ThemeForm(string floorId, string floorName, string floorType = "")
+        public ThemeForm(string floorId, string floorName, string floorType = "", Dictionary<string, object> palette = null, string theme = "")
         {
             FloorId = floorId ?? "";
             FloorName = floorName ?? "";
+            _palette = palette;
+            string initialTheme = theme == "light" ? "light" : "dark";
+            Theme = initialTheme;
             if (floorType != "normal" && floorType != "anomalous")
                 floorType = Parse.IsNormalFloorId(FloorId) ? "normal" : "anomalous";
             FloorType = floorType;
 
             Text = "樓層記錄";
-            ClientSize = new Size(460, 310);
+            ClientSize = new Size(460, 410);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
             StartPosition = FormStartPosition.CenterScreen;
@@ -1221,22 +1225,37 @@ namespace ExpeditionRecorder
             _nameBox = MkBox(12, 142, 430);
             _nameBox.Text = FloorName;
 
+            var previewLabel = new Label();
+            previewLabel.Text = "配色預覽（已記錄，只讀）";
+            previewLabel.SetBounds(12, 176, 300, 20);
+            previewLabel.ForeColor = Color.FromArgb(180, 180, 188);
+            Controls.Add(previewLabel);
+
+            var preview = new Panel();
+            preview.SetBounds(12, 198, 430, 76);
+            preview.BorderStyle = BorderStyle.FixedSingle;
+            preview.Paint += delegate (object s, PaintEventArgs e) { DrawPalettePreview(e.Graphics, preview.ClientSize); };
+            Controls.Add(preview);
+
             var themeLabel = new Label();
             themeLabel.Text = "主題";
-            themeLabel.SetBounds(12, 176, 120, 20);
+            themeLabel.SetBounds(12, 286, 120, 20);
             themeLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(themeLabel);
-            var dark = new RadioButton();
-            dark.Text = "暗色主題";
-            dark.SetBounds(12, 198, 150, 24);
-            dark.Checked = true;
-            dark.ForeColor = Color.White;
-            Controls.Add(dark);
             var light = new RadioButton();
-            light.Text = "亮色主題";
-            light.SetBounds(170, 198, 150, 24);
+            light.Text = "明亮";
+            light.SetBounds(12, 308, 150, 24);
+            light.Checked = initialTheme == "light";
             light.ForeColor = Color.White;
             Controls.Add(light);
+            var dark = new RadioButton();
+            dark.Text = "昏暗";
+            dark.SetBounds(170, 308, 150, 24);
+            dark.Checked = initialTheme == "dark";
+            dark.ForeColor = Color.White;
+            Controls.Add(dark);
+            light.CheckedChanged += delegate { preview.Invalidate(); };
+            dark.CheckedChanged += delegate { preview.Invalidate(); };
 
             _normal.CheckedChanged += delegate { UpdateType(); };
             _anomalous.CheckedChanged += delegate { UpdateType(); };
@@ -1244,7 +1263,7 @@ namespace ExpeditionRecorder
 
             var save = new Button();
             save.Text = "保存";
-            save.SetBounds(12, 254, 120, 30);
+            save.SetBounds(12, 360, 120, 30);
             save.FlatStyle = FlatStyle.Flat;
             save.BackColor = Color.FromArgb(44, 44, 47);
             save.ForeColor = Color.White;
@@ -1271,12 +1290,39 @@ namespace ExpeditionRecorder
             Controls.Add(save);
             var cancel = new Button();
             cancel.Text = "取消";
-            cancel.SetBounds(144, 254, 120, 30);
+            cancel.SetBounds(144, 360, 120, 30);
             cancel.FlatStyle = FlatStyle.Flat;
             cancel.BackColor = Color.FromArgb(44, 44, 47);
             cancel.ForeColor = Color.White;
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancel);
+        }
+
+        void DrawPalettePreview(Graphics g, Size size)
+        {
+            Color bg = PaletteColor("bg", Theme == "light" ? Color.FromArgb(244, 240, 230) : Color.FromArgb(28, 28, 32));
+            Color title = PaletteColor("title", Theme == "light" ? Color.FromArgb(92, 82, 58) : Color.FromArgb(255, 214, 120));
+            Color text = PaletteColor("text", Theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
+            g.Clear(bg);
+            using (var titleFont = new Font("Microsoft JhengHei UI", 11F, FontStyle.Bold))
+            using (var textFont = new Font("Microsoft JhengHei UI", 9F))
+            using (var titleBrush = new SolidBrush(title))
+            using (var textBrush = new SolidBrush(text))
+            {
+                g.DrawString("範例標題", titleFont, titleBrush, 12, 8);
+                g.DrawString("這是樓層正文的範例文字，只供預覽。", textFont, textBrush, 12, 38);
+            }
+        }
+
+        Color PaletteColor(string key, Color fallback)
+        {
+            try
+            {
+                if (_palette == null || !_palette.ContainsKey(key)) return fallback;
+                var c = ColorTranslator.FromHtml(Convert.ToString(_palette[key]));
+                return c == Color.Empty ? fallback : c;
+            }
+            catch { return fallback; }
         }
 
         void UpdateType()
@@ -3307,6 +3353,46 @@ namespace ExpeditionRecorder
             _y += bh + UiScale.Px(12);
         }
 
+        void AddPalettePreview(Dictionary<string, object> o)
+        {
+            AddHeading("配色預覽（已記錄，只讀）");
+            var pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
+            string theme = S(o, "theme");
+            int h = UiScale.Px(90);
+            var panel = new Panel();
+            panel.SetBounds(14, _y, Math.Max(UiScale.Px(260), _panel.ClientSize.Width - UiScale.Px(28)), h);
+            panel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            panel.BorderStyle = BorderStyle.FixedSingle;
+            panel.Paint += delegate (object s, PaintEventArgs e)
+            {
+                Color bg = PaletteColor(pal, "bg", theme == "light" ? Color.FromArgb(244, 240, 230) : Color.FromArgb(28, 28, 32));
+                Color title = PaletteColor(pal, "title", theme == "light" ? Color.FromArgb(92, 82, 58) : Color.FromArgb(255, 214, 120));
+                Color text = PaletteColor(pal, "text", theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
+                e.Graphics.Clear(bg);
+                using (var titleFont = new Font("Microsoft JhengHei UI", 11F, FontStyle.Bold))
+                using (var textFont = new Font("Microsoft JhengHei UI", 9F))
+                using (var titleBrush = new SolidBrush(title))
+                using (var textBrush = new SolidBrush(text))
+                {
+                    e.Graphics.DrawString("範例標題", titleFont, titleBrush, UiScale.Px(12), UiScale.Px(10));
+                    e.Graphics.DrawString("這是樓層正文的範例文字，只供預覽。", textFont, textBrush, UiScale.Px(12), UiScale.Px(44));
+                }
+            };
+            _panel.Controls.Add(panel);
+            _y += h + UiScale.Px(10);
+        }
+
+        static Color PaletteColor(Dictionary<string, object> pal, string key, Color fallback)
+        {
+            try
+            {
+                if (pal == null || !pal.ContainsKey(key)) return fallback;
+                var c = ColorTranslator.FromHtml(Convert.ToString(pal[key]));
+                return c == Color.Empty ? fallback : c;
+            }
+            catch { return fallback; }
+        }
+
         void AddLongText(Dictionary<string, object> d, string key, string label)
         {
             string val = d != null && d.ContainsKey(key) ? Convert.ToString(d[key]) : "";
@@ -3532,15 +3618,9 @@ namespace ExpeditionRecorder
                 AddChoice(o, "floorType", "樓層類型", new[] { "normal", "anomalous" }, new[] { "常規樓層", "異常樓層" });
                 AddText(o, "floorId", "樓層 ID");
                 AddText(o, "floorName", "樓層名稱");
-                AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "亮色", "暗色" });
+                AddChoice(o, "theme", "主題", new[] { "light", "dark" }, new[] { "明亮", "昏暗" });
                 AddLongText(o, "intro", "樓層介紹");
-                Dictionary<string, object> pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
-                if (pal != null)
-                {
-                    AddText(pal, "bg", "配色：底色");
-                    AddText(pal, "title", "配色：標題");
-                    AddText(pal, "text", "配色：正文");
-                }
+                AddPalettePreview(o);
             }
             else if (_kind == "出口")
             {
@@ -4202,9 +4282,7 @@ namespace ExpeditionRecorder
         {
             sb.AppendLine("樓層：" + Str(o, "floorId") + " " + Str(o, "floorName"));
             sb.AppendLine("樓層類型：" + (Str(o, "floorType") == "anomalous" ? "異常樓層" : "常規樓層"));
-            sb.AppendLine("主題：" + Str(o, "theme"));
-            var pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
-            if (pal != null) sb.AppendLine("配色：底色 " + Str(pal, "bg") + "　標題 " + Str(pal, "title") + "　正文 " + Str(pal, "text"));
+            sb.AppendLine("主題：" + (Str(o, "theme") == "light" ? "明亮" : "昏暗"));
             if (Str(o, "intro") != "") { sb.AppendLine("介紹："); foreach (var l in Str(o, "intro").Split('\n')) sb.AppendLine("  " + l); }
         }
 
@@ -7076,7 +7154,7 @@ namespace ExpeditionRecorder
                 Steps.Clear();
                 Steps.Add(f.Result);
                 Step = 1;
-                SetState("樓層介紹已抓；按 " + VkName(ModeVk) + " 選亮色／暗色並保存");
+                SetState("樓層介紹已抓；按 " + VkName(ModeVk) + " 選明亮／昏暗並保存");
             }
             else SetState("已取消；按 " + VkName(StepVk) + " 重抓；按 " + VkName(ModeVk) + " 離開");
             f.Dispose();
@@ -7312,10 +7390,13 @@ namespace ExpeditionRecorder
                 if (Steps.Count == 0) { Mode = ""; SetState("已離開"); return; }
                 NormalizeSteps();
                 var floorRec = Steps[0];
+                var pal = floorRec.ContainsKey("palette") ? floorRec["palette"] as Dictionary<string, object> : null;
                 var tf = new ThemeForm(
                     Convert.ToString(floorRec.ContainsKey("floorId") ? floorRec["floorId"] : ""),
                     Convert.ToString(floorRec.ContainsKey("floorName") ? floorRec["floorName"] : ""),
-                    Convert.ToString(floorRec.ContainsKey("floorType") ? floorRec["floorType"] : ""));
+                    Convert.ToString(floorRec.ContainsKey("floorType") ? floorRec["floorType"] : ""),
+                    pal,
+                    Convert.ToString(floorRec.ContainsKey("theme") ? floorRec["theme"] : "dark"));
                 if (tf.ShowDialog() == DialogResult.OK)
                 {
                     floorRec["floorType"] = tf.FloorType;
@@ -7764,7 +7845,7 @@ namespace ExpeditionRecorder
             sb.AppendLine("  " + sk + " 收當前物品；" + mk + " 結束");
             sb.AppendLine();
             sb.AppendLine("【樓層介紹】");
-            sb.AppendLine("  " + sk + " 拖樓層名＋介紹；" + mk + " 選亮色/暗色");
+            sb.AppendLine("  " + sk + " 拖樓層名＋介紹；" + mk + " 選明亮/昏暗");
             sb.AppendLine();
             sb.AppendLine("【出口】");
             sb.AppendLine("  " + sk + " 出口事件＋介紹；" + sk + " 通往文本；" + mk + " 填目標");
