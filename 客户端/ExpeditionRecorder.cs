@@ -3840,6 +3840,13 @@ namespace ExpeditionRecorder
             _y += UiScale.Px(28);
         }
 
+        static bool IsConditionOption(Dictionary<string, object> od)
+        {
+            if (od == null) return false;
+            string sp = S(od, "special").ToLowerInvariant();
+            return sp == "true" || od.ContainsKey("conditionText") || od.ContainsKey("requirement");
+        }
+
         static string ChoiceKey(string s)
         {
             return System.Text.RegularExpressions.Regex.Replace(s ?? "", @"[\s　★☆※]", "");
@@ -4407,7 +4414,8 @@ namespace ExpeditionRecorder
                         var od = opts[oi] as Dictionary<string, object>;
                         if (od == null) continue;
                         int optTop = _y;
-                        var optFrame = AddOptionFrame(optTop, "選項 " + (oi + 1));
+                        string optName = IsConditionOption(od) ? "條件選項⭐" : "選項 " + (oi + 1);
+                        var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         if (od.ContainsKey("check"))
@@ -4438,7 +4446,7 @@ namespace ExpeditionRecorder
                         {
                             usedBranches.Add(branch);
                             int resTop = _y;
-                            var resFrame = AddOptionFrame(resTop, "選項 " + (oi + 1) + " 結果");
+                            var resFrame = AddOptionFrame(resTop, optName + " 結果");
                             AddBranchFields(branch);
                             resFrame.Rect = new Rectangle(resFrame.Rect.X, resFrame.Rect.Y, resFrame.Rect.Width,
                                 Math.Max(UiScale.Px(40), _y - resTop + UiScale.Px(6)));
@@ -5527,15 +5535,13 @@ namespace ExpeditionRecorder
                     else if (Kind == "event" && l.IsOption && l.OptionGroup >= 0)
                     {
                         color = Color.FromArgb(255, 76, 217, 100);
-                        label = "選項" + CnNumber(l.OptionGroup + 1);
-                        if (l.Check != "" || l.Requirement != "") label += "條件";
+                        bool cond = l.IsSpecial || l.Check != "" || l.Requirement != "";
+                        label = cond ? "條件選項⭐" : "選項" + CnNumber(l.OptionGroup + 1);
                     }
                     else if (Kind == "event" && l.IsCondition)
                     {
                         color = Color.FromArgb(255, 255, 214, 64);
-                        label = l.ConditionFor >= 0
-                            ? "選項" + CnNumber(l.ConditionFor + 1) + "條件"
-                            : "選項條件";
+                        label = "條件選項⭐";
                     }
                     else continue;
                     DrawTag(g, font, l.Rect, color, label);
