@@ -2932,6 +2932,9 @@ namespace ExpeditionRecorder
         Panel _panel;
         int _y = 12;
         List<Action> _savers = new List<Action>();
+        System.Windows.Forms.Timer _autoSave;
+        bool _saving;
+        bool _dirty;
 
         public RecordEditForm(RecordEntry entry)
             : this(entry.Kind, entry.Data, null, true)
@@ -2960,52 +2963,31 @@ namespace ExpeditionRecorder
             ForeColor = Color.FromArgb(230, 230, 235);
             KeyPreview = true;
 
-            var bottom = new Panel();
-            bottom.Dock = DockStyle.Bottom;
-            bottom.Height = UiScale.Px(52);
-            bottom.BackColor = Color.FromArgb(24, 24, 27);
-
-            var save = new Button();
-            save.Text = "保存修改";
-            save.SetBounds(12, UiScale.Px(10), UiScale.Px(120), UiScale.Px(32));
-            save.FlatStyle = FlatStyle.Flat;
-            save.BackColor = Color.FromArgb(44, 44, 47);
-            save.ForeColor = Color.White;
-            save.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
-            save.Click += delegate { SaveAndClose(); };
-            bottom.Controls.Add(save);
-
-            var cancel = new Button();
-            cancel.Text = "取消";
-            cancel.SetBounds(UiScale.Px(144), UiScale.Px(10), UiScale.Px(100), UiScale.Px(32));
-            cancel.FlatStyle = FlatStyle.Flat;
-            cancel.BackColor = Color.FromArgb(44, 44, 47);
-            cancel.ForeColor = Color.White;
-            cancel.FlatAppearance.BorderColor = Color.FromArgb(78, 78, 84);
-            cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
-            bottom.Controls.Add(cancel);
-
-            var tip = new Label();
-            tip.Text = "只改结构字段；原始 JSONL 由程序重写，不需要手动改原文。";
-            tip.SetBounds(UiScale.Px(260), UiScale.Px(15), UiScale.Px(500), UiScale.Px(20));
-            tip.ForeColor = Color.FromArgb(160, 160, 168);
-            bottom.Controls.Add(tip);
-
             _panel = new Panel();
             _panel.Dock = DockStyle.Fill;
             _panel.AutoScroll = true;
             _panel.Padding = new Padding(10);
             _panel.BackColor = Color.FromArgb(32, 32, 36);
             Controls.Add(_panel);
-            Controls.Add(bottom);
-            bottom.BringToFront();
 
             BuildFields();
             UiScale.Apply(this);
+            HookAutoSave(_panel);
+            _autoSave = new System.Windows.Forms.Timer();
+            _autoSave.Interval = 600;
+            _autoSave.Tick += delegate
+            {
+                _autoSave.Stop();
+                if (!_saving) SaveData(false);
+            };
             KeyDown += delegate (object s, KeyEventArgs e)
             {
-                if (e.KeyCode == Keys.Escape) { DialogResult = DialogResult.Cancel; Close(); }
-                else if (e.Control && e.KeyCode == Keys.S) SaveAndClose();
+                if (e.KeyCode == Keys.Escape) Close();
+                else if (e.Control && e.KeyCode == Keys.S)
+                {
+                    if (_autoSave != null) _autoSave.Stop();
+                    SaveData(false);
+                }
             };
         }
 
@@ -3489,39 +3471,82 @@ namespace ExpeditionRecorder
             }
         }
 
-        void SaveAndClose()
+        void HookAutoSave(Control root)
         {
+            foreach (Control c in root.Controls)
+            {
+                var tb = c as TextBox;
+                if (tb != null) tb.TextChanged += delegate { ScheduleSave(); };
+                var cb = c as CheckBox;
+                if (cb != null) cb.CheckedChanged += delegate { ScheduleSave(); };
+                var rb = c as RadioButton;
+                if (rb != null) rb.CheckedChanged += delegate { ScheduleSave(); };
+                var combo = c as ComboBox;
+                if (combo != null) combo.SelectedIndexChanged += delegate { ScheduleSave(); };
+                var btn = c as Button;
+                if (btn != null) btn.Click += delegate { ScheduleSave(); };
+                if (c.HasChildren) HookAutoSave(c);
+            }
+        }
+
+        void ScheduleSave()
+        {
+            _dirty = true;
+            if (_autoSave == null) return;
+            _autoSave.Stop();
+            _autoSave.Start();
+        }
+
+        bool SaveData(bool closing)
+        {
+            if (_saving || !_dirty) return true;
+            _saving = true;
             try
             {
                 foreach (var save in _savers) save();
                 if (_externalSave != null)
                 {
                     _externalSave(_data);
-                    DialogResult = DialogResult.OK;
-                    Close();
-                    return;
+                    _dirty = false;
+                    return true;
                 }
+                if (_entry == null) { _dirty = false; return true; }
                 var ser = new JavaScriptSerializer();
+                string json = ser.Serialize(_entry.Data);
                 var lines = new List<string>(File.ReadAllLines(_entry.File));
                 bool replaced = false;
                 for (int i = 0; i < lines.Count; i++)
                 {
                     if (lines[i] == _entry.Line)
                     {
-                        lines[i] = ser.Serialize(_entry.Data);
+                        lines[i] = json;
                         replaced = true;
                         break;
                     }
                 }
                 if (!replaced) throw new Exception("找不到原始記錄行，請重新整理後再修改。");
                 File.WriteAllLines(_entry.File, lines.ToArray(), new UTF8Encoding(false));
-                DialogResult = DialogResult.OK;
-                Close();
+                _entry.Line = json;
+                _dirty = false;
+                return true;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("保存失敗：" + ex.Message, "已記錄", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (closing)
+                    MessageBox.Show("保存失敗：" + ex.Message, "已記錄", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                    Text = "編輯記錄：" + _kind + "（自動保存失敗）";
+                return false;
             }
+            finally { _saving = false; }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_autoSave != null) _autoSave.Stop();
+            if (!SaveData(true)) { e.Cancel = true; return; }
+            if (_externalSave != null) DialogResult = DialogResult.OK;
+            base.OnFormClosing(e);
         }
     }
 
