@@ -180,10 +180,10 @@ node D:\Project\HulinBackroomsWiki\客户端\Recorder\structured\tests\run-tests
 
 - 楼层：**96 层**（38 一般、41 `name-only`、17 `id-only`）。
 - 有 `events.json` 的楼层：**16**；有 `endings.json`：**0**；有 doc：**37**；有 palette：**36**；有 `design.css`：**2**。
-- 角色 **99**、实体 **71**、物品 **455**、商店 **17**。
+- 角色 **104**、实体 **71**、物品 **465**、商店 **17**。
 - 验收：`verify-final` **845 / 845**（failed 0、warnings 5）；`smoke` **8 / 8**；`sync --check` **84 项对齐**；`build` exit 0。
 - 已知内容债：
-  - 455 件物品中 261 件没有 `desc`、101 件 `eff` 空、26 件没有 `eff` 字段；**多数是用户尚未截图，先不要代写**。
+  - 465 件物品中 271 件没有 `desc`、101 件 `eff` 空、26 件没有 `eff` 字段；**多数是用户尚未截图，先不要代写**。
   - 116 处角色／实体／商店／配方引用找不到对应物品（含 OCR 杂讯与真缺条目）。
   - 54 个 JSON 仍含 `D:\Project\HulinBackroomsWiki\...` 绝对路径（多在 `_staging`／`_observations`）。
   - 17 个 `id-only` 楼层没有可恢复的名字（其中 9 个是 `▒▒▒▒▒`），不要编造。
