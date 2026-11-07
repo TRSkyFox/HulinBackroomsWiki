@@ -1630,7 +1630,11 @@ namespace ExpeditionRecorder
             { "狀態：已切換成繁體", "Status: Switched to Traditional" },
             { "狀態：已切換成英文", "Status: Switched to English" },
             { "已存一條事件", "Event saved" },
-            { "寫入失敗，尚未存檔", "Write failed; not saved" }
+            { "寫入失敗，尚未存檔", "Write failed; not saved" },
+            { "搜尋", "Search" },
+            { "篩選", "Filter" },
+            { "重整", "Refresh" },
+            { "開啟資料夾", "Open folder" }
         };
 
         static void Ensure()
@@ -1644,7 +1648,34 @@ namespace ExpeditionRecorder
             _t2s['為'] = '为';
             _t2s['眾'] = '众';
             _t2s['門'] = '门';
+            _t2s['籤'] = '签';
+            _t2s['籖'] = '签';
         }
+
+        static readonly Dictionary<string, string> SPhrases = new Dictionary<string, string>
+        {
+            { "開啟資料夾", "打开文件夹" },
+            { "重新整理", "刷新" },
+            { "重整", "刷新" },
+            { "搜尋", "搜索" },
+            { "篩選", "筛选" },
+            { "解析度", "分辨率" },
+            { "匯出", "导出" },
+            { "匯入", "导入" },
+            { "介面", "界面" },
+            { "預設", "默认" },
+            { "載入", "加载" },
+            { "儲存", "保存" },
+            { "選單", "菜单" },
+            { "檔案", "文件" },
+            { "資料夾", "文件夹" },
+            { "連線", "连接" },
+            { "網路", "网络" },
+            { "資訊", "信息" },
+            { "帳號", "账号" },
+            { "登入", "登录" },
+            { "使用者", "用户" }
+        };
 
         public static string FontFamily
         {
@@ -1671,6 +1702,28 @@ namespace ExpeditionRecorder
             foreach (Control child in root.Controls) ApplyFonts(child);
         }
 
+        public static void SetComboItems(ComboBox cb, params string[] items)
+        {
+            if (cb == null) return;
+            cb.Tag = items;
+            ApplyComboItems(cb);
+        }
+
+        static void ApplyComboItems(ComboBox cb)
+        {
+            var items = cb.Tag as string[];
+            if (items == null) return;
+            int selected = cb.SelectedIndex;
+            cb.BeginUpdate();
+            try
+            {
+                cb.Items.Clear();
+                foreach (var s in items) cb.Items.Add(Convert(s, Lang == UiLang.Simplified));
+                if (selected >= 0 && selected < cb.Items.Count) cb.SelectedIndex = selected;
+            }
+            finally { cb.EndUpdate(); }
+        }
+
         public static string ToTraditional(string s)
         {
             if (string.IsNullOrEmpty(s)) return s;
@@ -1684,6 +1737,11 @@ namespace ExpeditionRecorder
         {
             if (string.IsNullOrEmpty(s)) return s;
             Ensure();
+            if (toSimplified)
+            {
+                string phrase;
+                if (SPhrases.TryGetValue(s, out phrase)) return phrase;
+            }
             var map = toSimplified ? _t2s : Party.S2T;
             if (map == null || map.Count == 0) return s;
             var sb = new StringBuilder(s.Length);
@@ -1754,6 +1812,8 @@ namespace ExpeditionRecorder
         static void Apply(Control c)
         {
             if (c == null) return;
+            var combo = c as ComboBox;
+            if (combo != null) ApplyComboItems(combo);
             /* 下拉選單／文字輸入的內容不是 UI 標籤，不能翻譯。 */
             if (!(c is ComboBox) && !(c is TextBox) && !NoTranslate.Contains(c))
             {
@@ -4147,6 +4207,8 @@ namespace ExpeditionRecorder
         public static RecordsForm Instance;
         TextBox _search;
         Label _searchTip;
+        Label _filterLabel;
+        Panel _splitter;
         Panel _editorHost;
         RecordEditForm _inlineEditor;
         bool _closingInline;
@@ -4154,6 +4216,8 @@ namespace ExpeditionRecorder
         Label _count;
         ComboBox _kind;
         Button _reloadBtn, _delBtn, _openBtn, _closeBtn;
+        int _listW;
+        int _splitStartX, _splitStartW;
         List<RecordEntry> _all = new List<RecordEntry>();
         List<RecordEntry> _shown = new List<RecordEntry>();
 
@@ -4182,10 +4246,14 @@ namespace ExpeditionRecorder
             _searchTip.SetBounds(420, UiScale.Px(13), 48, UiScale.Px(24));
             _searchTip.ForeColor = Color.FromArgb(140, 140, 148);
             Controls.Add(_searchTip);
+            _filterLabel = new Label();
+            _filterLabel.Text = "篩選";
+            _filterLabel.ForeColor = Color.FromArgb(140, 140, 148);
+            Controls.Add(_filterLabel);
             _kind = new ComboBox();
             _kind.DropDownStyle = ComboBoxStyle.DropDownList;
             _kind.SetBounds(472, 10, 130, UiScale.Px(28));
-            _kind.Items.AddRange(new object[] { "全部", "事件", "物品", "樓層", "出口", "結局", "商店" });
+            UiText.SetComboItems(_kind, "全部", "事件", "物品", "樓層", "出口", "結局", "商店");
             _kind.SelectedIndex = 0;
             _kind.SelectedIndexChanged += delegate { ApplyFilter(); };
             Controls.Add(_kind);
@@ -4205,6 +4273,25 @@ namespace ExpeditionRecorder
             _editorHost.BackColor = Color.FromArgb(24, 24, 27);
             _editorHost.BorderStyle = BorderStyle.FixedSingle;
             Controls.Add(_editorHost);
+
+            _splitter = new Panel();
+            _splitter.BackColor = Color.FromArgb(64, 64, 72);
+            _splitter.Cursor = Cursors.VSplit;
+            _splitter.MouseDown += delegate
+            {
+                _splitStartX = Control.MousePosition.X;
+                _splitStartW = _listW;
+                _splitter.Capture = true;
+            };
+            _splitter.MouseMove += delegate
+            {
+                if (!_splitter.Capture) return;
+                int dx = Control.MousePosition.X - _splitStartX;
+                _listW = Math.Max(UiScale.Px(150), Math.Min(UiScale.Px(430), _splitStartW + dx));
+                LayoutRecords();
+            };
+            _splitter.MouseUp += delegate { _splitter.Capture = false; };
+            Controls.Add(_splitter);
 
             _count = new Label();
             _count.SetBounds(12, 560, 880, 18);
@@ -4227,24 +4314,31 @@ namespace ExpeditionRecorder
         void LayoutRecords()
         {
             int pad = UiScale.Px(12);
-            int top = Math.Max(UiScale.Px(42), UiScale.Px(10) + UiScale.Px(28) + UiScale.Px(8));
+            int top = pad;
+            int rowH = UiScale.Px(24);
+            int gap = UiScale.Px(6);
             int bottom = UiScale.Px(92);
             int w = ClientSize.Width;
             int h = ClientSize.Height;
-            int searchW = Math.Max(180, Math.Min(400, w - 300));
-            _search.SetBounds(pad, UiScale.Px(10), searchW, UiScale.Px(28));
-            int tipW = UiScale.Px(56);
-            int tipX = pad + searchW + UiScale.Px(8);
-            _searchTip.SetBounds(tipX, UiScale.Px(10), tipW, UiScale.Px(28));
-            int kindX = tipX + tipW + UiScale.Px(8);
-            _kind.SetBounds(kindX, UiScale.Px(10), Math.Max(100, w - kindX - pad), UiScale.Px(28));
-            int listW = Math.Max(240, Math.Min(460, (w - pad * 3) * 34 / 100));
-            if (w < 760) listW = Math.Max(200, (w - pad * 3) / 2);
-            int detailX = pad + listW + 12;
-            int detailW = Math.Max(220, w - detailX - pad);
-            int contentH = Math.Max(120, h - top - bottom - 8);
-            _list.SetBounds(pad, top, listW, contentH);
+            int minW = UiScale.Px(150);
+            int maxW = Math.Max(minW, Math.Min(UiScale.Px(430), w - UiScale.Px(320)));
+            if (_listW <= 0) _listW = Math.Max(minW, Math.Min(maxW, (w - pad * 3) * 26 / 100));
+            _listW = Math.Max(minW, Math.Min(maxW, _listW));
+            int labelW = UiScale.Px(42);
+            int searchW = Math.Max(UiScale.Px(80), _listW - labelW - gap);
+            _search.SetBounds(pad, top, searchW, rowH);
+            _searchTip.SetBounds(pad + searchW + gap, top, labelW, rowH);
+            int filterY = top + rowH + gap;
+            _filterLabel.SetBounds(pad, filterY, labelW, rowH);
+            _kind.SetBounds(pad + labelW, filterY, Math.Max(UiScale.Px(80), _listW - labelW), rowH);
+            int leftTop = filterY + rowH + gap;
+            int detailX = pad + _listW + UiScale.Px(6);
+            int detailW = Math.Max(UiScale.Px(220), w - detailX - pad);
+            int contentH = Math.Max(UiScale.Px(120), h - top - bottom - UiScale.Px(8));
+            _list.SetBounds(pad, leftTop, _listW, Math.Max(UiScale.Px(80), h - leftTop - bottom - UiScale.Px(8)));
             _editorHost.SetBounds(detailX, top, detailW, contentH);
+            _splitter.SetBounds(pad + _listW, top, UiScale.Px(6), contentH);
+            _splitter.BringToFront();
             _count.SetBounds(pad, h - UiScale.Px(44), Math.Max(200, w - pad * 2), UiScale.Px(40));
             int by = h - UiScale.Px(80);
             if (_reloadBtn != null) _reloadBtn.SetBounds(pad, by, UiScale.Px(90), UiScale.Px(32));
