@@ -5641,7 +5641,7 @@ namespace ExpeditionRecorder
 
             CacheResetTimer = new System.Windows.Forms.Timer();
             CacheResetTimer.Interval = 8000;
-            CacheResetTimer.Tick += delegate { ResetCacheConfirm(); };
+            CacheResetTimer.Tick += delegate { ResetCacheConfirm(); SetState("已取消清理緩存"); };
             ResetCacheConfirm();
 
             var recGroup = Group("記錄", 12, 112, 406, 140);
