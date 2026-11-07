@@ -3442,6 +3442,45 @@ namespace ExpeditionRecorder
             _y += UiScale.Px(36);
         }
 
+        void AddCompactFloorRow(Dictionary<string, object> o)
+        {
+            int rowY = _y;
+            var floorLabel = new Label();
+            floorLabel.Text = "樓層";
+            floorLabel.SetBounds(14, rowY + 5, UiScale.Px(120), UiScale.Px(24));
+            floorLabel.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(floorLabel);
+            bool normal = Parse.IsNormalFloorId(S(o, "floorId"));
+            var prefix = new Label();
+            prefix.Text = "Level";
+            prefix.SetBounds(UiScale.Px(150), rowY + 4, UiScale.Px(42), UiScale.Px(22));
+            prefix.ForeColor = Color.FromArgb(220, 220, 226);
+            prefix.Visible = normal;
+            _panel.Controls.Add(prefix);
+            var idBox = new TextBox();
+            idBox.SetBounds(normal ? UiScale.Px(195) : UiScale.Px(150), rowY, normal ? UiScale.Px(180) : UiScale.Px(220), UiScale.Px(24));
+            idBox.BackColor = Color.FromArgb(40, 40, 44);
+            idBox.ForeColor = Color.White;
+            idBox.BorderStyle = BorderStyle.FixedSingle;
+            idBox.Text = S(o, "floorId");
+            _panel.Controls.Add(idBox);
+            var nameBox = new TextBox();
+            nameBox.SetBounds(normal ? UiScale.Px(383) : UiScale.Px(378), rowY,
+                Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(normal ? 397 : 392)), UiScale.Px(24));
+            nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            nameBox.BackColor = Color.FromArgb(40, 40, 44);
+            nameBox.ForeColor = Color.White;
+            nameBox.BorderStyle = BorderStyle.FixedSingle;
+            nameBox.Text = S(o, "floorName");
+            _panel.Controls.Add(nameBox);
+            _savers.Add(delegate
+            {
+                o["floorId"] = idBox.Text.Trim();
+                o["floorName"] = nameBox.Text.Trim();
+            });
+            _y += UiScale.Px(36);
+        }
+
         void AddPalettePreview(Dictionary<string, object> o)
         {
             AddHeading("配色預覽");
@@ -3528,27 +3567,22 @@ namespace ExpeditionRecorder
         void BuildFields()
         {
             var o = _data;
-            AddHeading("結構化欄位");
             if (_kind == "事件")
             {
-                AddHeading("事件");
                 var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
                 if (_lockIdentity)
                 {
-                    AddFixed("類型", "事件");
                     AddFixed("事件類型", Program.EventKindText(S(o, "eventKind")));
                     AddFixed("事件名", EventTitleOf(o));
-                    AddText(o, "floorId", "樓層 ID");
-                    AddText(o, "floorName", "樓層名稱");
+                    AddCompactFloorRow(o);
                     string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
                     string chars = A(o, "characters"); if (chars == "") chars = S(o, "character");
                     AddFixed("歸屬", scopes + (chars != "" ? "　角色：" + chars : ""));
                 }
                 else
                 {
-                    AddText(o, "floorId", "樓層 ID");
-                    AddText(o, "floorName", "樓層名稱");
+                    AddCompactFloorRow(o);
                     string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
                     var tt = AddRaw("事件名", title, false, 24);
                     _savers.Add(delegate
@@ -3578,6 +3612,7 @@ namespace ExpeditionRecorder
                 }
                 else if (o.ContainsKey("choice")) branches.Add(o);
 
+                Program.MoveChecksToOptions(o);
                 var opts = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
                 AddHeading("選項");
                 if (opts != null && opts.Count > 0)
@@ -3589,8 +3624,9 @@ namespace ExpeditionRecorder
                         AddHeading("選項 " + (oi + 1));
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        if (od.ContainsKey("check")) AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
-                        if (od.ContainsKey("conditionText")) AddLongText(od, "conditionText", "出現條件");
+                        if (od.ContainsKey("check"))
+                            AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
+                        if (od.ContainsKey("conditionText")) AddLongText(od, "conditionText", "選項條件");
                         var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
                         if (req != null)
                         {
@@ -3612,7 +3648,6 @@ namespace ExpeditionRecorder
                             var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
                             if (ck != null)
                             {
-                                AddChoice(ck, "attribute", "判定屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                                 var outs = new List<string> { "成功", "失敗" };
                                 string cur = S(ck, "outcome");
                                 if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
@@ -3656,7 +3691,6 @@ namespace ExpeditionRecorder
                     var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
                     if (ck != null)
                     {
-                        AddChoice(ck, "attribute", "判定屬性", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                         var outs = new List<string> { "成功", "失敗" };
                         string cur = S(ck, "outcome");
                         if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
@@ -3681,7 +3715,6 @@ namespace ExpeditionRecorder
             {
                 if (_lockIdentity)
                 {
-                    AddFixed("類型", "物品");
                     AddFixed("名稱", S(o, "name"));
                     AddFixed("分類", S(o, "type"));
                 }
@@ -3708,7 +3741,6 @@ namespace ExpeditionRecorder
             {
                 if (_lockIdentity)
                 {
-                    AddFixed("類型", "出口");
                     AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
                     AddFixed("出口事件", S(o, "event"));
                 }
@@ -3726,7 +3758,6 @@ namespace ExpeditionRecorder
             {
                 if (_lockIdentity)
                 {
-                    AddFixed("類型", "結局");
                     AddFixed("結局名稱", S(o, "name"));
                     AddFixed("分類", S(o, "category"));
                 }
@@ -3742,7 +3773,6 @@ namespace ExpeditionRecorder
             {
                 if (_lockIdentity)
                 {
-                    AddFixed("類型", "商店");
                     AddFixed("商店", S(o, "title"));
                     AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
                 }
@@ -4273,7 +4303,7 @@ namespace ExpeditionRecorder
                     sb.AppendLine("  · " + optText);
                     if (Str(od, "desc") != "") sb.AppendLine("    " + Str(od, "desc"));
                     if (od.ContainsKey("requirement")) sb.AppendLine("    需求：" + ReqText(od["requirement"]));
-                    if (Str(od, "conditionText") != "") sb.AppendLine("    出現需求：" + Str(od, "conditionText"));
+                    if (Str(od, "conditionText") != "") sb.AppendLine("    選項條件：" + Str(od, "conditionText"));
                     bool needCheck = Str(od, "check") != "";
                     var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
                     if (req != null && Str(req, "type") == "attr") needCheck = true;
@@ -4941,11 +4971,15 @@ namespace ExpeditionRecorder
                     if (reqAttr != "" && !d.ContainsKey("check")) d["check"] = reqAttr;
                 }
                 if (o.TextColor != Color.Empty) d["color"] = ColorTranslator.ToHtml(o.TextColor);
+                string conditionText = Party.Normalize(o.Condition);
+                string conditionAttr = NormalizeAttr(conditionText);
+                if (conditionAttr != "" && !d.ContainsKey("check")) d["check"] = conditionAttr;
                 if (o.IsSpecial)
                 {
                     d["special"] = true;
                     d["specialReason"] = SpecialReason(o);
-                    if (o.Condition != "") d["conditionText"] = Party.Normalize(o.Condition);
+                    if (conditionText != "" && conditionAttr == "" && !d.ContainsKey("check"))
+                        d["conditionText"] = conditionText;
                 }
                 if (o.ReqType != "" && o.ReqType != "attr")
                 {
@@ -5280,8 +5314,9 @@ namespace ExpeditionRecorder
         static bool IsMultiplayerPrompt(string t)
         {
             string s = (t ?? "").Trim();
-            if (s.StartsWith("要由谁来") || s.StartsWith("要由誰來")) return true;
-            if (s.StartsWith("大家推派") || s.StartsWith("大家推選") || s.StartsWith("大家推举") || s.StartsWith("大家推舉")) return true;
+            if (s.IndexOf("要由谁来", StringComparison.Ordinal) >= 0 || s.IndexOf("要由誰來", StringComparison.Ordinal) >= 0) return true;
+            if (s.IndexOf("大家推派", StringComparison.Ordinal) >= 0 || s.IndexOf("大家推選", StringComparison.Ordinal) >= 0
+                || s.IndexOf("大家推举", StringComparison.Ordinal) >= 0 || s.IndexOf("大家推舉", StringComparison.Ordinal) >= 0) return true;
             if (s.IndexOf("自己的选", StringComparison.Ordinal) >= 0 && s.IndexOf("择", StringComparison.Ordinal) >= 0) return true;
             if (s.IndexOf("自己的選", StringComparison.Ordinal) >= 0 && s.IndexOf("擇", StringComparison.Ordinal) >= 0) return true;
             if (s.IndexOf("一按就算数", StringComparison.Ordinal) >= 0 || s.IndexOf("一按就算數", StringComparison.Ordinal) >= 0) return true;
@@ -5365,7 +5400,7 @@ namespace ExpeditionRecorder
                 return list;
             }
 
-            string[] parts = body.Split(new char[] { '、', '，', ',', '；', ';' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = body.Split(new char[] { '、', '丶', '，', ',', '；', ';', '·', '・' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return list;
             foreach (var part in parts)
             {
@@ -5724,6 +5759,60 @@ namespace ExpeditionRecorder
             if (k == "cooperation") return "合力事件";
             if (k == "common") return "通用事件";
             return "普通事件";
+        }
+
+        internal static void MoveChecksToOptions(Dictionary<string, object> rec)
+        {
+            if (rec == null) return;
+            var steps = rec.ContainsKey("steps") ? rec["steps"] as System.Collections.ArrayList : null;
+            if (steps == null || steps.Count == 0) return;
+            var s1 = steps[0] as Dictionary<string, object>;
+            var options = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
+            if (options == null) return;
+            foreach (var oo in options)
+            {
+                var od = oo as Dictionary<string, object>;
+                if (od == null) continue;
+                string ct = Convert.ToString(od.ContainsKey("conditionText") ? od["conditionText"] : "");
+                if (ct == "")
+                {
+                    if (od.ContainsKey("check")) continue;
+                    ct = Convert.ToString(od.ContainsKey("requirement") ? od["requirement"] : "");
+                }
+                var ma = System.Text.RegularExpressions.Regex.Match(ct, "(力量|敏捷|體質|体质|感知|智力|魅力)");
+                if (!ma.Success) continue;
+                string attr = ma.Groups[1].Value == "体质" ? "體質" : ma.Groups[1].Value;
+                if (!od.ContainsKey("check") || Convert.ToString(od["check"]) == "") od["check"] = attr;
+                if (od.ContainsKey("conditionText")) od.Remove("conditionText");
+            }
+            var branches = new List<Dictionary<string, object>>();
+            for (int i = 1; i < steps.Count; i++)
+            {
+                var st = steps[i] as Dictionary<string, object>;
+                if (st == null) continue;
+                var nested = st.ContainsKey("branches") ? st["branches"] as System.Collections.ArrayList : null;
+                if (nested != null)
+                    foreach (var n in nested) { var nd = n as Dictionary<string, object>; if (nd != null) branches.Add(nd); }
+                else branches.Add(st);
+            }
+            foreach (var b in branches)
+            {
+                var ck = b.ContainsKey("check") ? b["check"] as Dictionary<string, object> : null;
+                if (ck == null) continue;
+                string attr = Convert.ToString(ck.ContainsKey("attribute") ? ck["attribute"] : "");
+                if (attr == "") continue;
+                string choice = Convert.ToString(b.ContainsKey("choice") ? b["choice"] : "");
+                if (choice == "") continue;
+                Dictionary<string, object> match = null;
+                foreach (var oo in options)
+                {
+                    var od = oo as Dictionary<string, object>;
+                    if (od != null && Convert.ToString(od.ContainsKey("text") ? od["text"] : "") == choice) { match = od; break; }
+                }
+                if (match == null) continue;
+                if (!match.ContainsKey("check") || Convert.ToString(match["check"]) == "") match["check"] = attr;
+                ck.Remove("attribute");
+            }
         }
 
         static void ApplyFreeChoiceBonus(Dictionary<string, object> rec)
@@ -7588,6 +7677,7 @@ namespace ExpeditionRecorder
                 }
             }
             rec["steps"] = Steps.ToArray();
+            MoveChecksToOptions(rec);
             ApplyFreeChoiceBonus(rec);
             if (!WriteEvent(rec))
             {
