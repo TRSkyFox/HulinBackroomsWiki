@@ -1410,6 +1410,7 @@ namespace ExpeditionRecorder
             { "客戶端", "Clients" },
             { "開啟客戶端", "Open client" },
             { "關閉客戶端", "Close client" },
+            { "刷新網頁", "Refresh page" },
             { "解析度", "Resolution" },
             { "記錄", "Recording" },
             { "按鍵設定", "Hotkeys" },
@@ -5601,6 +5602,10 @@ namespace ExpeditionRecorder
             };
             clientGroup.Controls.Add(resCombo);
 
+            var refreshPage = Btn("刷新網頁", 300, 62, 90, 24);
+            refreshPage.Click += delegate { RefreshWebPage(); };
+            clientGroup.Controls.Add(refreshPage);
+
             var recGroup = Group("記錄", 12, 112, 406, 140);
             StepLabel = new Label();
             StepLabel.SetBounds(14, 24, 378, 40);
@@ -6218,6 +6223,31 @@ namespace ExpeditionRecorder
             Client = null;
             ClientOwned = false;
             SetState("狀態：客戶端已關閉");
+        }
+
+        static void RefreshWebPage()
+        {
+            try
+            {
+                if (GameHwnd == IntPtr.Zero) EnsureClient(false);
+                if (GameHwnd == IntPtr.Zero) { SetState("找不到客戶端視窗"); return; }
+                Native.SetForegroundWindow(GameHwnd);
+                System.Threading.Thread.Sleep(80);
+                Application.DoEvents();
+                if (Native.GetForegroundWindow() == GameHwnd)
+                {
+                    SendKeys.SendWait("{F5}");
+                    SetState("已刷新網頁");
+                    return;
+                }
+                /* 焦點搶不到時，直接把 F5 送進 WebView 的 render 子視窗。 */
+                IntPtr target = Capture.RenderChild(GameHwnd);
+                if (target == IntPtr.Zero) target = GameHwnd;
+                Native.PostMessage(target, 0x0100, (IntPtr)0x74, IntPtr.Zero);
+                Native.PostMessage(target, 0x0101, (IntPtr)0x74, IntPtr.Zero);
+                SetState("已送出刷新");
+            }
+            catch (Exception ex) { SetState("刷新失敗：" + ex.Message); }
         }
 
         /* ── 事件記錄 ─────────────────────────────────────── */
