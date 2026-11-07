@@ -3915,7 +3915,7 @@ namespace ExpeditionRecorder
             if (outs == "") outs = Str(o, "outcome");
             sb.AppendLine("結果類型：" + OutcomeText(outs) + (Str(o, "jumpTo") != "" ? " → " + Str(o, "jumpTo") : ""));
             string tags = JoinArr(o, "tags");
-            if (tags != "") sb.AppendLine("事件標籤：" + tags);
+            if (tags != "") sb.AppendLine("事件標籤：" + tags.Replace("rest", "休息處"));
             var s1 = EventStep1(o);
             string intro = s1 != null ? Str(s1, "intro") : Str(o, "intro");
             if (intro != "")
