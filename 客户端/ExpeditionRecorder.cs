@@ -38,6 +38,38 @@ namespace ExpeditionRecorder
         [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)] public static extern int SetWindowTheme(IntPtr hwnd, string app, string id);
         [DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
         [DllImport("user32.dll")] public static extern bool ShowScrollBar(IntPtr hwnd, int bar, bool show);
+        [DllImport("user32.dll")] public static extern bool SystemParametersInfo(uint action, uint param, ref bool value, uint winini);
+
+        static bool _comboAnimWasOn;
+
+        public static void DisableComboAnimation()
+        {
+            try
+            {
+                bool on = false;
+                if (SystemParametersInfo(0x1004, 0, ref on, 0))
+                {
+                    _comboAnimWasOn = on;
+                    if (on)
+                    {
+                        bool off = false;
+                        SystemParametersInfo(0x1005, 0, ref off, 2);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        public static void RestoreComboAnimation()
+        {
+            try
+            {
+                if (!_comboAnimWasOn) return;
+                bool on = true;
+                SystemParametersInfo(0x1005, 0, ref on, 2);
+            }
+            catch { }
+        }
 
         public static void DarkScroll(Control c)
         {
@@ -954,29 +986,29 @@ namespace ExpeditionRecorder
 
             _floorLabel = new Label();
             _floorLabel.Text = _curId == "" ? "事件出現樓層（OCR 未識別）" : "事件出現樓層（OCR：Level " + _curId + " " + _curName + "）";
-            _floorLabel.SetBounds(12, 94, 520, 20);
+            _floorLabel.SetBounds(12, 140, 520, 20);
             _floorLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(_floorLabel);
-            _floorBox = MkBox(12, 116, 300);
+            _floorBox = MkBox(12, 162, 300);
             _floorBox.Text = (_curId + " " + _curName).Trim();
 
             _charLabel = new Label();
             _charLabel.Text = "角色（角色事件填一個，合力事件可填多個，用、分隔）";
-            _charLabel.SetBounds(12, 148, 520, 20);
+            _charLabel.SetBounds(12, 194, 520, 20);
             _charLabel.ForeColor = Color.FromArgb(180, 180, 188);
             Controls.Add(_charLabel);
-            _charBox = MkBox(12, 170, 500);
+            _charBox = MkBox(12, 216, 500);
             string ch = !string.IsNullOrEmpty(characterName) ? characterName : prefill;
             _charBox.Text = ch ?? "";
 
-            var l2 = new Label(); l2.Text = "選項導向"; l2.SetBounds(12, 206, 520, 20); l2.ForeColor = Color.FromArgb(255, 214, 120); Controls.Add(l2);
-            _jump = MkCheck("跳層 →", 12, 230, 70);
-            _jumpBox = MkBox(88, 230, 190);
-            _combat = MkCheck("進入戰鬥，實體名稱：", 12, 260, 180);
-            _enemyBox = MkBox(196, 260, 350);
+            var l2 = new Label(); l2.Text = "結果導向"; l2.SetBounds(12, 252, 520, 20); l2.ForeColor = Color.FromArgb(255, 214, 120); Controls.Add(l2);
+            _jump = MkCheck("切換樓層 →", 12, 276, 100);
+            _jumpBox = MkBox(118, 276, 160);
+            _combat = MkCheck("進入戰鬥，實體名稱：", 12, 306, 180);
+            _enemyBox = MkBox(196, 306, 350);
 
-            var l3 = new Label(); l3.Text = "事件標籤"; l3.SetBounds(12, 296, 520, 20); l3.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l3);
-            _rest = MkCheck("休息處", 12, 320, 120);
+            var l3 = new Label(); l3.Text = "事件標籤"; l3.SetBounds(12, 90, 520, 20); l3.ForeColor = Color.FromArgb(180, 180, 188); Controls.Add(l3);
+            _rest = MkCheck("休息處", 12, 112, 120);
 
             _normal.CheckedChanged += delegate { UpdateEnabled(); };
             _free.CheckedChanged += delegate { UpdateEnabled(); };
@@ -2140,6 +2172,7 @@ namespace ExpeditionRecorder
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.Clear(BackColor);
+            if (DroppedDown) return;
             var r = ClientRectangle;
             TextRenderer.DrawText(e.Graphics, Text, Font,
                 new Rectangle(6, 0, Math.Max(10, r.Width - 26), r.Height), ForeColor,
@@ -3569,6 +3602,7 @@ namespace ExpeditionRecorder
 
             BuildFields();
             UiScale.Apply(this);
+            NormalizeTextHeights();
             Native.DarkScroll(_panel);
             HideNativeScroll();
             _panel.Invalidate(true);
@@ -3718,18 +3752,59 @@ namespace ExpeditionRecorder
             t.ForeColor = Color.White;
             t.BorderStyle = BorderStyle.FixedSingle;
             _panel.Controls.Add(t);
+            if (multi) t.TextChanged += delegate { AdjustTextHeight(t); };
             return t;
         }
 
         int WrappedHeight(string text, Font font, int width)
         {
             if (string.IsNullOrEmpty(text)) return UiScale.Px(24);
-            float scale = Math.Max(0.1f, UiScale.Scale);
-            int baseW = Math.Max(40, (int)Math.Round((width - UiScale.Px(12)) / scale));
+            int baseW = Math.Max(40, width - UiScale.Px(12));
             int measured = TextRenderer.MeasureText(text, font, new Size(baseW, int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height;
-            int h = (int)Math.Ceiling(measured * scale) + UiScale.Px(8);
-            return Math.Max(UiScale.Px(24), h);
+            return Math.Max(UiScale.Px(24), measured + UiScale.Px(8));
+        }
+
+        void AdjustTextHeight(TextBox t, bool force = false)
+        {
+            if (_rebuilding && !force) return;
+            if (t == null || !t.Multiline) return;
+            int newH = WrappedHeight(t.Text, t.Font, t.Width);
+            int oldH = t.Height;
+            if (newH == oldH) return;
+            int oldBottom = t.Top + oldH;
+            int delta = newH - oldH;
+            _panel.SuspendLayout();
+            try
+            {
+                t.Height = newH;
+                foreach (Control c in _panel.Controls)
+                {
+                    if (c == t) continue;
+                    if (c.Top >= oldBottom) c.Top += delta;
+                }
+                foreach (var f in _optionFrames)
+                {
+                    if (f.Rect.Top >= oldBottom) f.Rect = new Rectangle(f.Rect.X, f.Rect.Y + delta, f.Rect.Width, f.Rect.Height);
+                    else if (f.Rect.Bottom >= oldBottom) f.Rect = new Rectangle(f.Rect.X, f.Rect.Y, f.Rect.Width, Math.Max(1, f.Rect.Height + delta));
+                }
+                _y += delta;
+            }
+            finally { _panel.ResumeLayout(true); }
+            _panel.Invalidate(true);
+            if (_scrollbar != null) _scrollbar.Invalidate();
+        }
+
+        void NormalizeTextHeights()
+        {
+            var boxes = new List<TextBox>();
+            foreach (Control c in _panel.Controls)
+            {
+                var tb = c as TextBox;
+                if (tb != null && tb.Multiline) boxes.Add(tb);
+            }
+            boxes.Sort(delegate (TextBox a, TextBox b) { return a.Top.CompareTo(b.Top); });
+            foreach (var tb in boxes) AdjustTextHeight(tb, true);
         }
 
         void AddText(Dictionary<string, object> d, string key, string label)
@@ -3764,10 +3839,169 @@ namespace ExpeditionRecorder
             _y += UiScale.Px(28);
         }
 
+        static string ChoiceKey(string s)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(s ?? "", @"[\s　★☆※]", "");
+        }
+
+        static string StatusSummary(System.Collections.ArrayList effs)
+        {
+            if (effs == null) return "";
+            var parts = new List<string>();
+            foreach (var x in effs)
+            {
+                var ed = x as Dictionary<string, object>;
+                if (ed == null) continue;
+                string kind = S(ed, "kind");
+                string cat = "";
+                if (kind.IndexOf("体力", StringComparison.Ordinal) >= 0 || kind.IndexOf("體力", StringComparison.Ordinal) >= 0
+                    || kind.IndexOf("HP", StringComparison.OrdinalIgnoreCase) >= 0 || kind.IndexOf("生命", StringComparison.Ordinal) >= 0
+                    || kind.IndexOf("耐久", StringComparison.Ordinal) >= 0) cat = "体力";
+                else if (kind.IndexOf("理智", StringComparison.Ordinal) >= 0 || kind.IndexOf("SAN", StringComparison.OrdinalIgnoreCase) >= 0
+                    || kind.IndexOf("算力", StringComparison.Ordinal) >= 0) cat = "理智";
+                else if (kind.IndexOf("饥饿", StringComparison.Ordinal) >= 0 || kind.IndexOf("飢餓", StringComparison.Ordinal) >= 0) cat = "饥饿";
+                else if (kind.IndexOf("口渴", StringComparison.Ordinal) >= 0) cat = "口渴";
+                if (cat == "") continue;
+                double amt = 0;
+                double.TryParse(S(ed, "amount"), out amt);
+                string tag = cat + (amt < 0 ? "损失" : "恢复");
+                if (!parts.Contains(tag)) parts.Add(tag);
+            }
+            return string.Join("、", parts.ToArray());
+        }
+
+        void AddBranchFields(Dictionary<string, object> st)
+        {
+            var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
+            if (ck != null)
+            {
+                var outs = new List<string> { "成功", "失敗" };
+                string cur = S(ck, "outcome");
+                if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
+                AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
+                if (S(ck, "sameChoiceBonus") != "" && S(ck, "sameChoiceBonus") != "0")
+                    AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
+            }
+            AddResults(st);
+            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+            string summary = StatusSummary(eff);
+            if (summary != "" && S(st, "status") == "") st["status"] = summary;
+            AddText(st, "status", "狀態影響");
+            AddText(st, "coins", "獲得硬幣");
+            AddText(st, "items", "獲得物品");
+            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+            if (pg != null)
+            {
+                AddText(pg, "delta", "出口進度");
+            }
+            else
+            {
+                var progBox = AddRaw("出口進度", "", false, 24);
+                _savers.Add(delegate
+                {
+                    string v = progBox.Text.Trim();
+                    if (v != "")
+                    {
+                        var nd = new Dictionary<string, object>();
+                        nd["delta"] = v;
+                        st["progress"] = nd;
+                    }
+                    else st.Remove("progress");
+                });
+            }
+            if (eff != null)
+            {
+                for (int ei = 0; ei < eff.Count; ei++)
+                {
+                    var ed = eff[ei] as Dictionary<string, object>;
+                    if (ed == null) continue;
+                    string kind = S(ed, "kind");
+                    if (kind.IndexOf("体力", StringComparison.Ordinal) >= 0 || kind.IndexOf("體力", StringComparison.Ordinal) >= 0
+                        || kind.IndexOf("理智", StringComparison.Ordinal) >= 0 || kind.IndexOf("饥饿", StringComparison.Ordinal) >= 0
+                        || kind.IndexOf("飢餓", StringComparison.Ordinal) >= 0 || kind.IndexOf("口渴", StringComparison.Ordinal) >= 0
+                        || kind.IndexOf("算力", StringComparison.Ordinal) >= 0 || kind.IndexOf("耐久", StringComparison.Ordinal) >= 0) continue;
+                    if (ed.ContainsKey("text")) AddText(ed, "text", "影響 " + (ei + 1));
+                }
+            }
+            AddOutcomeDirection(st);
+        }
+
+        void AddOutcomeDirection(Dictionary<string, object> st)
+        {
+            var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
+            string enemy = cb != null ? S(cb, "enemy") : S(st, "combat");
+            string floor = S(st, "nextFloor");
+            if (floor == "") floor = S(st, "leadsTo");
+            var eBox = AddRaw("戰鬥實體", enemy, false, 24);
+            var fBox = AddRaw("目標樓層", floor, false, 24);
+            _savers.Add(delegate
+            {
+                string en = eBox.Text.Trim();
+                string fl = fBox.Text.Trim();
+                if (en != "")
+                {
+                    var nd = new Dictionary<string, object>();
+                    nd["enemy"] = en;
+                    st["combat"] = nd;
+                    st["outcomeType"] = "combat";
+                }
+                else
+                {
+                    st.Remove("combat");
+                    if (S(st, "outcomeType") == "combat") st.Remove("outcomeType");
+                }
+                if (fl != "")
+                {
+                    st["nextFloor"] = fl;
+                    st["outcomeType"] = "floor";
+                }
+                else
+                {
+                    st.Remove("nextFloor");
+                    if (S(st, "outcomeType") == "floor") st.Remove("outcomeType");
+                }
+            });
+        }
+
+        void AddResults(Dictionary<string, object> st)
+        {
+            var old = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
+            int n = old == null ? 0 : old.Count;
+            if (n == 0)
+            {
+                var t0 = AddRaw("選擇結果", "", true, 24);
+                _savers.Add(delegate
+                {
+                    var arr = new System.Collections.ArrayList();
+                    if (t0.Text.Trim() != "") arr.Add(t0.Text.Trim());
+                    st["results"] = arr;
+                });
+                return;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                int idx = i;
+                string label = n == 1 ? "選擇結果" : "結果 " + (i + 1);
+                var t = AddRaw(label, Convert.ToString(old[i]), true, 24);
+                _savers.Add(delegate
+                {
+                    var arr = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
+                    if (arr == null)
+                    {
+                        arr = new System.Collections.ArrayList();
+                        foreach (var x in old) arr.Add(Convert.ToString(x));
+                        st["results"] = arr;
+                    }
+                    while (arr.Count <= idx) arr.Add("");
+                    arr[idx] = t.Text.Trim();
+                });
+            }
+        }
+
         void AddOptionText(Dictionary<string, object> d)
         {
             string val = S(d, "text");
-            var t = AddRaw("選項文字", val, false, 24);
+            var t = AddRaw("選項", val, false, 24);
             string col = S(d, "color");
             if (col != "")
             {
@@ -3790,26 +4024,27 @@ namespace ExpeditionRecorder
             l.SetBounds(14, _y + 4, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
-            int n = Math.Max(1, values.Length);
-            int bh = UiScale.Px(24);
+            int bh = UiScale.Px(26);
             string current = S(d, key);
             int selected = Array.IndexOf(values, current);
             var buttons = new List<Button>();
-            var table = new TableLayoutPanel();
-            table.ColumnCount = n;
-            table.RowCount = 1;
-            table.SetBounds(narrow ? 14 : UiScale.Px(108), narrow ? _y + UiScale.Px(24) : _y,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Max(UiScale.Px(120), avail - UiScale.Px(122)), bh);
-            table.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            for (int i = 0; i < n; i++) table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f / n));
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, bh));
+            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int maxX = avail - UiScale.Px(14);
+            int x = fieldX;
+            int y = narrow ? _y + UiScale.Px(24) : _y;
             for (int i = 0; i < values.Length; i++)
             {
                 int idx = i;
+                int tw = (int)Math.Ceiling(TextRenderer.MeasureText(texts[i], Font).Width * UiScale.Scale);
+                int bw = Math.Max(UiScale.Px(42), Math.Min(maxX - fieldX, tw + UiScale.Px(18)));
+                if (x > fieldX && x + bw > maxX)
+                {
+                    x = fieldX;
+                    y += bh + UiScale.Px(4);
+                }
                 var b = new Button();
                 b.Text = texts[i];
-                b.Dock = DockStyle.Fill;
-                b.Margin = new Padding(UiScale.Px(2), 0, UiScale.Px(2), 0);
+                b.SetBounds(x, y, bw, bh);
                 b.FlatStyle = FlatStyle.Flat;
                 b.BackColor = Color.FromArgb(44, 44, 47);
                 b.ForeColor = Color.FromArgb(232, 232, 236);
@@ -3831,12 +4066,12 @@ namespace ExpeditionRecorder
                     b.ForeColor = Color.FromArgb(190, 240, 190);
                     b.FlatAppearance.BorderColor = Color.FromArgb(80, 160, 90);
                 }
-                table.Controls.Add(b, i, 0);
+                _panel.Controls.Add(b);
                 buttons.Add(b);
+                x += bw + UiScale.Px(4);
             }
-            _panel.Controls.Add(table);
             _savers.Add(delegate { if (d != null && selected >= 0) d[key] = values[selected]; });
-            _y += (narrow ? UiScale.Px(24) : 0) + bh + UiScale.Px(6);
+            _y = y + bh + UiScale.Px(6);
         }
 
         void AddFloorFields(Dictionary<string, object> o)
@@ -4122,6 +4357,7 @@ namespace ExpeditionRecorder
                 if (_lockIdentity)
                 {
                     AddFixed("事件類型", Program.EventKindText(S(o, "eventKind")));
+                    AddRestTag(o);
                     AddFixed("事件名", EventTitleOf(o));
                     AddCompactFloorRow(o);
                     string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
@@ -4139,9 +4375,9 @@ namespace ExpeditionRecorder
                         if (o.ContainsKey("title")) o["title"] = tt.Text;
                     });
                 }
+                if (!_lockIdentity) AddRestTag(o);
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
-                AddRestTag(o);
 
                 var branches = new List<Dictionary<string, object>>();
                 if (steps != null)
@@ -4162,6 +4398,7 @@ namespace ExpeditionRecorder
 
                 Program.MoveChecksToOptions(o);
                 var opts = s1 != null && s1.ContainsKey("options") ? s1["options"] as System.Collections.ArrayList : null;
+                var usedBranches = new HashSet<Dictionary<string, object>>();
                 if (opts != null && opts.Count > 0)
                 {
                     for (int oi = 0; oi < opts.Count; oi++)
@@ -4189,33 +4426,22 @@ namespace ExpeditionRecorder
                         else if (od.ContainsKey("requirement"))
                             AddText(od, "requirement", "需求文字");
                         string optText = Convert.ToString(od["text"]);
+                        Dictionary<string, object> branch = null;
                         foreach (var st in branches)
                         {
-                            if (Convert.ToString(st.ContainsKey("choice") ? st["choice"] : "") != optText) continue;
-                            AddHeading("選中結果：" + optText);
-                            var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
-                            if (ck != null)
-                            {
-                                var outs = new List<string> { "成功", "失敗" };
-                                string cur = S(ck, "outcome");
-                                if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
-                                AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
-                                if (S(ck, "sameChoiceBonus") != "" && S(ck, "sameChoiceBonus") != "0")
-                                    AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
-                            }
-                            if (S(st, "teamDecision").ToLower() == "true") AddFixed("決定方式", "隊伍決定");
-                            AddList(st, "results", "結果文本", false);
-                            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                            if (eff != null)
-                            {
-                                for (int ei = 0; ei < eff.Count; ei++)
-                                {
-                                    var ed = eff[ei] as Dictionary<string, object>;
-                                    if (ed != null) AddText(ed, "text", "影響文字 " + (ei + 1));
-                                }
-                            }
-                            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-                            if (pg != null) AddText(pg, "delta", "出口進度增減");
+                            if (ChoiceKey(Convert.ToString(st.ContainsKey("choice") ? st["choice"] : "")) == ChoiceKey(optText))
+                            { branch = st; break; }
+                        }
+                        if (branch == null && branches.Count == opts.Count) branch = branches[oi];
+                        if (branch != null)
+                        {
+                            usedBranches.Add(branch);
+                            int resTop = _y;
+                            var resFrame = AddOptionFrame(resTop, "選項 " + (oi + 1) + " 結果");
+                            AddBranchFields(branch);
+                            resFrame.Rect = new Rectangle(resFrame.Rect.X, resFrame.Rect.Y, resFrame.Rect.Width,
+                                Math.Max(UiScale.Px(40), _y - resTop + UiScale.Px(6)));
+                            _y += UiScale.Px(10);
                         }
                         optFrame.Rect = new Rectangle(optFrame.Rect.X, optFrame.Rect.Y, optFrame.Rect.Width,
                             Math.Max(UiScale.Px(40), _y - optTop + UiScale.Px(6)));
@@ -4226,40 +4452,27 @@ namespace ExpeditionRecorder
                 {
                     AddList(s1 ?? o, "options", "選項", true);
                 }
-                /* 選中但不在選項清單裡的分支，仍然給出可修改欄位。 */
+                /* 未掛到任何選項的結果，仍單獨顯示，不靠選項文字硬匹配。 */
+                int extra = 0;
                 foreach (var st in branches)
                 {
+                    if (usedBranches.Contains(st)) continue;
                     string c = Convert.ToString(st.ContainsKey("choice") ? st["choice"] : "");
                     bool matched = false;
                     if (opts != null)
                         foreach (var oo in opts)
                         {
                             var od = oo as Dictionary<string, object>;
-                            if (od != null && Convert.ToString(od["text"]) == c) { matched = true; break; }
+                            if (od != null && ChoiceKey(Convert.ToString(od["text"])) == ChoiceKey(c)) { matched = true; break; }
                         }
                     if (matched) continue;
-                    AddHeading("選中（未匹配選項）：" + c);
-                    var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
-                    if (ck != null)
-                    {
-                        var outs = new List<string> { "成功", "失敗" };
-                        string cur = S(ck, "outcome");
-                        if (cur != "" && !outs.Contains(cur)) outs.Add(cur);
-                        AddChoice(ck, "outcome", "判定結果", outs.ToArray(), outs.ToArray());
-                        if (S(ck, "sameChoiceBonus") != "" && S(ck, "sameChoiceBonus") != "0")
-                            AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
-                    }
-                    if (S(st, "teamDecision").ToLower() == "true") AddFixed("決定方式", "隊伍決定");
-                    AddList(st, "results", "結果文本", false);
-                    var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                    if (eff != null)
-                        for (int ei = 0; ei < eff.Count; ei++)
-                        {
-                            var ed = eff[ei] as Dictionary<string, object>;
-                            if (ed != null) AddText(ed, "text", "影響文字 " + (ei + 1));
-                        }
-                    var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-                    if (pg != null) AddText(pg, "delta", "出口進度增減");
+                    extra++;
+                    int resTop = _y;
+                    var resFrame = AddOptionFrame(resTop, "其他結果 " + extra);
+                    AddBranchFields(st);
+                    resFrame.Rect = new Rectangle(resFrame.Rect.X, resFrame.Rect.Y, resFrame.Rect.Width,
+                        Math.Max(UiScale.Px(40), _y - resTop + UiScale.Px(6)));
+                    _y += UiScale.Px(10);
                 }
             }
             else if (_kind == "物品")
@@ -4372,6 +4585,7 @@ namespace ExpeditionRecorder
                 _y = 12;
                 BuildFields();
                 UiText.ApplyTo(this);
+                NormalizeTextHeights();
                 HookAutoSave(_panel);
                 HideNativeScroll();
                 _panel.Invalidate(true);
@@ -4952,7 +5166,6 @@ namespace ExpeditionRecorder
                             if (ck != null && Str(ck, "sameChoiceBonus") != "" && Str(ck, "sameChoiceBonus") != "0")
                                 sb.AppendLine("    同選加成：+" + Str(ck, "sameChoiceBonus"));
                         }
-                        if (Str(st, "teamDecision").ToLower() == "true") sb.AppendLine("    決定：隊伍決定");
                         var qt = st.ContainsKey("qte") ? st["qte"] as Dictionary<string, object> : null;
                         if (qt != null)
                         {
@@ -5875,7 +6088,6 @@ namespace ExpeditionRecorder
                 if (qtePlayers.Count > 0) qd["players"] = qtePlayers;
                 rec["qte"] = qd;
             }
-            if (teamDecision) rec["teamDecision"] = true;
             string playerName = teamDecision && actor == "" ? "" : (actor != "" ? actor : Party.LocalName);
             if (playerName != "") rec["player"] = playerName;
             var players = SplitActors(playerName);
@@ -6501,6 +6713,7 @@ namespace ExpeditionRecorder
             {
                 SessionStart = DateTime.Now;
                 Native.SetProcessDPIAware();
+                Native.DisableComboAnimation();
                 for (int i = 0; i < args.Length; i++)
                 {
                     switch (args[i].ToLowerInvariant())
@@ -6765,6 +6978,7 @@ namespace ExpeditionRecorder
             ControlWindow.FormClosing += delegate
             {
                 Closing = true;
+                Native.RestoreComboAnimation();
                 try { if (CacheResetTimer != null) CacheResetTimer.Stop(); } catch { }
                 try { if (Keys != null) Keys.Uninstall(); } catch { }
                 try { if (GameHwnd != IntPtr.Zero) Native.EnableWindow(GameHwnd, true); } catch { }
