@@ -1299,7 +1299,7 @@ namespace ExpeditionRecorder
             Color text = PaletteColor("text", Theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
             g.Clear(bg);
             float fs = Math.Max(9F, 10F * UiScale.Scale);
-            using (var font = new Font("Microsoft JhengHei UI", fs))
+            using (var font = UiText.MakeFont(fs, FontStyle.Regular))
             using (var titleBrush = new SolidBrush(title))
             using (var textBrush = new SolidBrush(text))
             {
@@ -1620,6 +1620,35 @@ namespace ExpeditionRecorder
             if (_t2s != null) return;
             _t2s = new Dictionary<char, char>();
             foreach (var kv in Party.S2T) _t2s[kv.Value] = kv.Key;
+            /* s2t 裡有「爲／衆／冂／啓」等異體字也指向同一個繁體字；
+               反查時會被它們覆蓋，造成「开启」變「开啓」。 */
+            _t2s['啟'] = '启';
+            _t2s['為'] = '为';
+            _t2s['眾'] = '众';
+            _t2s['門'] = '门';
+        }
+
+        public static string FontFamily
+        {
+            get { return Lang == UiLang.Simplified ? "Microsoft YaHei UI" : "Microsoft JhengHei UI"; }
+        }
+
+        public static Font MakeFont(float size, FontStyle style)
+        {
+            try { return new Font(FontFamily, size, style); }
+            catch { return new Font("Microsoft JhengHei UI", size, style); }
+        }
+
+        public static void ApplyFonts(Control root)
+        {
+            if (root == null) return;
+            try
+            {
+                if (root.Font != null)
+                    root.Font = MakeFont(root.Font.Size, root.Font.Style);
+            }
+            catch { }
+            foreach (Control child in root.Controls) ApplyFonts(child);
         }
 
         public static string ToTraditional(string s)
@@ -1729,6 +1758,7 @@ namespace ExpeditionRecorder
         public static void ApplyTo(Control root)
         {
             Apply(root);
+            ApplyFonts(root);
         }
 
         public static void SetLang(UiLang lang)
@@ -1737,6 +1767,7 @@ namespace ExpeditionRecorder
             foreach (Form f in Application.OpenForms)
             {
                 try { Apply(f); } catch { }
+                try { ApplyFonts(f); } catch { }
             }
         }
     }
@@ -1847,7 +1878,12 @@ namespace ExpeditionRecorder
                     if (c == null || c.IsDisposed || c is TrackBar) continue;
                     var b = kv.Value;
                     if (b == null) continue;
-                    try { c.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
+                    try
+                    {
+                        string fam = b.FontFamily.Name.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? UiText.FontFamily : b.FontFamily.Name;
+                        c.Font = new Font(fam, b.Size * Scale, b.Style, GraphicsUnit.Point);
+                    }
                     catch { }
                 }
             }
@@ -1908,7 +1944,12 @@ namespace ExpeditionRecorder
                 Font b;
                 if (BaseFonts.TryGetValue(c, out b) && b != null)
                 {
-                    try { c.Font = new Font(b.FontFamily, b.Size * Scale, b.Style, GraphicsUnit.Point); }
+                    try
+                    {
+                        string fam = b.FontFamily.Name.IndexOf("JhengHei", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? UiText.FontFamily : b.FontFamily.Name;
+                        c.Font = new Font(fam, b.Size * Scale, b.Style, GraphicsUnit.Point);
+                    }
                     catch { }
                 }
             }
@@ -3588,7 +3629,7 @@ namespace ExpeditionRecorder
                 Color text = PaletteColor(pal, "text", theme == "light" ? Color.FromArgb(52, 50, 46) : Color.FromArgb(230, 230, 235));
                 e.Graphics.Clear(bg);
                 float fs = Math.Max(9F, 10F * UiScale.Scale);
-                using (var font = new Font("Microsoft JhengHei UI", fs))
+                using (var font = UiText.MakeFont(fs, FontStyle.Regular))
                 using (var titleBrush = new SolidBrush(title))
                 using (var textBrush = new SolidBrush(text))
                 {
