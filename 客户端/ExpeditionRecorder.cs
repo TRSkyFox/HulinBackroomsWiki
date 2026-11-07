@@ -2423,22 +2423,29 @@ namespace ExpeditionRecorder
         string _kind;
         Dictionary<string, object> _data;
         Action<Dictionary<string, object>> _externalSave;
+        bool _lockIdentity;
         Panel _panel;
         int _y = 12;
         List<Action> _savers = new List<Action>();
 
         public RecordEditForm(RecordEntry entry)
-            : this(entry.Kind, entry.Data, null)
+            : this(entry.Kind, entry.Data, null, true)
         {
             _entry = entry;
             Text = "編輯記錄：" + entry.Kind;
         }
 
         public RecordEditForm(string kind, Dictionary<string, object> data, Action<Dictionary<string, object>> externalSave)
+            : this(kind, data, externalSave, false)
+        {
+        }
+
+        public RecordEditForm(string kind, Dictionary<string, object> data, Action<Dictionary<string, object>> externalSave, bool lockIdentity)
         {
             _kind = kind;
             _data = data;
             _externalSave = externalSave;
+            _lockIdentity = lockIdentity;
             Text = "編輯記錄：" + kind;
             ClientSize = new Size(780, 700);
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
@@ -2506,6 +2513,48 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(l);
             _y += 30;
             return l;
+        }
+
+        void AddFixed(string label, string value)
+        {
+            var l = new Label();
+            l.Text = label;
+            l.SetBounds(14, _y + 4, 130, 20);
+            l.ForeColor = Color.FromArgb(170, 170, 178);
+            _panel.Controls.Add(l);
+            var v = new Label();
+            v.Text = value ?? "";
+            v.SetBounds(150, _y + 4, 580, 20);
+            v.ForeColor = Color.FromArgb(220, 220, 226);
+            _panel.Controls.Add(v);
+            _y += 28;
+        }
+
+        static string S(Dictionary<string, object> d, string k)
+        {
+            if (d == null || !d.ContainsKey(k) || d[k] == null) return "";
+            return Convert.ToString(d[k]);
+        }
+
+        static string A(Dictionary<string, object> d, string k)
+        {
+            if (d == null || !d.ContainsKey(k)) return "";
+            var arr = d[k] as System.Collections.ArrayList;
+            if (arr == null) return S(d, k);
+            var parts = new List<string>();
+            foreach (var x in arr) parts.Add(Convert.ToString(x));
+            return string.Join("、", parts.ToArray());
+        }
+
+        static string EventTitleOf(Dictionary<string, object> o)
+        {
+            var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
+            if (steps != null && steps.Count > 0)
+            {
+                var s1 = steps[0] as Dictionary<string, object>;
+                if (s1 != null && S(s1, "title") != "") return S(s1, "title");
+            }
+            return S(o, "title");
         }
 
         TextBox AddRaw(string label, string value, bool multi, int height)
@@ -2585,17 +2634,29 @@ namespace ExpeditionRecorder
             if (_kind == "事件")
             {
                 AddHeading("事件");
-                AddText(o, "floorId", "樓層 ID");
-                AddText(o, "floorName", "樓層名稱");
                 var steps = o.ContainsKey("steps") ? o["steps"] as System.Collections.ArrayList : null;
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
-                string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
-                var tt = AddRaw("事件名", title, false, 24);
-                _savers.Add(delegate
+                if (_lockIdentity)
                 {
-                    if (s1 != null) s1["title"] = tt.Text;
-                    if (o.ContainsKey("title")) o["title"] = tt.Text;
-                });
+                    AddFixed("類型", "事件");
+                    AddFixed("事件名", EventTitleOf(o));
+                    AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
+                    string scopes = A(o, "scopes"); if (scopes == "") scopes = S(o, "scope");
+                    string chars = A(o, "characters"); if (chars == "") chars = S(o, "character");
+                    AddFixed("歸屬", scopes + (chars != "" ? "　角色：" + chars : ""));
+                }
+                else
+                {
+                    AddText(o, "floorId", "樓層 ID");
+                    AddText(o, "floorName", "樓層名稱");
+                    string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : "";
+                    var tt = AddRaw("事件名", title, false, 24);
+                    _savers.Add(delegate
+                    {
+                        if (s1 != null) s1["title"] = tt.Text;
+                        if (o.ContainsKey("title")) o["title"] = tt.Text;
+                    });
+                }
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
 
@@ -2698,8 +2759,17 @@ namespace ExpeditionRecorder
             }
             else if (_kind == "物品")
             {
-                AddText(o, "name", "名稱");
-                AddText(o, "type", "類型");
+                if (_lockIdentity)
+                {
+                    AddFixed("類型", "物品");
+                    AddFixed("名稱", S(o, "name"));
+                    AddFixed("分類", S(o, "type"));
+                }
+                else
+                {
+                    AddText(o, "name", "名稱");
+                    AddText(o, "type", "類型");
+                }
                 AddText(o, "source", "來源");
                 AddText(o, "price", "參考價格");
                 AddText(o, "character", "角色");
@@ -2709,8 +2779,17 @@ namespace ExpeditionRecorder
             }
             else if (_kind == "樓層")
             {
-                AddText(o, "floorId", "樓層 ID");
-                AddText(o, "floorName", "樓層名稱");
+                if (_lockIdentity)
+                {
+                    AddFixed("類型", "樓層");
+                    AddFixed("樓層 ID", S(o, "floorId"));
+                    AddFixed("樓層名稱", S(o, "floorName"));
+                }
+                else
+                {
+                    AddText(o, "floorId", "樓層 ID");
+                    AddText(o, "floorName", "樓層名稱");
+                }
                 AddText(o, "theme", "主題（light／dark）");
                 AddLongText(o, "intro", "樓層介紹");
                 Dictionary<string, object> pal = o.ContainsKey("palette") ? o["palette"] as Dictionary<string, object> : null;
@@ -2723,25 +2802,52 @@ namespace ExpeditionRecorder
             }
             else if (_kind == "出口")
             {
-                AddText(o, "floorId", "樓層 ID");
-                AddText(o, "floorName", "樓層名稱");
-                AddText(o, "event", "出口事件");
+                if (_lockIdentity)
+                {
+                    AddFixed("類型", "出口");
+                    AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
+                    AddFixed("出口事件", S(o, "event"));
+                }
+                else
+                {
+                    AddText(o, "floorId", "樓層 ID");
+                    AddText(o, "floorName", "樓層名稱");
+                    AddText(o, "event", "出口事件");
+                }
                 AddText(o, "target", "通往樓層");
                 AddLongText(o, "intro", "事件介紹");
                 AddLongText(o, "transition", "通往文本");
             }
             else if (_kind == "結局")
             {
-                AddText(o, "name", "結局名稱");
-                AddText(o, "category", "分類");
+                if (_lockIdentity)
+                {
+                    AddFixed("類型", "結局");
+                    AddFixed("結局名稱", S(o, "name"));
+                    AddFixed("分類", S(o, "category"));
+                }
+                else
+                {
+                    AddText(o, "name", "結局名稱");
+                    AddText(o, "category", "分類");
+                }
                 AddLongText(o, "intro", "通用介紹");
                 AddLongText(o, "epilogue", "後日談");
             }
             else if (_kind == "商店")
             {
-                AddText(o, "title", "商店標題");
-                AddText(o, "floorId", "樓層 ID");
-                AddText(o, "floorName", "樓層名稱");
+                if (_lockIdentity)
+                {
+                    AddFixed("類型", "商店");
+                    AddFixed("商店", S(o, "title"));
+                    AddFixed("樓層", (S(o, "floorId") + " " + S(o, "floorName")).Trim());
+                }
+                else
+                {
+                    AddText(o, "title", "商店標題");
+                    AddText(o, "floorId", "樓層 ID");
+                    AddText(o, "floorName", "樓層名稱");
+                }
                 AddLongText(o, "intro", "商店介紹");
                 AddList(o, "items", "商品", false);
             }
@@ -2793,7 +2899,10 @@ namespace ExpeditionRecorder
 
     class RecordsForm : Form
     {
-        TextBox _search, _detail;
+        TextBox _search;
+        Panel _editorHost;
+        RecordEditForm _inlineEditor;
+        bool _closingInline;
         ListBox _list;
         Label _count;
         ComboBox _kind;
@@ -2838,29 +2947,23 @@ namespace ExpeditionRecorder
             _list.SelectedIndexChanged += delegate { ShowDetail(); };
             Controls.Add(_list);
 
-            _detail = new TextBox();
-            _detail.Multiline = true;
-            _detail.ReadOnly = true;
-            _detail.ScrollBars = ScrollBars.Both;
-            _detail.WordWrap = true;
-            _detail.SetBounds(424, 42, 484, 480);
-            _detail.BackColor = Color.FromArgb(24, 24, 27);
-            _detail.ForeColor = Color.FromArgb(220, 220, 226);
-            _detail.BorderStyle = BorderStyle.FixedSingle;
-            _detail.Font = new Font("Consolas", 10F);
-            Controls.Add(_detail);
+            _editorHost = new Panel();
+            _editorHost.SetBounds(424, 42, 484, 480);
+            _editorHost.AutoScroll = true;
+            _editorHost.BackColor = Color.FromArgb(24, 24, 27);
+            _editorHost.BorderStyle = BorderStyle.FixedSingle;
+            Controls.Add(_editorHost);
 
             _count = new Label();
             _count.SetBounds(12, 560, 880, 18);
             _count.ForeColor = Color.FromArgb(170, 170, 178);
             Controls.Add(_count);
 
-            var edit = MkBtn("編輯選中", 12, 528, 100); edit.Click += delegate { EditSelected(); };
-            var reload = MkBtn("重整", 120, 528, 90); reload.Click += delegate { LoadAll(); };
-            var del = MkBtn("刪除選中", 218, 528, 100); del.Click += delegate { DeleteSelected(); };
-            var open = MkBtn("開啟資料夾", 326, 528, 110); open.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
-            var close = MkBtn("關閉", 444, 528, 90); close.Click += delegate { Close(); };
-            Controls.Add(edit); Controls.Add(reload); Controls.Add(del); Controls.Add(open); Controls.Add(close);
+            var reload = MkBtn("重整", 12, 528, 90); reload.Click += delegate { LoadAll(); };
+            var del = MkBtn("刪除選中", 110, 528, 100); del.Click += delegate { DeleteSelected(); };
+            var open = MkBtn("開啟資料夾", 218, 528, 110); open.Click += delegate { try { Process.Start("explorer.exe", Program.DataDir()); } catch { } };
+            var close = MkBtn("關閉", 336, 528, 90); close.Click += delegate { Close(); };
+            Controls.Add(reload); Controls.Add(del); Controls.Add(open); Controls.Add(close);
 
             LoadAll();
         }
@@ -2964,21 +3067,52 @@ namespace ExpeditionRecorder
             if (_list.Items.Count > 0) _list.SelectedIndex = 0;
         }
 
+        void ClearInlineEditor()
+        {
+            _closingInline = true;
+            try
+            {
+                if (_inlineEditor != null)
+                {
+                    try { if (!_inlineEditor.IsDisposed) _inlineEditor.Close(); } catch { }
+                    try { if (!_inlineEditor.IsDisposed) _inlineEditor.Dispose(); } catch { }
+                    _inlineEditor = null;
+                }
+                _editorHost.Controls.Clear();
+            }
+            finally { _closingInline = false; }
+        }
+
         void ShowDetail()
         {
+            ClearInlineEditor();
             int i = _list.SelectedIndex;
-            if (i < 0 || i >= _shown.Count) { _detail.Text = ""; return; }
-            var o = _shown[i].Data;
-            var sb = new StringBuilder();
-            sb.AppendLine(_shown[i].Kind + "　" + _shown[i].Time);
-            sb.AppendLine(new string('─', 44));
-            if (_shown[i].Kind == "事件") FormatEvent(sb, o);
-            else if (_shown[i].Kind == "物品") FormatItem(sb, o);
-            else if (_shown[i].Kind == "樓層") FormatFloor(sb, o);
-            else if (_shown[i].Kind == "出口") FormatExit(sb, o);
-            else if (_shown[i].Kind == "結局") FormatEnding(sb, o);
-            else if (_shown[i].Kind == "商店") FormatShop(sb, o);
-            _detail.Text = sb.ToString();
+            if (i < 0 || i >= _shown.Count)
+            {
+                var tip = new Label();
+                tip.Text = "選中左邊的記錄，欄位會直接顯示在這裡。";
+                tip.SetBounds(16, 16, 440, 24);
+                tip.ForeColor = Color.FromArgb(160, 160, 168);
+                _editorHost.Controls.Add(tip);
+                return;
+            }
+            var f = new RecordEditForm(_shown[i]);
+            f.TopLevel = false;
+            f.FormBorderStyle = FormBorderStyle.None;
+            f.TopMost = false;
+            f.ShowInTaskbar = false;
+            f.Dock = DockStyle.Fill;
+            f.FormClosed += delegate
+            {
+                if (_inlineEditor == f) _inlineEditor = null;
+                if (!_closingInline && !IsDisposed)
+                {
+                    try { BeginInvoke((Action)LoadAll); } catch { }
+                }
+            };
+            _inlineEditor = f;
+            _editorHost.Controls.Add(f);
+            f.Show();
         }
 
         static string Str(Dictionary<string, object> d, string k)
@@ -3290,15 +3424,6 @@ namespace ExpeditionRecorder
                 return ser.Serialize(d);
             }
             return Convert.ToString(v);
-        }
-
-        void EditSelected()
-        {
-            int i = _list.SelectedIndex;
-            if (i < 0 || i >= _shown.Count) return;
-            var f = new RecordEditForm(_shown[i]);
-            if (f.ShowDialog() == DialogResult.OK) LoadAll();
-            f.Dispose();
         }
 
         void DeleteSelected()
