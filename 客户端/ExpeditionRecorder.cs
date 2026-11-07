@@ -1712,6 +1712,7 @@ namespace ExpeditionRecorder
             _t2s['門'] = '门';
             _t2s['籤'] = '签';
             _t2s['籖'] = '签';
+            _t2s['鬥'] = '斗';
         }
 
         static readonly Dictionary<string, string> SPhrases = new Dictionary<string, string>
@@ -3843,8 +3844,13 @@ namespace ExpeditionRecorder
         static bool IsConditionOption(Dictionary<string, object> od)
         {
             if (od == null) return false;
-            string sp = S(od, "special").ToLowerInvariant();
-            return sp == "true" || od.ContainsKey("conditionText") || od.ContainsKey("requirement");
+            if (S(od, "conditionText") != "") return true;
+            var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
+            if (req != null && req.Count > 0) return true;
+            string reason = S(od, "specialReason");
+            if (reason != "" && reason != "event") return true;
+            string text = S(od, "text").TrimStart();
+            return text.StartsWith("★") || text.StartsWith("☆");
         }
 
         static string ChoiceKey(string s)
@@ -5535,7 +5541,7 @@ namespace ExpeditionRecorder
                     else if (Kind == "event" && l.IsOption && l.OptionGroup >= 0)
                     {
                         color = Color.FromArgb(255, 76, 217, 100);
-                        bool cond = l.IsSpecial || l.Check != "" || l.Requirement != "";
+                        bool cond = l.IsCondition || (l.Text ?? "").TrimStart().StartsWith("★");
                         label = cond ? "條件選項⭐" : "選項" + CnNumber(l.OptionGroup + 1);
                     }
                     else if (Kind == "event" && l.IsCondition)
