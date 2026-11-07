@@ -1504,6 +1504,11 @@ namespace ExpeditionRecorder
             c.Text = Translate(traditional);
         }
 
+        public static void ApplyTo(Control root)
+        {
+            Apply(root);
+        }
+
         public static void SetLang(UiLang lang)
         {
             Lang = lang;
@@ -4926,7 +4931,11 @@ namespace ExpeditionRecorder
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
             resCombo.SelectedIndexChanged += delegate
             {
-                if (resCombo.SelectedItem != null) Preset = Convert.ToString(resCombo.SelectedItem);
+                if (resCombo.SelectedItem != null)
+                {
+                    Preset = Convert.ToString(resCombo.SelectedItem);
+                    SaveHotkeys();
+                }
             };
             clientGroup.Controls.Add(resCombo);
 
@@ -5006,6 +5015,12 @@ namespace ExpeditionRecorder
             settingsGroup.Controls.Add(ScaleLabel);
             UpdateLanguageButtons();
             UpdateScaleLabel();
+            /* 載入先前儲存的語言；靜態控制項在建構時是中文，這裡統一轉換。 */
+            UiText.ApplyTo(ControlWindow);
+            UpdateLanguageButtons();
+            UpdateScaleLabel();
+            UpdateRecordButtons();
+            UpdateHotkeyButton();
 
             ControlWindow.FormClosing += delegate
             {
@@ -5146,6 +5161,7 @@ namespace ExpeditionRecorder
                 try { p.Close(); } catch { }
             }
             UpdateHotkeyButton();
+            SaveHotkeys();
             SetState(on ? "快捷鍵已啟用（Q/E/C 可用）" : "快捷鍵已暫停（Q/E/C 直接給遊戲）");
         }
 
@@ -5211,6 +5227,7 @@ namespace ExpeditionRecorder
             UpdateScaleLabel();
             UpdateRecordButtons();
             UpdateHotkeyButton();
+            SaveHotkeys();
             SetState(lang == UiLang.Simplified ? "狀態：已切換成簡體"
                 : lang == UiLang.English ? "狀態：已切換成英文"
                 : "狀態：已切換成繁體");
@@ -6636,6 +6653,24 @@ namespace ExpeditionRecorder
                     if (float.TryParse(Convert.ToString(d["textScale"]), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out sc))
                         UiScale.Value = sc;
                 }
+                if (d != null && d.ContainsKey("preset"))
+                {
+                    string ps = Convert.ToString(d["preset"]);
+                    if (ps == "1280x720" || ps == "1600x900" || ps == "1920x1080" || ps == "2400x1350") Preset = ps;
+                }
+                if (d != null && d.ContainsKey("lang"))
+                {
+                    string lg = Convert.ToString(d["lang"]);
+                    if (lg == "Traditional") UiText.Lang = UiLang.Traditional;
+                    else if (lg == "Simplified") UiText.Lang = UiLang.Simplified;
+                    else if (lg == "English") UiText.Lang = UiLang.English;
+                }
+                if (d != null && d.ContainsKey("hotkeysEnabled"))
+                {
+                    string he = Convert.ToString(d["hotkeysEnabled"]).ToLowerInvariant();
+                    if (he == "true") HotkeysEnabled = true;
+                    else if (he == "false") HotkeysEnabled = false;
+                }
             }
             catch { }
         }
@@ -6649,6 +6684,9 @@ namespace ExpeditionRecorder
                 d["step"] = StepVk;
                 d["cancel"] = CancelVk;
                 d["textScale"] = Math.Round(UiScale.Scale, 1);
+                d["preset"] = Preset;
+                d["lang"] = UiText.Lang.ToString();
+                d["hotkeysEnabled"] = HotkeysEnabled;
                 File.WriteAllText(HotkeyFile(), new JavaScriptSerializer().Serialize(d), new UTF8Encoding(false));
             }
             catch { }

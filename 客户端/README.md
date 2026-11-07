@@ -64,7 +64,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File 客户端\start.ps1
   - C 显示「C 取消記錄」。
 - 圆盘六种模式：**事件／物品／楼层介绍／出口／结局／商店**。
 - 楼层介绍模式会优先读取左上角的 `Level …「…」`；有左上角楼层时以它为准，不靠框选内容猜楼层。
-- 按键可在面板“按键设置”改，设置写在 app 目录的 `hotkeys.json`。
+- 按键可在面板“按键设置”改；Q／E／C、解析度、界面语言、字号倍率与快捷键开关都会保存到 app 目录的 `hotkeys.json`，下次启动恢复。
 
 事件模式：
 
