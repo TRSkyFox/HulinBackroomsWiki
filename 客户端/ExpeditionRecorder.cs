@@ -1377,6 +1377,8 @@ namespace ExpeditionRecorder
             { "導出", "Export" },
             { "狀態：—", "Status: —" },
             { "設置", "Settings" },
+            { "操作說明", "Help" },
+            { "關閉", "Close" },
             { "說明", "Help" },
             { "繁體", "Traditional" },
             { "簡體", "Simplified" },
@@ -1617,11 +1619,12 @@ namespace ExpeditionRecorder
     {
         public static HelpForm Instance;
         TextBox _text;
+        Button _close;
 
         public HelpForm()
         {
             Instance = this;
-            Text = "操作說明";
+            UiText.SetText(this, "操作說明");
             ClientSize = new Size(560, 520);
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             TopMost = true;
@@ -1641,15 +1644,22 @@ namespace ExpeditionRecorder
             _text.Font = new Font("Microsoft JhengHei UI", 10F);
             Controls.Add(_text);
 
-            var close = new Button();
-            close.Text = "關閉";
-            close.SetBounds(448, 476, 100, 30);
-            close.FlatStyle = FlatStyle.Flat;
-            close.BackColor = Color.FromArgb(44, 44, 47);
-            close.ForeColor = Color.White;
-            close.Click += delegate { Close(); };
-            Controls.Add(close);
+            _close = new Button();
+            UiText.SetText(_close, "關閉");
+            _close.SetBounds(448, 476, 100, 30);
+            _close.FlatStyle = FlatStyle.Flat;
+            _close.BackColor = Color.FromArgb(44, 44, 47);
+            _close.ForeColor = Color.White;
+            _close.Click += delegate { Close(); };
+            Controls.Add(_close);
 
+            RefreshLanguage();
+        }
+
+        public void RefreshLanguage()
+        {
+            UiText.SetText(this, "操作說明");
+            if (_close != null) UiText.SetText(_close, "關閉");
             SetText(Program.HelpText());
         }
 
@@ -4902,6 +4912,7 @@ namespace ExpeditionRecorder
         static void SetUiLang(UiLang lang)
         {
             UiText.SetLang(lang);
+            if (HelpForm.Instance != null && !HelpForm.Instance.IsDisposed) HelpForm.Instance.RefreshLanguage();
             UpdateLanguageButtons();
             UpdateRecordButtons();
             UpdateHotkeyButton();
@@ -6359,8 +6370,43 @@ namespace ExpeditionRecorder
             UpdateRecordButtons();
         }
 
+        static string HelpTextEn()
+        {
+            string mk = VkName(ModeVk), sk = VkName(StepVk), ck = VkName(CancelVk);
+            var sb = new StringBuilder();
+            sb.AppendLine("Mode: " + mk + "    Record: " + sk + "    Cancel: " + ck);
+            sb.AppendLine();
+            sb.AppendLine("Tap or hold " + mk + " -> radial menu; release on a mode = select; no selection leaves it open");
+            sb.AppendLine();
+            sb.AppendLine("[Event]");
+            sb.AppendLine("  " + sk + " step 1: drag \"event name + intro\" -> release to save");
+            sb.AppendLine("  " + sk + " step 2: drag \"choice + result\" -> release to save");
+            sb.AppendLine("  " + mk + " finish: choose floor/character/common + normal/jump/shop/rest/combat (multi-select; combat can fill the entity name)");
+            sb.AppendLine();
+            sb.AppendLine("[Item]");
+            sb.AppendLine("  " + sk + " capture current item; " + mk + " finish");
+            sb.AppendLine();
+            sb.AppendLine("[Floor intro]");
+            sb.AppendLine("  " + sk + " drag floor name + intro; " + mk + " choose light/dark");
+            sb.AppendLine();
+            sb.AppendLine("[Exit]");
+            sb.AppendLine("  " + sk + " exit event + intro; " + sk + " transition text; " + mk + " fill target");
+            sb.AppendLine();
+            sb.AppendLine("[Shop]");
+            sb.AppendLine("  " + sk + " scan shelf (shop UI) or shop text; " + mk + " finish");
+            sb.AppendLine();
+            sb.AppendLine("[Ending]");
+            sb.AppendLine("  " + sk + " ending name + common intro; " + sk + " epilogue; " + mk + " choose category");
+            sb.AppendLine();
+            sb.AppendLine("Selection: Y axis only; every line vertically covered is selected; release to save");
+            sb.AppendLine("Cancel: " + ck + " cancels this scan; press again to discard the whole record; Esc/right-click also cancels the current selection");
+            sb.AppendLine("Hotkeys can be changed in Hotkeys; this text and the status line update automatically");
+            return sb.ToString();
+        }
+
         public static string HelpText()
         {
+            if (UiText.Lang == UiLang.English) return HelpTextEn();
             string mk = VkName(ModeVk), sk = VkName(StepVk), ck = VkName(CancelVk);
             var sb = new StringBuilder();
             sb.AppendLine("模式鍵：" + mk + "　　記錄鍵：" + sk + "　　取消鍵：" + ck);
@@ -6390,7 +6436,8 @@ namespace ExpeditionRecorder
             sb.AppendLine("框選：只按 Y 軸，垂直帶覆蓋到的整行都會選中；鬆手即存");
             sb.AppendLine("取消：" + ck + " 掃描中取消這一步；再按一次放棄整條記錄；Esc 或右鍵也可取消當前框選");
             sb.AppendLine("按鍵可在「按鍵設定」改，改完這裡和狀態文字會同步更新");
-            return sb.ToString();
+            string text = sb.ToString();
+            return UiText.Lang == UiLang.Simplified ? UiText.Convert(text, true) : text;
         }
 
         public static void UpdateHint()
