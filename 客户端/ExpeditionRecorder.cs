@@ -1411,6 +1411,9 @@ namespace ExpeditionRecorder
             { "開啟客戶端", "Open client" },
             { "關閉客戶端", "Close client" },
             { "刷新網頁", "Refresh page" },
+            { "清理緩存", "Clear cache" },
+            { "再按一次確認", "Confirm again" },
+            { "最後確認", "Final confirm" },
             { "解析度", "Resolution" },
             { "記錄", "Recording" },
             { "按鍵設定", "Hotkeys" },
@@ -5412,8 +5415,10 @@ namespace ExpeditionRecorder
         static Mutex SingleInstance;
         static Form ControlWindow;
         static Label StateLabel, StepLabel;
-        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn;
+        static Button RecordsBtn, PendingBtn, QBtn, EBtn, CancelBtn, HotkeyBtn, HelpBtn, TradBtn, SimpBtn, EngBtn, CacheBtn;
         static Button[] ScaleBtns;
+        static int CacheConfirm;
+        static System.Windows.Forms.Timer CacheResetTimer;
         static Label ScaleLabel;
         static bool HotkeysEnabled = true;
         static System.Windows.Forms.Timer UiTimer;
@@ -5599,21 +5604,24 @@ namespace ExpeditionRecorder
             ControlWindow.Location = new Point(Math.Max(wa.Left + 20, wa.Right - ControlWindow.Width - 24), Math.Max(wa.Top + 20, wa.Top + 60));
 
             var clientGroup = Group("客戶端", 12, 10, 406, 96);
-            var open = Btn("開啟客戶端", 14, 24, 180, 28);
+            var open = Btn("開啟客戶端", 14, 24, 120, 28);
             open.Click += delegate { EnsureClient(true); };
             clientGroup.Controls.Add(open);
-            var close = Btn("關閉客戶端", 202, 24, 180, 28);
+            var close = Btn("關閉客戶端", 142, 24, 120, 28);
             close.Click += delegate { CloseClient(); };
             clientGroup.Controls.Add(close);
+            var refreshPage = Btn("刷新網頁", 270, 24, 120, 28);
+            refreshPage.Click += delegate { RefreshWebPage(); };
+            clientGroup.Controls.Add(refreshPage);
 
             var resLabel = new Label();
-            resLabel.SetBounds(14, 64, 70, 20);
+            resLabel.SetBounds(14, 64, 58, 20);
             resLabel.ForeColor = Color.FromArgb(200, 200, 206);
             resLabel.Text = "解析度";
             clientGroup.Controls.Add(resLabel);
             var resCombo = new ComboBox();
             resCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            resCombo.SetBounds(86, 62, 206, 24);
+            resCombo.SetBounds(74, 62, 192, 24);
             resCombo.Items.AddRange(new object[] { "1280x720", "1600x900", "1920x1080", "2400x1350" });
             resCombo.SelectedItem = Preset;
             if (resCombo.SelectedIndex < 0) resCombo.SelectedItem = "1600x900";
@@ -5627,9 +5635,14 @@ namespace ExpeditionRecorder
             };
             clientGroup.Controls.Add(resCombo);
 
-            var refreshPage = Btn("刷新網頁", 300, 62, 90, 24);
-            refreshPage.Click += delegate { RefreshWebPage(); };
-            clientGroup.Controls.Add(refreshPage);
+            CacheBtn = Btn("清理緩存", 274, 62, 116, 24);
+            CacheBtn.Click += delegate { CacheConfirmClick(); };
+            clientGroup.Controls.Add(CacheBtn);
+
+            CacheResetTimer = new System.Windows.Forms.Timer();
+            CacheResetTimer.Interval = 8000;
+            CacheResetTimer.Tick += delegate { ResetCacheConfirm(); };
+            ResetCacheConfirm();
 
             var recGroup = Group("記錄", 12, 112, 406, 140);
             StepLabel = new Label();
@@ -5735,6 +5748,7 @@ namespace ExpeditionRecorder
 
             ControlWindow.FormClosing += delegate
             {
+                try { if (CacheResetTimer != null) CacheResetTimer.Stop(); } catch { }
                 try { if (Keys != null) Keys.Uninstall(); } catch { }
                 try { if (GameHwnd != IntPtr.Zero) Native.EnableWindow(GameHwnd, true); } catch { }
                 Ocr.Stop();
@@ -6273,6 +6287,92 @@ namespace ExpeditionRecorder
                 SetState("已送出刷新");
             }
             catch (Exception ex) { SetState("刷新失敗：" + ex.Message); }
+        }
+
+        static void ResetCacheConfirm()
+        {
+            CacheConfirm = 0;
+            try { if (CacheResetTimer != null) CacheResetTimer.Stop(); } catch { }
+            if (CacheBtn != null) UiText.SetText(CacheBtn, "清理緩存");
+        }
+
+        static void CacheConfirmClick()
+        {
+            if (CacheConfirm == 0)
+            {
+                CacheConfirm = 1;
+                UiText.SetText(CacheBtn, "再按一次確認");
+                SetState("清理緩存：再按兩下確認（會先關閉遊戲，保留登入與存檔）");
+                if (CacheResetTimer != null) { CacheResetTimer.Stop(); CacheResetTimer.Start(); }
+                return;
+            }
+            if (CacheConfirm == 1)
+            {
+                CacheConfirm = 2;
+                UiText.SetText(CacheBtn, "最後確認");
+                SetState("清理緩存：再按一下確認");
+                if (CacheResetTimer != null) { CacheResetTimer.Stop(); CacheResetTimer.Start(); }
+                return;
+            }
+            ResetCacheConfirm();
+            ClearWebCache();
+        }
+
+        static bool DeleteCacheDir(string path, ref int removed, ref int failed)
+        {
+            if (!Directory.Exists(path)) return true;
+            try
+            {
+                Directory.Delete(path, true);
+                removed++;
+                return true;
+            }
+            catch
+            {
+                failed++;
+                return false;
+            }
+        }
+
+        static void ClearWebCache()
+        {
+            try
+            {
+                if (ClientProcessExists() || GameHwnd != IntPtr.Zero)
+                {
+                    SetState("清理緩存：關閉客戶端…");
+                    if (GameHwnd == IntPtr.Zero) EnsureClient(false);
+                    CloseClient();
+                    for (int i = 0; i < 15 && ClientProcessExists(); i++)
+                    {
+                        System.Threading.Thread.Sleep(200);
+                        Application.DoEvents();
+                    }
+                    if (ClientProcessExists())
+                    {
+                        SetState("清理失敗：請先手動關閉客戶端");
+                        return;
+                    }
+                }
+
+                SetState("清理緩存中…");
+                Application.DoEvents();
+                string profile = ProfileDir;
+                if (string.IsNullOrEmpty(profile))
+                    profile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Expedition", "webview2-profile");
+                string root = Path.Combine(profile, "EBWebView");
+                string def = Path.Combine(root, "Default");
+                int removed = 0, failed = 0;
+                foreach (string name in new[] { "GPUCache", "GrShaderCache", "ShaderCache", "GPUPersistentCache" })
+                    DeleteCacheDir(Path.Combine(root, name), ref removed, ref failed);
+                foreach (string name in new[] { "Cache", "Code Cache", "GPUCache", "DawnGraphiteCache", "DawnWebGPUCache", "Service Worker\\CacheStorage" })
+                    DeleteCacheDir(Path.Combine(def, name), ref removed, ref failed);
+                if (failed > 0)
+                    SetState("已清理 " + removed + " 項緩存；" + failed + " 項被鎖定");
+                else
+                    SetState("已清理緩存（保留登入與存檔）；按「開啟客戶端」重開");
+            }
+            catch (Exception ex) { SetState("清理緩存失敗：" + ex.Message); }
         }
 
         /* ── 事件記錄 ─────────────────────────────────────── */
