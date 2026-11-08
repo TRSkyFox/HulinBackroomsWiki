@@ -3984,9 +3984,16 @@ namespace ExpeditionRecorder
 
         void AddOptionText(Dictionary<string, object> d)
         {
-            string val = S(d, "text");
+            string raw = S(d, "text");
             bool cond = IsConditionOption(d);
-            var t = AddRaw(cond ? "條件選項" : "選項", val, false, 24,
+            string val = Program.CleanOptionText(raw);
+            if (val != raw)
+            {
+                d["text"] = val;
+                if (!d.ContainsKey("special")) d["special"] = true;
+                _dirty = true;
+            }
+            var t = AddRaw(cond ? "條件選項⭐" : "選項", val, false, 24,
                 cond ? Color.FromArgb(255, 196, 92) : (Color?)null,
                 cond ? Color.FromArgb(255, 226, 150) : (Color?)null);
             string col = S(d, "color");
@@ -3999,7 +4006,7 @@ namespace ExpeditionRecorder
                 }
                 catch { }
             }
-            _savers.Add(delegate { if (d != null) d["text"] = t.Text; });
+            _savers.Add(delegate { if (d != null) d["text"] = Program.CleanOptionText(t.Text); });
         }
 
         static readonly string[] CondTypes = { "item", "attribute", "character", "status", "skill", "event" };
@@ -5902,7 +5909,7 @@ namespace ExpeditionRecorder
             {
                 if (Parse.IsChrome(o.Text)) continue;
                 var d = new Dictionary<string, object>();
-                d["text"] = Party.Normalize(o.Text.Trim());
+                d["text"] = Program.CleanOptionText(Party.Normalize(o.Text.Trim()));
                 if (o.Desc != "") d["desc"] = o.Desc;
                 string attr = NormalizeAttr(o.Check);
                 if (attr != "") d["check"] = attr;
@@ -6700,6 +6707,12 @@ namespace ExpeditionRecorder
             if (k == "cooperation") return "合力事件";
             if (k == "common") return "通用事件";
             return "普通事件";
+        }
+
+        internal static string CleanOptionText(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s ?? "";
+            return System.Text.RegularExpressions.Regex.Replace(s, "[★☆]", "").Trim();
         }
 
         internal static void MoveChecksToOptions(Dictionary<string, object> rec)
