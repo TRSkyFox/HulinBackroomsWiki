@@ -3663,7 +3663,7 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             var frame = new OptionFrame();
-            frame.Rect = new Rectangle(8, top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(16)), 0);
+            frame.Rect = new Rectangle(UiScale.Px(12), top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(24)), 0);
             _optionFrames.Add(frame);
 
             var cap = new Label();
@@ -3747,7 +3747,7 @@ namespace ExpeditionRecorder
             l.TextAlign = ContentAlignment.MiddleRight;
         }
 
-        TextBox AddRaw(string label, string value, bool multi, int height, Color? labelColor = null, Color? textColor = null)
+        TextBox AddRaw(string label, string value, bool multi, int height, Color? labelColor = null, Color? textColor = null, int rightPad = -1)
         {
             int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
@@ -3759,9 +3759,10 @@ namespace ExpeditionRecorder
             l.ForeColor = labelColor ?? Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int fieldX = narrow ? 14 : 14 + labelW;
+            int padRight = rightPad >= 0 ? rightPad : UiScale.Px(14);
             int fieldW = narrow
                 ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
-                : Math.Max(UiScale.Px(120), avail - fieldX - UiScale.Px(14));
+                : Math.Max(UiScale.Px(120), avail - fieldX - padRight);
             var t = new TextBox();
             t.Multiline = multi;
             t.WordWrap = true;
@@ -4027,7 +4028,7 @@ namespace ExpeditionRecorder
             }
             var t = AddRaw(cond ? "條件選項⭐" : "選項", val, false, 24,
                 cond ? Color.FromArgb(255, 196, 92) : (Color?)null,
-                cond ? Color.FromArgb(255, 226, 150) : (Color?)null);
+                cond ? Color.FromArgb(255, 226, 150) : (Color?)null, UiScale.Px(30));
             string col = S(d, "color");
             if (!cond && col != "")
             {
