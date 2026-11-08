@@ -3815,8 +3815,7 @@ namespace ExpeditionRecorder
 
         int PanelWidth()
         {
-            int w = _panel.ClientSize.Width;
-            if (!_panel.VerticalScroll.Visible) w -= SystemInformation.VerticalScrollBarWidth;
+            int w = ClientSize.Width - SystemInformation.VerticalScrollBarWidth;
             return Math.Max(UiScale.Px(180), w);
         }
 
@@ -3874,7 +3873,7 @@ namespace ExpeditionRecorder
                 t.SetBounds(fieldX, _y, fieldW, h);
                 _y += h + UiScale.Px(6);
             }
-            t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            t.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             t.BackColor = Color.FromArgb(40, 40, 44);
             t.ForeColor = textColor ?? Color.White;
             t.BorderStyle = BorderStyle.FixedSingle;
