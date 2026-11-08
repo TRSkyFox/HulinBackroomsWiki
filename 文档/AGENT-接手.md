@@ -145,6 +145,10 @@ cmd /c '"D:\Project\HulinBackroomsWiki\客户端\啟動.bat"'
 在深色输入框里看不见，`ReadableOptionColor()` 保持色相把亮度抬到可读范围。
 截图 `after/12-附加选项移入结果区.png`。
 
+**00:35 定稿**：附加選項是**结果**的属性，不是选项的——只有该选项有「結果」段时才显示，
+数据写在 branch 上（`"step":2,"sideOption":true`），没有结果段的选项不再显示这一行。
+导入端（`import-manual.mjs`）仍不消费 `sideOption`。
+
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

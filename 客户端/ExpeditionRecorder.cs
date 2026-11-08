@@ -4228,13 +4228,14 @@ namespace ExpeditionRecorder
             }
         }
 
-        /* 選項層級的標記：勾了就表示「選這個不會讓事件通過」（附加選項）。
-           放在「選項 N 結果」區塊內，格式是「☐ 附加選項（描述）」。 */
-        void AddSideOptionRow(Dictionary<string, object> od)
+        /* 「附加選項」屬於**結果**，不是選項本身：只有這個選項真的產生結果段（branch）時才出現，
+           資料也寫在 branch 上（sideOption），跟 results 放在同一層。
+           格式：☐ 附加選項（選擇不會導致通過該事件） */
+        void AddSideOptionRow(Dictionary<string, object> st)
         {
             int rowTop = _y;
             bool on;
-            try { on = string.Equals(S(od, "sideOption"), "true", StringComparison.OrdinalIgnoreCase); }
+            try { on = string.Equals(S(st, "sideOption"), "true", StringComparison.OrdinalIgnoreCase); }
             catch { on = false; }
             int x = Narrow ? PageLeft : FieldX;
             int cbW = Math.Min(Math.Max(Px(90), TextW("附加選項", BasePt) + Px(28)), Math.Max(Px(90), FieldRight - x));
@@ -4257,8 +4258,8 @@ namespace ExpeditionRecorder
             _y = rowTop + _fieldH + RowGap;
             _savers.Add(delegate
             {
-                if (cb.Checked) od["sideOption"] = true;
-                else od.Remove("sideOption");
+                if (cb.Checked) st["sideOption"] = true;
+                else st.Remove("sideOption");
             });
         }
 
@@ -4817,14 +4818,9 @@ namespace ExpeditionRecorder
                             usedBranches.Add(branch);
                             int resTop = _y;
                             AddDivider(resTop, optName + " 結果");
-                            AddSideOptionRow(od);
+                            AddSideOptionRow(branch);
                             AddBranchFields(branch);
                             _y += Px(10);
-                        }
-                        else
-                        {
-                            /* 沒有結果段時仍要能勾，放在選項框內。 */
-                            AddSideOptionRow(od);
                         }
                         CloseDecor(optFrame, _y);
                         _y += Px(12);
