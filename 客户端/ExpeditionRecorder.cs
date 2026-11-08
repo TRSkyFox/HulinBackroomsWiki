@@ -3900,29 +3900,11 @@ namespace ExpeditionRecorder
             var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
             string summary = StatusSummary(eff);
             if (summary != "" && S(st, "status") == "") st["status"] = summary;
-            AddText(st, "status", "狀態影響");
-            AddText(st, "coins", "獲得硬幣");
-            AddText(st, "items", "獲得物品");
+            if (S(st, "status") != "") AddText(st, "status", "狀態影響");
+            if (S(st, "coins") != "") AddText(st, "coins", "獲得硬幣");
+            if (S(st, "items") != "") AddText(st, "items", "獲得物品");
             var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-            if (pg != null)
-            {
-                AddText(pg, "delta", "出口進度");
-            }
-            else
-            {
-                var progBox = AddRaw("出口進度", "", false, 24);
-                _savers.Add(delegate
-                {
-                    string v = progBox.Text.Trim();
-                    if (v != "")
-                    {
-                        var nd = new Dictionary<string, object>();
-                        nd["delta"] = v;
-                        st["progress"] = nd;
-                    }
-                    else st.Remove("progress");
-                });
-            }
+            if (pg != null && S(pg, "delta") != "") AddText(pg, "delta", "出口進度");
             if (eff != null)
             {
                 for (int ei = 0; ei < eff.Count; ei++)
@@ -3944,37 +3926,18 @@ namespace ExpeditionRecorder
         {
             var cb = st.ContainsKey("combat") ? st["combat"] as Dictionary<string, object> : null;
             string enemy = cb != null ? S(cb, "enemy") : S(st, "combat");
-            string floor = S(st, "nextFloor");
-            if (floor == "") floor = S(st, "leadsTo");
-            var eBox = AddRaw("戰鬥實體", enemy, false, 24);
-            var fBox = AddRaw("目標樓層", floor, false, 24);
-            _savers.Add(delegate
+            if (enemy != "")
             {
-                string en = eBox.Text.Trim();
-                string fl = fBox.Text.Trim();
-                if (en != "")
-                {
-                    var nd = new Dictionary<string, object>();
-                    nd["enemy"] = en;
-                    st["combat"] = nd;
-                    st["outcomeType"] = "combat";
-                }
+                if (cb != null) AddText(cb, "enemy", "戰鬥實體");
                 else
                 {
-                    st.Remove("combat");
-                    if (S(st, "outcomeType") == "combat") st.Remove("outcomeType");
+                    var eBox = AddRaw("戰鬥實體", enemy, false, 24);
+                    _savers.Add(delegate { st["combat"] = eBox.Text.Trim(); });
                 }
-                if (fl != "")
-                {
-                    st["nextFloor"] = fl;
-                    st["outcomeType"] = "floor";
-                }
-                else
-                {
-                    st.Remove("nextFloor");
-                    if (S(st, "outcomeType") == "floor") st.Remove("outcomeType");
-                }
-            });
+            }
+            string floor = S(st, "nextFloor");
+            if (floor != "") AddText(st, "nextFloor", "目標樓層");
+            else if (S(st, "leadsTo") != "") AddText(st, "leadsTo", "目標樓層");
         }
 
         void AddResults(Dictionary<string, object> st)
@@ -4540,9 +4503,19 @@ namespace ExpeditionRecorder
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        if (od.ContainsKey("check"))
-                            AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
-                        if (IsConditionOption(od)) AddConditionRow(od);
+                        bool condOpt = IsConditionOption(od);
+                        string condType = condOpt ? InferConditionType(od) : "";
+                        if (condOpt) AddConditionRow(od);
+                        if ((!condOpt && od.ContainsKey("check")) || (condOpt && condType == "attribute"))
+                        {
+                            if (condOpt && !od.ContainsKey("check"))
+                            {
+                                string inferred = ConditionRequirement(od);
+                                if (inferred != "") od["check"] = inferred;
+                            }
+                            if (od.ContainsKey("check"))
+                                AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
+                        }
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
                         foreach (var st in branches)
