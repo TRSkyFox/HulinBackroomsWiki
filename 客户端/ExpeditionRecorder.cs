@@ -4228,35 +4228,52 @@ namespace ExpeditionRecorder
             }
         }
 
-        /* 選項層級的標記：勾了就表示「選這個不會讓事件通過」（附加選項）。 */
+        /* 選項層級的標記：勾了就表示「選這個不會讓事件通過」（附加選項）。
+           放在「選項 N 結果」區塊內，格式是「☐ 附加選項（描述）」。 */
         void AddSideOptionRow(Dictionary<string, object> od)
         {
             int rowTop = _y;
-            bool narrow = Narrow;
             bool on;
             try { on = string.Equals(S(od, "sideOption"), "true", StringComparison.OrdinalIgnoreCase); }
             catch { on = false; }
+            int x = Narrow ? PageLeft : FieldX;
+            int cbW = Math.Min(Math.Max(Px(90), TextW("附加選項", BasePt) + Px(28)), Math.Max(Px(90), FieldRight - x));
             var cb = new CheckBox();
-            cb.Text = "選擇不會導致通過該事件";
-            cb.ForeColor = Color.FromArgb(225, 225, 230);
+            cb.Text = "附加選項";
+            cb.ForeColor = Color.FromArgb(228, 228, 234);
             cb.Checked = on;
-            AddLabel("附加選項", rowTop, _fieldH, Color.FromArgb(150, 195, 220));
-            if (narrow)
-            {
-                cb.SetBounds(PageLeft, rowTop + _fieldH + Px(2), FieldW, _fieldH);
-                _y = rowTop + (_fieldH + Px(2)) * 2 + RowGap;
-            }
-            else
-            {
-                cb.SetBounds(FieldX, rowTop, Math.Min(FieldW, Px(300)), _fieldH);
-                _y = rowTop + _fieldH + RowGap;
-            }
+            cb.SetBounds(x, rowTop, cbW, _fieldH);
             _panel.Controls.Add(cb);
+            var hint = new Label();
+            hint.Text = "（選擇不會導致通過該事件）";
+            hint.ForeColor = Color.FromArgb(146, 146, 154);
+            hint.TextAlign = ContentAlignment.MiddleLeft;
+            hint.AutoEllipsis = true;
+            hint.Cursor = Cursors.Hand;
+            hint.Click += delegate { cb.Checked = !cb.Checked; };
+            int hintX = x + cbW + Px(2);
+            hint.SetBounds(hintX, rowTop, Math.Max(Px(40), FieldRight - hintX), _fieldH);
+            _panel.Controls.Add(hint);
+            _y = rowTop + _fieldH + RowGap;
             _savers.Add(delegate
             {
                 if (cb.Checked) od["sideOption"] = true;
                 else od.Remove("sideOption");
             });
+        }
+
+        /* 遊戲裡的選項顏色有深有淺（已看過的會變暗），直接拿來當文字色會看不到；
+           保持色相、把亮度抬到可讀範圍。 */
+        static Color ReadableOptionColor(Color c)
+        {
+            int max = Math.Max(c.R, Math.Max(c.G, c.B));
+            if (max >= 150) return c;
+            if (max < 24) return Color.FromArgb(226, 226, 232);
+            double k = 185.0 / max;
+            return Color.FromArgb(
+                Math.Min(255, (int)Math.Round(c.R * k)),
+                Math.Min(255, (int)Math.Round(c.G * k)),
+                Math.Min(255, (int)Math.Round(c.B * k)));
         }
 
         void AddOptionText(Dictionary<string, object> d)
@@ -4279,7 +4296,7 @@ namespace ExpeditionRecorder
                 try
                 {
                     var c = ColorTranslator.FromHtml(col);
-                    if (c != Color.Empty) t.ForeColor = c;
+                    if (c != Color.Empty) t.ForeColor = ReadableOptionColor(c);
                 }
                 catch { }
             }
@@ -4773,7 +4790,6 @@ namespace ExpeditionRecorder
                         string optName = "選項 " + (oi + 1);
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
-                        AddSideOptionRow(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         bool condOpt = IsConditionOption(od);
                         string condType = condOpt ? InferConditionType(od) : "";
@@ -4801,8 +4817,14 @@ namespace ExpeditionRecorder
                             usedBranches.Add(branch);
                             int resTop = _y;
                             AddDivider(resTop, optName + " 結果");
+                            AddSideOptionRow(od);
                             AddBranchFields(branch);
                             _y += Px(10);
+                        }
+                        else
+                        {
+                            /* 沒有結果段時仍要能勾，放在選項框內。 */
+                            AddSideOptionRow(od);
                         }
                         CloseDecor(optFrame, _y);
                         _y += Px(12);
