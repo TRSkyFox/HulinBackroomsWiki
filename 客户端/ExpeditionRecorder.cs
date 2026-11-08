@@ -2188,6 +2188,28 @@ namespace ExpeditionRecorder
         }
     }
 
+    class PanelWheelRouter : IMessageFilter
+    {
+        readonly Panel _panel;
+        public PanelWheelRouter(Panel panel) { _panel = panel; }
+
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg != 0x020A || _panel == null || !_panel.IsHandleCreated || !_panel.Visible) return false;
+            Point sp = Control.MousePosition;
+            if (!_panel.RectangleToScreen(_panel.ClientRectangle).Contains(sp)) return false;
+            Control under = _panel.GetChildAtPoint(_panel.PointToClient(sp));
+            if (under is ComboBox || under is ListBox) return false;
+            int max = _panel.VerticalScroll.Maximum - _panel.VerticalScroll.LargeChange + 1;
+            if (max <= 0) return false;
+            int delta = (short)((long)m.WParam >> 16);
+            int current = -_panel.AutoScrollPosition.Y;
+            int next = Math.Max(0, Math.Min(max, current - delta));
+            _panel.AutoScrollPosition = new Point(0, next);
+            return true;
+        }
+    }
+
     class DarkScrollBar : Control
     {
         readonly Panel _target;
@@ -3534,6 +3556,7 @@ namespace ExpeditionRecorder
         class OptionFrame { public Rectangle Rect; }
         Panel _panel;
         DarkScrollBar _scrollbar;
+        IMessageFilter _wheelRouter;
         int _y = 12;
         List<Action> _savers = new List<Action>();
         List<OptionFrame> _optionFrames = new List<OptionFrame>();
@@ -3595,6 +3618,8 @@ namespace ExpeditionRecorder
             _scrollbar.Width = UiScale.Px(10);
             Controls.Add(_scrollbar);
             _scrollbar.BringToFront();
+            _wheelRouter = new PanelWheelRouter(_panel);
+            Application.AddMessageFilter(_wheelRouter);
             _panel.HandleCreated += delegate { HideNativeScroll(); };
             HideNativeScroll();
             Resize += delegate { LayoutEditor(); };
@@ -3691,7 +3716,7 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(14 + labelW, _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - 14 - labelW - UiScale.Px(14)), UiScale.Px(22));
+            v.SetBounds(14 + labelW, _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - 14 - labelW - UiScale.Px(2)), UiScale.Px(22));
             v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
@@ -3729,7 +3754,7 @@ namespace ExpeditionRecorder
         {
             using (var f = new Font(UiText.FontFamily, 9f * UiScale.Scale, FontStyle.Regular))
             {
-                int max = TextRenderer.MeasureText("條件選項⭐", f).Width;
+                int max = TextRenderer.MeasureText("⭐條件選項", f).Width;
                 int ch = TextRenderer.MeasureText("国", f).Width;
                 return Math.Max(UiScale.Px(64), max + ch);
             }
@@ -3759,7 +3784,7 @@ namespace ExpeditionRecorder
             l.ForeColor = labelColor ?? Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int fieldX = narrow ? 14 : 14 + labelW;
-            int padRight = rightPad >= 0 ? rightPad : UiScale.Px(14);
+            int padRight = rightPad >= 0 ? rightPad : UiScale.Px(2);
             int fieldW = narrow
                 ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
                 : Math.Max(UiScale.Px(120), avail - fieldX - padRight);
@@ -4026,7 +4051,7 @@ namespace ExpeditionRecorder
                 if (!d.ContainsKey("special")) d["special"] = true;
                 _dirty = true;
             }
-            var t = AddRaw(cond ? "條件選項⭐" : "選項", val, false, 24,
+            var t = AddRaw(cond ? "⭐條件選項" : "選項", val, false, 24,
                 cond ? Color.FromArgb(255, 196, 92) : (Color?)null,
                 cond ? Color.FromArgb(255, 226, 150) : (Color?)null, UiScale.Px(30));
             string col = S(d, "color");
@@ -4086,7 +4111,7 @@ namespace ExpeditionRecorder
             int cw = Math.Min(UiScale.Px(150), ComboWidth(CondLabels));
             var cb = AddComboCore(fieldX, cy, cw, CondLabels, idx, Color.FromArgb(255, 226, 150));
             int bx = fieldX + cw + UiScale.Px(6);
-            int bw = Math.Max(UiScale.Px(100), avail - bx - UiScale.Px(14));
+            int bw = Math.Max(UiScale.Px(100), avail - bx - UiScale.Px(2));
             var box = new TextBox();
             box.SetBounds(bx, cy, bw, UiScale.Px(24));
             box.BackColor = Color.FromArgb(40, 40, 44);
@@ -4127,7 +4152,7 @@ namespace ExpeditionRecorder
             int selected = Array.IndexOf(values, current);
             var buttons = new List<Button>();
             int fieldX = narrow ? 14 : 14 + labelW;
-            int maxX = avail - UiScale.Px(14);
+            int maxX = avail - UiScale.Px(2);
             int x = fieldX;
             int y = narrow ? _y + UiScale.Px(24) : _y;
             for (int i = 0; i < values.Length; i++)
@@ -4210,7 +4235,7 @@ namespace ExpeditionRecorder
             int idx = Array.IndexOf(values, S(d, key));
             if (idx < 0) idx = 0;
             int fieldX = narrow ? 14 : 14 + labelW;
-            int cw = Math.Min(avail - fieldX - UiScale.Px(14), ComboWidth(texts));
+            int cw = Math.Min(avail - fieldX - UiScale.Px(2), ComboWidth(texts));
             int cy = narrow ? _y + UiScale.Px(24) : _y;
             var cb = AddComboCore(fieldX, cy, cw, texts, idx, Color.White);
             cb.SelectedIndexChanged += delegate
@@ -4358,7 +4383,7 @@ namespace ExpeditionRecorder
             var nameBox = new TextBox();
             int nameX = normal ? fieldX + UiScale.Px(144) : fieldX + UiScale.Px(116);
             nameBox.SetBounds(narrow ? 14 : nameX, narrow ? rowY + UiScale.Px(54) : rowY,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(340), Math.Max(UiScale.Px(100), avail - nameX - UiScale.Px(14))), UiScale.Px(24));
+                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Max(UiScale.Px(100), avail - nameX - UiScale.Px(2)), UiScale.Px(24));
             nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
@@ -4817,6 +4842,11 @@ namespace ExpeditionRecorder
             if (_autoSave != null) _autoSave.Stop();
             if (_relayout != null) _relayout.Stop();
             if (!SaveData(true)) { e.Cancel = true; return; }
+            if (_wheelRouter != null)
+            {
+                Application.RemoveMessageFilter(_wheelRouter);
+                _wheelRouter = null;
+            }
             if (_externalSave != null) DialogResult = DialogResult.OK;
             base.OnFormClosing(e);
         }
@@ -5688,12 +5718,12 @@ namespace ExpeditionRecorder
                     {
                         color = Color.FromArgb(255, 76, 217, 100);
                         bool cond = l.IsCondition || (l.Text ?? "").TrimStart().StartsWith("★");
-                        label = cond ? "條件選項⭐" : "選項" + CnNumber(l.OptionGroup + 1);
+                        label = cond ? "⭐條件選項" : "選項" + CnNumber(l.OptionGroup + 1);
                     }
                     else if (Kind == "event" && l.IsCondition)
                     {
                         color = Color.FromArgb(255, 255, 214, 64);
-                        label = "條件選項⭐";
+                        label = "⭐條件選項";
                     }
                     else continue;
                     DrawTag(g, font, l.Rect, color, label);
