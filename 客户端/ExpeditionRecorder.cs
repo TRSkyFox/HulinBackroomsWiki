@@ -3663,12 +3663,15 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             var frame = new OptionFrame();
-            frame.Rect = new Rectangle(UiScale.Px(4), top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(8)), 0);
+            frame.Rect = new Rectangle(8, top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(16)), 0);
             _optionFrames.Add(frame);
 
             var cap = new Label();
             cap.Text = caption;
-            cap.SetBounds(UiScale.Px(14), top, UiScale.Px(100), UiScale.Px(20));
+            int capW;
+            using (var mf = new Font("Microsoft JhengHei UI", 9F * UiScale.Scale, FontStyle.Bold))
+                capW = TextRenderer.MeasureText(caption, mf).Width + UiScale.Px(6);
+            cap.SetBounds(18, top, capW, UiScale.Px(20));
             cap.BackColor = _panel.BackColor;
             cap.ForeColor = Color.FromArgb(255, 214, 120);
             cap.Font = new Font("Microsoft JhengHei UI", 9F, FontStyle.Bold);
@@ -3758,7 +3761,7 @@ namespace ExpeditionRecorder
             int fieldX = narrow ? 14 : 14 + labelW;
             int fieldW = narrow
                 ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
-                : Math.Max(UiScale.Px(120), avail - fieldX - UiScale.Px(6));
+                : Math.Max(UiScale.Px(120), avail - fieldX - UiScale.Px(14));
             var t = new TextBox();
             t.Multiline = multi;
             t.WordWrap = true;
