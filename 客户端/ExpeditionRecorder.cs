@@ -3767,11 +3767,18 @@ namespace ExpeditionRecorder
             return Math.Max(minH, measured + 4);
         }
 
+        int ExactTextHeight(TextBox t)
+        {
+            int lines = t.GetLineFromCharIndex(t.TextLength) + 1;
+            int lineH = TextRenderer.MeasureText("国", t.Font).Height;
+            return Math.Max(UiScale.Px(18), lines * lineH + UiScale.Px(4));
+        }
+
         void AdjustTextHeight(TextBox t, bool force = false)
         {
             if (_rebuilding && !force) return;
             if (t == null || !t.Multiline) return;
-            int newH = WrappedHeight(t.Text, t.Font, t.Width);
+            int newH = t.IsHandleCreated ? ExactTextHeight(t) : WrappedHeight(t.Text, t.Font, t.Width);
             int oldH = t.Height;
             if (newH == oldH) return;
             int oldBottom = t.Top + oldH;
