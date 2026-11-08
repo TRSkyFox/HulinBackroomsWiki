@@ -4140,10 +4140,10 @@ namespace ExpeditionRecorder
             int max = 0;
             foreach (var s in texts)
             {
-                int w = (int)Math.Ceiling(TextRenderer.MeasureText(s, Font).Width * UiScale.Scale) + UiScale.Px(34);
+                int w = (int)Math.Ceiling(TextRenderer.MeasureText(s, Font).Width * UiScale.Scale) + UiScale.Px(22);
                 if (w > max) max = w;
             }
-            return Math.Max(UiScale.Px(84), max);
+            return Math.Max(UiScale.Px(68), max);
         }
 
         DarkComboBox AddComboCore(int x, int y, int width, string[] labels, int selected, Color fore)
@@ -4891,6 +4891,18 @@ namespace ExpeditionRecorder
             Resize += delegate { LayoutRecords(); };
         }
 
+        int ComboItemsWidth(ComboBox cb)
+        {
+            if (cb == null) return UiScale.Px(64);
+            int max = 0;
+            foreach (var item in cb.Items)
+            {
+                int w = TextRenderer.MeasureText(Convert.ToString(item), cb.Font).Width + UiScale.Px(30);
+                if (w > max) max = w;
+            }
+            return Math.Max(UiScale.Px(64), max);
+        }
+
         void LayoutRecords()
         {
             int pad = UiScale.Px(12);
@@ -4909,7 +4921,8 @@ namespace ExpeditionRecorder
             _search.SetBounds(pad, top, searchW, rowH);
             _searchTip.SetBounds(pad + searchW + gap, top, labelW, rowH);
             int filterY = top + rowH + gap;
-            int kindW = Math.Max(UiScale.Px(80), _listW - labelW - gap);
+            int kindW = Math.Min(_listW - labelW - gap, ComboItemsWidth(_kind));
+            kindW = Math.Max(UiScale.Px(64), kindW);
             _kind.SetBounds(pad, filterY, kindW, rowH);
             _filterLabel.SetBounds(pad + kindW + gap, filterY, labelW, rowH);
             int leftTop = filterY + rowH + gap;
