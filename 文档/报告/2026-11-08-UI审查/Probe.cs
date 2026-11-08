@@ -111,6 +111,57 @@ static class Probe
             if (panel != null) CaptureControl(panel, Path.Combine(OutDir, tag + "-panel.png"));
         }
         Dump(f, tag);
+        if (Environment.GetEnvironmentVariable("PROBE_FLOW") == "1")
+        {
+            Panel sp = null;
+            if (kind == "__records")
+            {
+                var ef = f.GetType().GetField("_inlineEditor", BindingFlags.Instance | BindingFlags.NonPublic);
+                object editor = ef == null ? null : ef.GetValue(f);
+                if (editor != null)
+                {
+                    var pf2 = editor.GetType().GetField("_panel", BindingFlags.Instance | BindingFlags.NonPublic);
+                    sp = pf2 == null ? null : pf2.GetValue(editor) as Panel;
+                }
+            }
+            else sp = f.GetType().GetField("_panel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f) as Panel;
+            if (sp != null)
+            {
+                Log.AppendLine("---- FLOW ----");
+                Log.AppendLine("start scroll=" + sp.AutoScrollPosition + " client=" + sp.ClientSize + " width=" + sp.Width);
+                int max = sp.VerticalScroll.Maximum - sp.VerticalScroll.LargeChange + 1;
+                sp.AutoScrollPosition = new Point(0, Math.Max(0, max));
+                Pump(400);
+                Log.AppendLine("scrolled=" + sp.AutoScrollPosition + " max=" + max);
+                CaptureClient(f, Path.Combine(OutDir, tag + "-flow1.png"));
+                int newW = Math.Max(700, f.ClientSize.Width - 260);
+                f.ClientSize = new Size(newW, f.ClientSize.Height);
+                Pump(1000);
+                Log.AppendLine("after resize w=" + f.ClientSize.Width + " scroll=" + sp.AutoScrollPosition);
+                var lm = f.GetType().GetMethod("LayoutRecords", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (lm != null) { try { lm.Invoke(f, null); Log.AppendLine("manual LayoutRecords ok"); } catch (Exception ex2) { Log.AppendLine("manual LayoutRecords threw: " + ex2.InnerException); } Pump(500); }
+                CaptureClient(f, Path.Combine(OutDir, tag + "-flow2.png"));
+                var lwF = f.GetType().GetField("_listW", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (lwF != null && lm != null)
+                {
+                    lwF.SetValue(f, 9999);
+                    try { lm.Invoke(f, null); } catch { }
+                    Pump(400);
+                    var hostF2 = f.GetType().GetField("_editorHost", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var host2 = hostF2 == null ? null : hostF2.GetValue(f) as Control;
+                    Log.AppendLine("after drag list to max: host=" + (host2 == null ? "-" : host2.Bounds.ToString()) + " panel=" + sp.ClientSize);
+                    CaptureClient(f, Path.Combine(OutDir, tag + "-flow4.png"));
+                }
+                sp.AutoScrollPosition = new Point(0, 0);
+                Pump(500);
+                Log.AppendLine("back to top scroll=" + sp.AutoScrollPosition);
+                CaptureClient(f, Path.Combine(OutDir, tag + "-flow3.png"));
+                var first = sp.Controls.Count > 0 ? sp.Controls[0] : null;
+                Log.AppendLine("panel client=" + sp.ClientSize + " controls=" + sp.Controls.Count + " first=" + (first == null ? "-" : first.GetType().Name + " at " + first.Location));
+                var hostF = f.GetType().GetField("_editorHost", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (hostF != null) { var host = hostF.GetValue(f) as Control; Log.AppendLine("host=" + host.Bounds + " children=" + host.Controls.Count + (host.Controls.Count > 0 ? " child=" + host.Controls[0].Bounds : "")); }
+            }
+        }
         Behavior(f, tag);
         if (Environment.GetEnvironmentVariable("PROBE_EDIT") == "1")
         {

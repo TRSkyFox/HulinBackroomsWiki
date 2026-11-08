@@ -3193,6 +3193,7 @@ namespace ExpeditionRecorder
             }
             var f = new RecordEditForm(_entries[i]);
             f.TopLevel = false;
+            f.MinimumSize = Size.Empty;
             f.FormBorderStyle = FormBorderStyle.None;
             f.TopMost = false;
             f.ShowInTaskbar = false;
@@ -3590,6 +3591,9 @@ namespace ExpeditionRecorder
         {
             _entry = entry;
             Text = "編輯記錄：" + entry.Kind;
+            /* 只有獨立視窗才需要最小尺寸；嵌進「已記錄」右欄時由 RecordsForm 控制，
+               留在這裡會讓內層窗體撐得比宿主寬、右邊被裁掉。 */
+            MinimumSize = UiScale.FitSize(430, 320);
         }
 
         public RecordEditForm(string kind, Dictionary<string, object> data, Action<Dictionary<string, object>> externalSave)
@@ -3606,7 +3610,6 @@ namespace ExpeditionRecorder
             Text = "編輯記錄：" + kind;
             AutoScaleMode = AutoScaleMode.None;
             ClientSize = UiScale.FitSize(900, 720);
-            MinimumSize = UiScale.FitSize(430, 320);
             DoubleBuffered = true;
             FormBorderStyle = FormBorderStyle.SizableToolWindow;
             TopMost = true;
@@ -4895,6 +4898,9 @@ namespace ExpeditionRecorder
             {
                 if (_autoSave != null) _autoSave.Stop();
                 SaveData(false);
+                /* 重建前必須把滾動歸零：AutoScroll 開啟時新增控制項，WinForms 會把
+                   目前的滾動量加進 Location；不歸零就會出現「內容整體下移、上方空白」。 */
+                _panel.AutoScrollPosition = new Point(0, 0);
                 var olds = new List<Control>();
                 foreach (Control c in _panel.Controls) olds.Add(c);
                 _panel.Controls.Clear();
@@ -4908,7 +4914,16 @@ namespace ExpeditionRecorder
                 HookAutoSave(_panel);
                 _panel.Invalidate(true);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                /* 重建失敗不能把整頁吞掉；至少留個紀錄，下一次才查得到。 */
+                try
+                {
+                    File.AppendAllText(Path.Combine(Path.GetTempPath(), "exp-relayout-error.log"),
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " w=" + w + "\r\n" + ex + "\r\n\r\n");
+                }
+                catch { }
+            }
             finally { _rebuilding = false; }
         }
 
@@ -5025,6 +5040,10 @@ namespace ExpeditionRecorder
 
         int Px(int v) { return UiScale.Px(v); }
 
+        /* 編輯區最少留這麼寬（1.0 → 434px，1.6 → 692px）。再窄欄位就開始擁擠，
+           而且會比獨立視窗的 MinimumSize 還小；這個值與 RecordsForm 的 MinimumSize 是配套的。 */
+        int EditorMinW { get { return UiScale.Px(430) + 4; } }
+
         int TextW(string s)
         {
             if (string.IsNullOrEmpty(s)) return 0;
@@ -5117,7 +5136,7 @@ namespace ExpeditionRecorder
             {
                 if (!_splitter.Capture) return;
                 int dx = Control.MousePosition.X - _splitStartX;
-                _listW = Math.Max(Px(160), Math.Min(Px(460), _splitStartW + dx));
+                _listW = Math.Max(Px(160), Math.Min(MaxListWidth(ClientSize.Width), _splitStartW + dx));
                 LayoutRecords();
             };
             _splitter.MouseUp += delegate { _splitter.Capture = false; };
@@ -5151,6 +5170,13 @@ namespace ExpeditionRecorder
             return Math.Max(Px(72), max);
         }
 
+        /* 清單最寬只能到「視窗寬 − 兩側留白 − 分隔 − 編輯器最小寬」，
+           否則把分隔條往右拖會把編輯器壓到比內層控制項還窄（右邊被裁掉）。 */
+        int MaxListWidth(int w)
+        {
+            return Math.Max(Px(160), Math.Min(Px(460), w - Px(12) * 2 - Px(8) - EditorMinW));
+        }
+
         void LayoutRecords()
         {
             int pad = Px(12);
@@ -5178,14 +5204,17 @@ namespace ExpeditionRecorder
             int contentTop = pad + toolH + gap;
             int contentH = Math.Max(Px(100), h - contentTop - bottomH - pad);
             int minList = Px(160);
-            int maxList = Math.Max(minList, w - pad * 2 - Px(300));
+            int maxList = MaxListWidth(w);
             if (_listW <= 0) _listW = Math.Max(minList, Math.Min(maxList, w * 28 / 100));
-            _listW = Math.Max(minList, Math.Min(maxList, _listW));
-            int detailX = pad + _listW + Px(8);
+            /* 只夾一個顯示用的值，不回寫 _listW：視窗再放大時，多出來的寬度要留給編輯區。 */
+            int listW = Math.Max(minList, Math.Min(maxList, _listW));
+            int detailX = pad + listW + Px(8);
+            /* 編輯區只吃剩下的寬度；視窗真的太小（低於 MinimumSize 才會發生）就讓它自己變窄，
+               絕不超過視窗右緣。 */
             int detailW = Math.Max(Px(200), w - detailX - pad);
 
-            _list.SetBounds(pad, contentTop, _listW, contentH);
-            _splitter.SetBounds(pad + _listW + Px(1), contentTop, Px(6), contentH);
+            _list.SetBounds(pad, contentTop, listW, contentH);
+            _splitter.SetBounds(pad + listW + Px(1), contentTop, Px(6), contentH);
             _splitter.BringToFront();
             _editorHost.SetBounds(detailX, contentTop, detailW, contentH);
 
@@ -5399,6 +5428,7 @@ namespace ExpeditionRecorder
             }
             var f = new RecordEditForm(_shown[i]);
             f.TopLevel = false;
+            f.MinimumSize = Size.Empty;
             f.FormBorderStyle = FormBorderStyle.None;
             f.TopMost = false;
             f.ShowInTaskbar = false;
