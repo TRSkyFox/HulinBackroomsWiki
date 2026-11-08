@@ -52,6 +52,10 @@ static class Probe
         string dataFile = args.Length > 6 ? args[6] : null;
 
         Asm.GetType("ExpeditionRecorder.UiScale").GetProperty("Value").SetValue(null, scale, null);
+        string lang = Environment.GetEnvironmentVariable("PROBE_LANG");
+        if (!string.IsNullOrEmpty(lang))
+            Asm.GetType("ExpeditionRecorder.UiText").GetField("Lang").SetValue(null,
+                Enum.Parse(Asm.GetType("ExpeditionRecorder.UiLang"), lang));
 
         Form f;
         if (kind == "__records")
@@ -62,8 +66,27 @@ static class Probe
         {
             var data = LoadRecord(dataFile, kind);
             var t = Asm.GetType("ExpeditionRecorder.RecordEditForm");
-            var ctor = t.GetConstructor(new Type[] { typeof(string), typeof(Dictionary<string, object>), typeof(Action<Dictionary<string, object>>), typeof(bool) });
-            f = (Form)ctor.Invoke(new object[] { kind, data, null, false });
+            if (Environment.GetEnvironmentVariable("PROBE_ENTRY") == "1")
+            {
+                var et = Asm.GetType("ExpeditionRecorder.RecordEntry");
+                var entry = Activator.CreateInstance(et);
+                string file = null, line = null;
+                foreach (var p2 in Directory.GetFiles(dataFile, "events-*.jsonl"))
+                {
+                    var ln = File.ReadAllLines(p2);
+                    if (ln.Length > 0 && ln[0].Trim().Length > 0) { file = p2; line = ln[0]; break; }
+                }
+                et.GetField("File").SetValue(entry, file);
+                et.GetField("Line").SetValue(entry, line);
+                et.GetField("Kind").SetValue(entry, kind);
+                et.GetField("Data").SetValue(entry, data);
+                f = (Form)Activator.CreateInstance(t, new object[] { entry });
+            }
+            else
+            {
+                var ctor = t.GetConstructor(new Type[] { typeof(string), typeof(Dictionary<string, object>), typeof(Action<Dictionary<string, object>>), typeof(bool) });
+                f = (Form)ctor.Invoke(new object[] { kind, data, null, false });
+            }
         }
 
         f.StartPosition = FormStartPosition.Manual;
@@ -89,6 +112,22 @@ static class Probe
         }
         Dump(f, tag);
         Behavior(f, tag);
+        if (Environment.GetEnvironmentVariable("PROBE_EDIT") == "1")
+        {
+            TextBox target = null;
+            foreach (var c2 in AllControls(f)) { var t2 = c2 as TextBox; if (t2 != null && !t2.Multiline) { target = t2; break; } }
+            if (target != null)
+            {
+                target.Text = target.Text + "（测试）";
+                Pump(1600);
+                Log.AppendLine("---- EDIT ----");
+                Log.AppendLine("text=" + target.Text);
+                var sf = f.GetType().GetField("_headerStatus", BindingFlags.Instance | BindingFlags.NonPublic);
+                var lbl = sf == null ? null : sf.GetValue(f) as Label;
+                Log.AppendLine("status=" + (lbl == null ? "-" : lbl.Text));
+                Log.AppendLine("dirty=" + Convert.ToString(f.GetType().GetField("_dirty", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(f)));
+            }
+        }
         if (Environment.GetEnvironmentVariable("PROBE_RESIZE") == "1")
         {
             f.ClientSize = new Size(w + 60, h);
@@ -206,7 +245,7 @@ static class Probe
         var pw = t.GetMethod("PanelWidth", BindingFlags.Instance | BindingFlags.NonPublic);
         var lw = t.GetMethod("FieldLabelWidth", BindingFlags.Instance | BindingFlags.NonPublic);
         var gw = t.GetMethod("FieldGap", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (pw != null) Log.AppendLine("PanelWidth()=" + pw.Invoke(f, null) + " FieldLabelWidth()=" + lw.Invoke(f, null) + " FieldGap()=" + gw.Invoke(f, null));
+        Log.AppendLine("PanelWidth()=" + (pw == null ? "-" : Convert.ToString(pw.Invoke(f, null))) + " FieldLabelWidth()=" + (lw == null ? "-" : Convert.ToString(lw.Invoke(f, null))) + " FieldGap()=" + (gw == null ? "-" : Convert.ToString(gw.Invoke(f, null))));
         var ff = t.GetField("_optionFrames", BindingFlags.Instance | BindingFlags.NonPublic);
         var frames = ff == null ? null : ff.GetValue(f) as IEnumerable;
         if (frames != null)
