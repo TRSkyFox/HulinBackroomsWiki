@@ -4123,7 +4123,7 @@ namespace ExpeditionRecorder
             }
             var t = AddRaw(cond ? "⭐條件選項" : "選項", val, false, 24,
                 cond ? Color.FromArgb(255, 196, 92) : (Color?)null,
-                cond ? Color.FromArgb(255, 226, 150) : (Color?)null, UiScale.Px(30));
+                cond ? Color.FromArgb(255, 226, 150) : (Color?)null);
             string col = S(d, "color");
             if (!cond && col != "")
             {
