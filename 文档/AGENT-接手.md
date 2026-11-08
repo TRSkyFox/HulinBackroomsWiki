@@ -157,6 +157,12 @@ cmd /c '"D:\Project\HulinBackroomsWiki\客户端\啟動.bat"'
 验证：两条无楼层的合成记录 dry-run `events:2 / skipped:0`（改前 0/2）；`sync --check` 84 对齐、
 `verify-final` 845/845。截图 `after/14-事件类型字段-角色.png`、`...-合力.png`。
 
+**03:06 多步事件**：编辑器把「跟第一屏选项对不上」的步骤显示成 `步驟 N` 区块
+（可改 選擇、補 步驟選項、編集結果/附加選項），不再叫「其他結果」；對得上选项的仍挂在选項下。
+錄影端：某一步整屏被框的列全是選項且 ≥2 条时，记成 `options` 而不是结果（共用 `BuildOptionDicts()`）。
+**限制**：wiki 的 `events.json` 还没有「步骤链」结构，`import-manual` 会把 options-only 的步骤过滤掉；
+要真正写进 wiki 得先定 schema（如 `branches[].next`）。截图 `after/15-多步事件步骤区块.png`。
+
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

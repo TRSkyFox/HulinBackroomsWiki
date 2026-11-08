@@ -4129,6 +4129,21 @@ namespace ExpeditionRecorder
             return string.Join("、", parts.ToArray());
         }
 
+        /* 「步驟 N」區塊：多步事件裡，對不上第一屏選項的那一步。
+           可以改選擇文字、補這一步自己的選項、編集結果與影響。 */
+        void AddStepBlock(Dictionary<string, object> st, int stepIndex)
+        {
+            int top = _y;
+            var frame = AddOptionFrame(top, "步驟 " + stepIndex);
+            AddText(st, "choice", "選擇");
+            AddSideOptionRow(st);
+            var stepOpts = st.ContainsKey("options") ? st["options"] as System.Collections.ArrayList : null;
+            if (stepOpts != null && stepOpts.Count > 0) AddList(st, "options", "步驟選項", true);
+            AddBranchFields(st);
+            CloseDecor(frame, _y);
+            _y += Px(12);
+        }
+
         void AddBranchFields(Dictionary<string, object> st)
         {
             var ck = st.ContainsKey("check") ? st["check"] as Dictionary<string, object> : null;
@@ -4922,8 +4937,15 @@ namespace ExpeditionRecorder
                 {
                     AddList(s1 ?? o, "options", "選項", true);
                 }
-                /* 未掛到任何選項的結果，仍單獨顯示，不靠選項文字硬匹配。 */
-                int extra = 0;
+                /* 多步事件：一個事件可能超過兩步（選完一個選項又跳出下一個選擇）。
+                   跟第一屏選項對得上的，已經掛在該選項下面；對不上的照記錄順序排成「步驟 N」。 */
+                int lastStep = 1;
+                foreach (var st in branches)
+                {
+                    if (!usedBranches.Contains(st)) continue;
+                    int used;
+                    if (int.TryParse(S(st, "step"), out used) && used > lastStep) lastStep = used;
+                }
                 foreach (var st in branches)
                 {
                     if (usedBranches.Contains(st)) continue;
@@ -4936,12 +4958,10 @@ namespace ExpeditionRecorder
                             if (od != null && ChoiceKey(Convert.ToString(od["text"])) == ChoiceKey(c)) { matched = true; break; }
                         }
                     if (matched) continue;
-                    extra++;
-                    int resTop = _y;
-                    var resFrame = AddOptionFrame(resTop, "其他結果 " + extra);
-                    AddBranchFields(st);
-                    CloseDecor(resFrame, _y);
-                    _y += Px(12);
+                    int stepIndex;
+                    if (!int.TryParse(S(st, "step"), out stepIndex) || stepIndex <= lastStep) stepIndex = lastStep + 1;
+                    lastStep = stepIndex;
+                    AddStepBlock(st, stepIndex);
                 }
             }
             else if (_kind == "物品")
@@ -6383,38 +6403,9 @@ namespace ExpeditionRecorder
             return "";
         }
 
-        Dictionary<string, object> BuildStep1(List<OcrLine> sel)
+        /* 把 OCR 認到的選項行轉成紀錄用的 options 陣列（第一屏與「下一步的新選項」共用）。 */
+        List<object> BuildOptionDicts(List<OcrLine> opts)
         {
-            string title = Parse.TitleOf(sel);
-            /* 多人角色事件提示：全队投票：……（「狐天 自己的选择」……） */
-            string allText = "";
-            foreach (var l in _lines) allText += (l.Text ?? "") + "\n";
-            bool characterEvent = false;
-            string characterPlayer = "", characterName = "";
-            var mce = System.Text.RegularExpressions.Regex.Match(allText, @"[「『]([^」』]{1,16}?)\s*自己的选[择擇][」』]");
-            if (mce.Success)
-            {
-                characterEvent = true;
-                characterPlayer = mce.Groups[1].Value.Trim();
-                characterName = Party.MapPlayer(characterPlayer);
-            }
-            bool junctionEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一条|一條)路");
-            bool freeEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一个|一個|一条|一條)");
-            bool commonEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"通用事件");
-            bool coopEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"合力|合作|協力|团队合作|團隊合作");
-            if (string.IsNullOrEmpty(allText)) { freeEvent = false; commonEvent = false; coopEvent = false; }
-
-            var intro = new List<string>();
-            foreach (var l in sel)
-            {
-                if (title != "" && l.Text.IndexOf("【" + title + "】", StringComparison.Ordinal) >= 0) continue;
-                if (Parse.IsChrome(l.Text)) continue;
-                if (IsMultiplayerPrompt(l.Text)) continue;
-                if (IsStatusWorsening(l.Text)) continue;
-                intro.Add(Party.Normalize(l.Text.Trim()));
-            }
-            var opts = _lines.FindAll(delegate (OcrLine l) { return l.IsOption && l.OptionGroup >= 0; });
-            opts.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
             var optionList = new List<object>();
             foreach (var o in opts)
             {
@@ -6450,6 +6441,42 @@ namespace ExpeditionRecorder
                 }
                 optionList.Add(d);
             }
+            return optionList;
+        }
+
+        Dictionary<string, object> BuildStep1(List<OcrLine> sel)
+        {
+            string title = Parse.TitleOf(sel);
+            /* 多人角色事件提示：全队投票：……（「狐天 自己的选择」……） */
+            string allText = "";
+            foreach (var l in _lines) allText += (l.Text ?? "") + "\n";
+            bool characterEvent = false;
+            string characterPlayer = "", characterName = "";
+            var mce = System.Text.RegularExpressions.Regex.Match(allText, @"[「『]([^」』]{1,16}?)\s*自己的选[择擇][」』]");
+            if (mce.Success)
+            {
+                characterEvent = true;
+                characterPlayer = mce.Groups[1].Value.Trim();
+                characterName = Party.MapPlayer(characterPlayer);
+            }
+            bool junctionEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一条|一條)路");
+            bool freeEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"各自[选選](?:一个|一個|一条|一條)");
+            bool commonEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"通用事件");
+            bool coopEvent = System.Text.RegularExpressions.Regex.IsMatch(allText, @"合力|合作|協力|团队合作|團隊合作");
+            if (string.IsNullOrEmpty(allText)) { freeEvent = false; commonEvent = false; coopEvent = false; }
+
+            var intro = new List<string>();
+            foreach (var l in sel)
+            {
+                if (title != "" && l.Text.IndexOf("【" + title + "】", StringComparison.Ordinal) >= 0) continue;
+                if (Parse.IsChrome(l.Text)) continue;
+                if (IsMultiplayerPrompt(l.Text)) continue;
+                if (IsStatusWorsening(l.Text)) continue;
+                intro.Add(Party.Normalize(l.Text.Trim()));
+            }
+            var opts = _lines.FindAll(delegate (OcrLine l) { return l.IsOption && l.OptionGroup >= 0; });
+            opts.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
+            var optionList = BuildOptionDicts(opts);
             var rec = new Dictionary<string, object>();
             rec["step"] = 1;
             rec["floorId"] = Parse.FloorId;
@@ -6577,6 +6604,19 @@ namespace ExpeditionRecorder
                     if (last.ContainsKey("character")) root["character"] = last["character"];
                 }
                 return root;
+            }
+
+            /* 多步事件：某一步本身就是「下一批選項」（上一個選擇之後才出現的新選擇）。
+               框選的行若全部都是選項（≥2 條），這一步就記成 options，不要塞進結果正文。 */
+            var selOpts = new List<OcrLine>();
+            foreach (var l in sel) if (l.IsOption) selOpts.Add(l);
+            if (selOpts.Count >= 2 && selOpts.Count == sel.Count)
+            {
+                selOpts.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
+                var orec = new Dictionary<string, object>();
+                orec["step"] = Step;
+                orec["options"] = BuildOptionDicts(selOpts);
+                return orec;
             }
 
             string choice = "";
