@@ -3663,7 +3663,7 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             var frame = new OptionFrame();
-            frame.Rect = new Rectangle(UiScale.Px(12), top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(24)), 0);
+            frame.Rect = new Rectangle(8, top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(16)), 0);
             _optionFrames.Add(frame);
 
             var cap = new Label();
