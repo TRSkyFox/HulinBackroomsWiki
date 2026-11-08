@@ -127,6 +127,15 @@ namespace ExpeditionRecorder
         [DllImport("gdi32.dll")] public static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
         [DllImport("gdi32.dll")] public static extern bool DeleteObject(IntPtr h);
         [DllImport("gdi32.dll")] public static extern bool DeleteDC(IntPtr hdc);
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        public struct MSLLHOOKSTRUCT
+        {
+            public POINT pt;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
         public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
     }
 
@@ -2188,6 +2197,53 @@ namespace ExpeditionRecorder
         }
     }
 
+    class PanelMouseWheelHook
+    {
+        IntPtr _hook;
+        Native.HookProc _proc;
+        readonly Panel _panel;
+
+        public PanelMouseWheelHook(Panel panel) { _panel = panel; }
+
+        public bool Install()
+        {
+            _proc = Hook;
+            _hook = Native.SetWindowsHookEx(14, _proc, Native.GetModuleHandle(null), 0);
+            return _hook != IntPtr.Zero;
+        }
+
+        public void Uninstall()
+        {
+            if (_hook != IntPtr.Zero)
+            {
+                Native.UnhookWindowsHookEx(_hook);
+                _hook = IntPtr.Zero;
+            }
+        }
+
+        IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode < 0 || _panel == null || !_panel.IsHandleCreated || !_panel.Visible)
+                return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            if ((int)wParam != 0x020A) return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            var data = (Native.MSLLHOOKSTRUCT)System.Runtime.InteropServices.Marshal.PtrToStructure(
+                lParam, typeof(Native.MSLLHOOKSTRUCT));
+            Point sp = new Point(data.pt.X, data.pt.Y);
+            if (!_panel.RectangleToScreen(_panel.ClientRectangle).Contains(sp))
+                return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            Control under = _panel.GetChildAtPoint(_panel.PointToClient(sp));
+            if (under is ComboBox || under is ListBox)
+                return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            int max = _panel.VerticalScroll.Maximum - _panel.VerticalScroll.LargeChange + 1;
+            if (max <= 0) return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+            int delta = (short)((data.mouseData >> 16) & 0xffff);
+            int current = -_panel.AutoScrollPosition.Y;
+            int target = Math.Max(0, Math.Min(max, current - delta));
+            _panel.AutoScrollPosition = new Point(0, target);
+            return (IntPtr)1;
+        }
+    }
+
     class PanelWheelRouter : IMessageFilter
     {
         readonly Panel _panel;
@@ -3556,7 +3612,7 @@ namespace ExpeditionRecorder
         class OptionFrame { public Rectangle Rect; }
         Panel _panel;
         DarkScrollBar _scrollbar;
-        IMessageFilter _wheelRouter;
+        PanelMouseWheelHook _wheelHook;
         int _y = 12;
         List<Action> _savers = new List<Action>();
         List<OptionFrame> _optionFrames = new List<OptionFrame>();
@@ -3615,13 +3671,13 @@ namespace ExpeditionRecorder
             Controls.Add(_panel);
             _scrollbar = new DarkScrollBar(_panel);
             _scrollbar.Dock = DockStyle.None;
-            _scrollbar.Width = UiScale.Px(10);
+            _scrollbar.Width = Math.Max(UiScale.Px(14), SystemInformation.VerticalScrollBarWidth + 2);
             Controls.Add(_scrollbar);
-            _scrollbar.BringToFront();
-            _wheelRouter = new PanelWheelRouter(_panel);
-            Application.AddMessageFilter(_wheelRouter);
-            _panel.HandleCreated += delegate { HideNativeScroll(); };
-            HideNativeScroll();
+            _scrollbar.Visible = false;
+            _wheelHook = new PanelMouseWheelHook(_panel);
+            _wheelHook.Install();
+            _panel.HandleCreated += delegate { ShowNativeScroll(); };
+            ShowNativeScroll();
             Resize += delegate { LayoutEditor(); };
             Shown += delegate { LayoutEditor(); };
             LayoutEditor();
@@ -3630,7 +3686,7 @@ namespace ExpeditionRecorder
             UiScale.Apply(this);
             NormalizeTextHeights();
             Native.DarkScroll(_panel);
-            HideNativeScroll();
+            ShowNativeScroll();
             _panel.Invalidate(true);
             HookAutoSave(_panel);
             _autoSave = new System.Windows.Forms.Timer();
@@ -3660,14 +3716,21 @@ namespace ExpeditionRecorder
         {
             if (_panel == null || _scrollbar == null) return;
             int sw = Math.Max(UiScale.Px(6), _scrollbar.Width);
-            _panel.SetBounds(0, 0, Math.Max(0, ClientSize.Width - sw), ClientSize.Height);
+            _panel.SetBounds(0, 0, Math.Max(0, ClientSize.Width), ClientSize.Height);
             _scrollbar.SetBounds(ClientSize.Width - sw, 0, sw, ClientSize.Height);
             _scrollbar.BringToFront();
         }
 
-        void HideNativeScroll()
+        void ShowNativeScroll()
         {
-            try { if (_panel != null && _panel.IsHandleCreated) Native.ShowScrollBar(_panel.Handle, 1, false); }
+            try
+            {
+                if (_panel != null && _panel.IsHandleCreated)
+                {
+                    _panel.HorizontalScroll.Enabled = false;
+                    _panel.HorizontalScroll.Visible = false;
+                }
+            }
             catch { }
         }
 
@@ -3675,7 +3738,7 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = text;
-            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), _panel.ClientSize.Width - UiScale.Px(28)), UiScale.Px(24));
+            l.SetBounds(14, _y, Math.Max(UiScale.Px(300), PanelWidth() - UiScale.Px(28)), UiScale.Px(24));
             l.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             l.ForeColor = Color.FromArgb(255, 214, 120);
             l.Font = new Font("Microsoft JhengHei UI", 10F, FontStyle.Bold);
@@ -3686,7 +3749,7 @@ namespace ExpeditionRecorder
 
         OptionFrame AddOptionFrame(int top, string caption)
         {
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             var frame = new OptionFrame();
             frame.Rect = new Rectangle(8, top + UiScale.Px(6), Math.Max(UiScale.Px(160), avail - UiScale.Px(16)), 0);
             _optionFrames.Add(frame);
@@ -3716,7 +3779,7 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(14 + labelW, _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - 14 - labelW - UiScale.Px(2)), UiScale.Px(22));
+            v.SetBounds(14 + labelW, _y + 3, Math.Max(UiScale.Px(120), PanelWidth() - 14 - labelW - UiScale.Px(2)), UiScale.Px(22));
             v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
@@ -3750,6 +3813,13 @@ namespace ExpeditionRecorder
             return S(o, "title");
         }
 
+        int PanelWidth()
+        {
+            int w = _panel.ClientSize.Width;
+            if (!_panel.VerticalScroll.Visible) w -= SystemInformation.VerticalScrollBarWidth;
+            return Math.Max(UiScale.Px(180), w);
+        }
+
         int FieldLabelWidth()
         {
             using (var f = new Font(UiText.FontFamily, 9f * UiScale.Scale, FontStyle.Regular))
@@ -3774,7 +3844,7 @@ namespace ExpeditionRecorder
 
         TextBox AddRaw(string label, string value, bool multi, int height, Color? labelColor = null, Color? textColor = null, int rightPad = -1)
         {
-            int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(180), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             int labelW = FieldLabelWidth();
             var l = new Label();
@@ -4094,7 +4164,7 @@ namespace ExpeditionRecorder
 
         void AddConditionRow(Dictionary<string, object> od)
         {
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             int labelW = FieldLabelWidth();
             var l = new Label();
@@ -4138,7 +4208,7 @@ namespace ExpeditionRecorder
 
         void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
         {
-            int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(180), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             int labelW = FieldLabelWidth();
             var l = new Label();
@@ -4223,7 +4293,7 @@ namespace ExpeditionRecorder
 
         void AddComboField(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
         {
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             int labelW = FieldLabelWidth();
             var l = new Label();
@@ -4252,7 +4322,7 @@ namespace ExpeditionRecorder
                 ft = Parse.IsNormalFloorId(S(o, "floorId")) ? "normal" : "anomalous";
             o["floorType"] = ft;
 
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             var typeLabel = new Label();
             typeLabel.Text = "類型";
@@ -4353,7 +4423,7 @@ namespace ExpeditionRecorder
 
         void AddCompactFloorRow(Dictionary<string, object> o, Dictionary<string, object> mirror = null)
         {
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             int rowY = _y;
             int labelW = FieldLabelWidth();
@@ -4407,7 +4477,7 @@ namespace ExpeditionRecorder
 
         void AddThemeButtons(Dictionary<string, object> o)
         {
-            int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
+            int avail = Math.Max(UiScale.Px(220), PanelWidth());
             bool narrow = avail < UiScale.Px(430);
             var label = new Label();
             label.Text = "主題";
@@ -4451,7 +4521,7 @@ namespace ExpeditionRecorder
             string theme = S(o, "theme");
             int h = UiScale.Px(90);
             var panel = new BufferedPanel();
-            int pw = Math.Min(UiScale.Px(520), Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(28)));
+            int pw = Math.Min(UiScale.Px(520), Math.Max(UiScale.Px(120), PanelWidth() - UiScale.Px(28)));
             panel.SetBounds(14, _y, pw, h);
             panel.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             panel.BorderStyle = BorderStyle.FixedSingle;
@@ -4760,7 +4830,7 @@ namespace ExpeditionRecorder
                 UiText.ApplyTo(this);
                 NormalizeTextHeights();
                 HookAutoSave(_panel);
-                HideNativeScroll();
+                ShowNativeScroll();
                 _panel.Invalidate(true);
             }
             catch { }
@@ -4842,10 +4912,10 @@ namespace ExpeditionRecorder
             if (_autoSave != null) _autoSave.Stop();
             if (_relayout != null) _relayout.Stop();
             if (!SaveData(true)) { e.Cancel = true; return; }
-            if (_wheelRouter != null)
+            if (_wheelHook != null)
             {
-                Application.RemoveMessageFilter(_wheelRouter);
-                _wheelRouter = null;
+                _wheelHook.Uninstall();
+                _wheelHook = null;
             }
             if (_externalSave != null) DialogResult = DialogResult.OK;
             base.OnFormClosing(e);
