@@ -96,17 +96,24 @@ const writes = [];
 
 /* ── 事件 ── */
 for (const rec of events) {
+  const scopes0 = Array.isArray(rec.scopes) ? rec.scopes : [];
+  const charScope = scopes0.includes('character');
+  const commonScope = scopes0.includes('common');
+  /* 角色／合力／通用事件本来就不属于楼层，不能因为 floorId 空就被跳过。 */
+  const floorEvent = !charScope && !commonScope;
   const fkey = fid(rec.floorId);
   const fl = floorById.get(fkey);
-  if (!fl) { report.skipped++; continue; }
+  if (floorEvent && !fl) { report.skipped++; continue; }
   const step1 = (rec.steps || [])[0] || rec;
   const step2 = (rec.steps || [])[1] || {};
   const name = T(step1.title).trim();
   if (!name) { report.skipped++; continue; }
-  const p = path.join(FLOORS, fl.dir, 'events.json');
-  const j = pendingFiles.get(p) || (fs.existsSync(p) ? readJson(p) : { floorId: fkey, floorName: fl.data.name, events: [], junctions: [] });
-  if (!Array.isArray(j.events)) j.events = [];
-  const existing = j.events.find((e) => norm(e.name) === norm(name));
+  const p = floorEvent ? path.join(FLOORS, fl.dir, 'events.json') : null;
+  const j = floorEvent
+    ? (pendingFiles.get(p) || (fs.existsSync(p) ? readJson(p) : { floorId: fkey, floorName: fl.data.name, events: [], junctions: [] }))
+    : null;
+  if (j && !Array.isArray(j.events)) j.events = [];
+  const existing = j ? j.events.find((e) => norm(e.name) === norm(name)) : null;
   const branchOf = (s) => {
     const ef = Array.isArray(s.effects) ? s.effects.map((e) => Object.assign({}, e, {
       text: T(e.text),
@@ -202,14 +209,16 @@ for (const rec of events) {
   if (rec.scopes) ev.scopes = rec.scopes;
   if (rec.characters) ev.characters = rec.characters;
   if (rec.outcomes) ev.outcomes = rec.outcomes;
-  j.events.push(ev);
-  pendingFiles.set(p, j);
-  writes.push({ path: p, data: j });
-  report.events++;
+  if (j) {
+    j.events.push(ev);
+    pendingFiles.set(p, j);
+    writes.push({ path: p, data: j });
+    report.events++;
+  }
 
-  const scopes = Array.isArray(rec.scopes) ? rec.scopes : [];
   const chars = Array.isArray(rec.characters) ? rec.characters : [];
-  if (scopes.includes('character')) {
+  if (charScope) {
+    if (!chars.length) report.skipped++;
     for (const ch of chars) {
       const dir = charDir.get(norm(ch));
       if (!dir) continue;
@@ -224,7 +233,7 @@ for (const rec of events) {
       }
     }
   }
-  if (scopes.includes('common')) {
+  if (commonScope) {
     const cp = path.join(CONTENT, 'events', 'common', 'events.json');
     const arr = pendingFiles.get(cp) || (fs.existsSync(cp) ? readJson(cp) : []);
     const list = Array.isArray(arr) ? arr : (arr.events || []);

@@ -149,6 +149,14 @@ cmd /c '"D:\Project\HulinBackroomsWiki\客户端\啟動.bat"'
 数据写在 branch 上（`"step":2,"sideOption":true`），没有结果段的选项不再显示这一行。
 导入端（`import-manual.mjs`）仍不消费 `sideOption`。
 
+**02:40 事件类型驱动字段**：编辑器现在按 `eventKind` 换字段——普通/自由/岔路 → 樓層；
+角色/合力 → 角色（合力可填多个，`、` 分隔）；通用 → 两者都不出。切换类型会重建表单，
+并**同步 `scopes`**（floor/character/common）。
+顺带修了 `import-manual.mjs` 的一个真 bug：它原来先按 `floorId` 找楼层、找不到就跳过，
+导致角色／通用事件从来没被写过（那段写入代码是死代码）。现在先按 `scopes` 分流。
+验证：两条无楼层的合成记录 dry-run `events:2 / skipped:0`（改前 0/2）；`sync --check` 84 对齐、
+`verify-final` 845/845。截图 `after/14-事件类型字段-角色.png`、`...-合力.png`。
+
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

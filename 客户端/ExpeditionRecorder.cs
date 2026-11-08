@@ -4447,7 +4447,7 @@ namespace ExpeditionRecorder
             return cb;
         }
 
-        void AddComboField(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
+        DarkComboBox AddComboField(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
         {
             int rowTop = _y;
             bool narrow = Narrow;
@@ -4457,12 +4457,16 @@ namespace ExpeditionRecorder
             int cy = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int cw = Math.Min(FieldRight - fx, ComboWidth(texts));
             var cb = AddComboCore(fx, cy, cw, texts, idx, Color.White);
-            cb.SelectedIndexChanged += delegate
+            if (cb != null)
             {
-                if (cb.SelectedIndex >= 0 && cb.SelectedIndex < values.Length) d[key] = values[cb.SelectedIndex];
-            };
+                cb.SelectedIndexChanged += delegate
+                {
+                    if (cb.SelectedIndex >= 0 && cb.SelectedIndex < values.Length) d[key] = values[cb.SelectedIndex];
+                };
+            }
             AddLabel(label, rowTop, narrow ? _fieldH : _comboH, null);
             _y = cy + _comboH + RowGap;
+            return cb;
         }
 
         void AddFloorFields(Dictionary<string, object> o)
@@ -4614,6 +4618,81 @@ namespace ExpeditionRecorder
             });
         }
 
+        /* 角色／合力事件不歸樓層，改成填角色：
+           角色事件一個，合力事件可多個（用、分隔）；寫回 `characters`，只有一個時再寫 `character`。 */
+        void AddCharacterRow(Dictionary<string, object> o, bool multi)
+        {
+            int rowTop = _y;
+            bool narrow = Narrow;
+            string val = A(o, "characters");
+            if (val == "") val = S(o, "character");
+            var box = new TextBox();
+            box.BackColor = Color.FromArgb(40, 40, 44);
+            box.ForeColor = Color.White;
+            box.BorderStyle = BorderStyle.FixedSingle;
+            box.Text = val;
+            if (multi)
+            {
+                var tip = new ToolTip();
+                tip.SetToolTip(box, "多個角色用、分隔");
+            }
+            if (narrow)
+            {
+                AddLabel("角色", rowTop, _fieldH, null);
+                box.SetBounds(PageLeft, rowTop + _fieldH + Px(2), FieldW, _fieldH);
+                _y = rowTop + (_fieldH + Px(2)) + _fieldH + RowGap;
+            }
+            else
+            {
+                AddLabel("角色", rowTop, _fieldH, null);
+                box.SetBounds(FieldX, rowTop, FieldW, _fieldH);
+                _y = rowTop + _fieldH + RowGap;
+            }
+            _panel.Controls.Add(box);
+            _savers.Add(delegate
+            {
+                var arr = new System.Collections.ArrayList();
+                foreach (var x in System.Text.RegularExpressions.Regex.Split(box.Text ?? "", @"[、,，;；]"))
+                {
+                    string c = (x ?? "").Trim();
+                    if (c != "" && !arr.Contains(c)) arr.Add(c);
+                }
+                if (arr.Count > 0)
+                {
+                    o["characters"] = arr;
+                    if (arr.Count == 1) o["character"] = arr[0];
+                    else o.Remove("character");
+                }
+                else
+                {
+                    o.Remove("characters");
+                    o.Remove("character");
+                }
+            });
+        }
+
+        /* 事件類型決定記錄要進哪個桶：樓層事件／角色事件／通用事件。
+           匯入端看的是 scopes，改了類型就必須同步，否則會進錯地方。 */
+        static void SyncEventScopes(Dictionary<string, object> o)
+        {
+            string k = S(o, "eventKind");
+            var arr = new System.Collections.ArrayList();
+            if (k == "common") arr.Add("common");
+            else if (k == "character" || k == "cooperation") arr.Add("character");
+            else arr.Add("floor");
+            o["scopes"] = arr;
+        }
+
+        static bool IsFloorEventKind(string k)
+        {
+            return k == "" || k == "normal" || k == "free" || k == "junction";
+        }
+
+        static bool IsCharacterEventKind(string k)
+        {
+            return k == "character" || k == "cooperation";
+        }
+
         void AddThemeButtons(Dictionary<string, object> o)
         {
             int rowTop = _y;
@@ -4745,9 +4824,21 @@ namespace ExpeditionRecorder
                 Dictionary<string, object> s1 = steps != null && steps.Count > 0 ? steps[0] as Dictionary<string, object> : o;
                 string eventKind = S(o, "eventKind");
                 if (eventKind == "") { eventKind = "normal"; o["eventKind"] = eventKind; }
-                AddComboField(o, "eventKind", "事件類型",
+                var kindCb = AddComboField(o, "eventKind", "事件類型",
                     new[] { "normal", "free", "junction", "character", "cooperation", "common" },
                     new[] { "普通事件", "自由事件", "岔路事件", "角色事件", "合力事件", "通用事件" });
+                if (kindCb != null)
+                {
+                    /* 換類型要換一組欄位（樓層 ↔ 角色）；等事件處理完再重排，避免在
+                       下拉自己的 SelectedIndexChanged 裡把控制項拆掉。 */
+                    kindCb.SelectedIndexChanged += delegate
+                    {
+                        SyncEventScopes(o);
+                        if (_rebuilding) return;
+                        try { BeginInvoke((Action)delegate { QueueRelayout(true); }); } catch { }
+                    };
+                }
+                SyncEventScopes(o);
                 AddRestTag(o);
                 string title = s1 != null && s1.ContainsKey("title") ? Convert.ToString(s1["title"]) : EventTitleOf(o);
                 var tt = AddRaw("事件名", title, false, 24);
@@ -4757,7 +4848,8 @@ namespace ExpeditionRecorder
                     if (s1 != null) s1["title"] = v;
                     o["title"] = v;
                 });
-                AddCompactFloorRow(o, s1);
+                if (IsFloorEventKind(eventKind)) AddCompactFloorRow(o, s1);
+                else if (IsCharacterEventKind(eventKind)) AddCharacterRow(o, eventKind == "cooperation");
                 if (s1 != null && s1.ContainsKey("intro")) AddLongText(s1, "intro", "事件介紹");
                 else AddLongText(o, "intro", "事件介紹");
 
