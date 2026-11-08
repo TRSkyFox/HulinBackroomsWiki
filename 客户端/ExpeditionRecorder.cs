@@ -3679,14 +3679,16 @@ namespace ExpeditionRecorder
 
         void AddFixed(string label, string value)
         {
+            int labelW = FieldLabelWidth();
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 3, UiScale.Px(90), UiScale.Px(22));
+            l.SetBounds(14, _y + 3, labelW, UiScale.Px(22));
+            AlignFieldLabel(l, labelW);
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var v = new Label();
             v.Text = value ?? "";
-            v.SetBounds(UiScale.Px(108), _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - UiScale.Px(122)), UiScale.Px(22));
+            v.SetBounds(14 + labelW, _y + 3, Math.Max(UiScale.Px(120), _panel.ClientSize.Width - 14 - labelW - UiScale.Px(14)), UiScale.Px(22));
             v.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             v.ForeColor = Color.FromArgb(220, 220, 226);
             _panel.Controls.Add(v);
@@ -3720,18 +3722,43 @@ namespace ExpeditionRecorder
             return S(o, "title");
         }
 
+        int FieldLabelWidth()
+        {
+            using (var f = new Font(UiText.FontFamily, 9f * UiScale.Scale, FontStyle.Regular))
+            {
+                int max = TextRenderer.MeasureText("條件選項⭐", f).Width;
+                int ch = TextRenderer.MeasureText("国", f).Width;
+                return Math.Max(UiScale.Px(64), max + ch);
+            }
+        }
+
+        int FieldGap()
+        {
+            using (var f = new Font(UiText.FontFamily, 9f * UiScale.Scale, FontStyle.Regular))
+                return Math.Max(UiScale.Px(8), TextRenderer.MeasureText("国", f).Width);
+        }
+
+        void AlignFieldLabel(Label l, int width)
+        {
+            l.Width = Math.Max(UiScale.Px(24), width - FieldGap());
+            l.TextAlign = ContentAlignment.MiddleRight;
+        }
+
         TextBox AddRaw(string label, string value, bool multi, int height, Color? labelColor = null, Color? textColor = null)
         {
             int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
+            int labelW = FieldLabelWidth();
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 3, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
+            l.SetBounds(14, _y + 3, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : labelW, UiScale.Px(22));
+            if (!narrow) AlignFieldLabel(l, labelW);
             l.ForeColor = labelColor ?? Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
+            int fieldX = narrow ? 14 : 14 + labelW;
             int fieldW = narrow
                 ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28))
-                : Math.Max(UiScale.Px(120), avail - UiScale.Px(122));
+                : Math.Max(UiScale.Px(120), avail - fieldX - UiScale.Px(14));
             var t = new TextBox();
             t.Multiline = multi;
             t.WordWrap = true;
@@ -3745,7 +3772,7 @@ namespace ExpeditionRecorder
             }
             else
             {
-                t.SetBounds(UiScale.Px(108), _y, fieldW, h);
+                t.SetBounds(fieldX, _y, fieldW, h);
                 _y += h + UiScale.Px(6);
             }
             t.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
@@ -3827,12 +3854,14 @@ namespace ExpeditionRecorder
         {
             var l = new Label();
             l.Text = "事件標籤";
-            l.SetBounds(14, _y + 3, UiScale.Px(90), UiScale.Px(22));
+            int labelW = FieldLabelWidth();
+            l.SetBounds(14, _y + 3, labelW, UiScale.Px(22));
+            AlignFieldLabel(l, labelW);
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             var cb = new CheckBox();
             cb.Text = "休息處";
-            cb.SetBounds(UiScale.Px(108), _y, UiScale.Px(180), UiScale.Px(22));
+            cb.SetBounds(14 + labelW, _y, UiScale.Px(180), UiScale.Px(22));
             cb.ForeColor = Color.FromArgb(225, 225, 230);
             string tags = A(d, "tags");
             cb.Checked = tags.IndexOf("rest", StringComparison.Ordinal) >= 0;
@@ -4038,12 +4067,14 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
+            int labelW = FieldLabelWidth();
             var l = new Label();
             l.Text = "條件";
-            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
+            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : labelW, UiScale.Px(22));
+            if (!narrow) AlignFieldLabel(l, labelW);
             l.ForeColor = Color.FromArgb(255, 196, 92);
             _panel.Controls.Add(l);
-            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int fieldX = narrow ? 14 : 14 + labelW;
             int cy = narrow ? _y + UiScale.Px(24) : _y;
             string type = InferConditionType(od);
             int idx = Array.IndexOf(CondTypes, type);
@@ -4080,16 +4111,18 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(180), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
+            int labelW = FieldLabelWidth();
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 4, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : UiScale.Px(90), UiScale.Px(22));
+            l.SetBounds(14, _y + 4, narrow ? Math.Max(UiScale.Px(60), avail - UiScale.Px(28)) : labelW, UiScale.Px(22));
+            if (!narrow) AlignFieldLabel(l, labelW);
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int bh = UiScale.Px(26);
             string current = S(d, key);
             int selected = Array.IndexOf(values, current);
             var buttons = new List<Button>();
-            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int fieldX = narrow ? 14 : 14 + labelW;
             int maxX = avail - UiScale.Px(14);
             int x = fieldX;
             int y = narrow ? _y + UiScale.Px(24) : _y;
@@ -4163,14 +4196,16 @@ namespace ExpeditionRecorder
         {
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
+            int labelW = FieldLabelWidth();
             var l = new Label();
             l.Text = label;
-            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
+            l.SetBounds(14, _y + 3, narrow ? avail - UiScale.Px(28) : labelW, UiScale.Px(22));
+            if (!narrow) AlignFieldLabel(l, labelW);
             l.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(l);
             int idx = Array.IndexOf(values, S(d, key));
             if (idx < 0) idx = 0;
-            int fieldX = narrow ? 14 : UiScale.Px(108);
+            int fieldX = narrow ? 14 : 14 + labelW;
             int cw = Math.Min(avail - fieldX - UiScale.Px(14), ComboWidth(texts));
             int cy = narrow ? _y + UiScale.Px(24) : _y;
             var cb = AddComboCore(fieldX, cy, cw, texts, idx, Color.White);
@@ -4292,21 +4327,24 @@ namespace ExpeditionRecorder
             int avail = Math.Max(UiScale.Px(220), _panel.ClientSize.Width);
             bool narrow = avail < UiScale.Px(430);
             int rowY = _y;
+            int labelW = FieldLabelWidth();
+            int fieldX = 14 + labelW;
             var floorLabel = new Label();
             floorLabel.Text = "樓層";
-            floorLabel.SetBounds(14, rowY + (narrow ? 0 : 4), narrow ? avail - UiScale.Px(28) : UiScale.Px(90), UiScale.Px(22));
+            floorLabel.SetBounds(14, rowY + (narrow ? 0 : 4), narrow ? avail - UiScale.Px(28) : labelW, UiScale.Px(22));
+            if (!narrow) AlignFieldLabel(floorLabel, labelW);
             floorLabel.ForeColor = Color.FromArgb(170, 170, 178);
             _panel.Controls.Add(floorLabel);
             bool normal = Parse.IsNormalFloorId(S(o, "floorId"));
             int floorLineY = narrow ? rowY + UiScale.Px(24) : rowY;
             var prefix = new Label();
             prefix.Text = "Level";
-            prefix.SetBounds(narrow ? 14 : UiScale.Px(108), floorLineY + (narrow ? 0 : 3), UiScale.Px(56), UiScale.Px(22));
+            prefix.SetBounds(narrow ? 14 : fieldX, floorLineY + (narrow ? 0 : 3), UiScale.Px(56), UiScale.Px(22));
             prefix.ForeColor = Color.FromArgb(220, 220, 226);
             prefix.Visible = normal;
             _panel.Controls.Add(prefix);
             var idBox = new TextBox();
-            idBox.SetBounds(narrow ? UiScale.Px(56) : (normal ? UiScale.Px(166) : UiScale.Px(108)), floorLineY,
+            idBox.SetBounds(narrow ? UiScale.Px(56) : (normal ? fieldX + UiScale.Px(58) : fieldX), floorLineY,
                 narrow ? UiScale.Px(90) : (normal ? UiScale.Px(80) : UiScale.Px(110)), UiScale.Px(24));
             idBox.BackColor = Color.FromArgb(40, 40, 44);
             idBox.ForeColor = Color.White;
@@ -4314,8 +4352,9 @@ namespace ExpeditionRecorder
             idBox.Text = S(o, "floorId");
             _panel.Controls.Add(idBox);
             var nameBox = new TextBox();
-            nameBox.SetBounds(narrow ? 14 : (normal ? UiScale.Px(252) : UiScale.Px(224)), narrow ? rowY + UiScale.Px(54) : rowY,
-                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(340), Math.Max(UiScale.Px(100), avail - UiScale.Px(normal ? 266 : 238))), UiScale.Px(24));
+            int nameX = normal ? fieldX + UiScale.Px(144) : fieldX + UiScale.Px(116);
+            nameBox.SetBounds(narrow ? 14 : nameX, narrow ? rowY + UiScale.Px(54) : rowY,
+                narrow ? Math.Max(UiScale.Px(120), avail - UiScale.Px(28)) : Math.Min(UiScale.Px(340), Math.Max(UiScale.Px(100), avail - nameX - UiScale.Px(14))), UiScale.Px(24));
             nameBox.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             nameBox.BackColor = Color.FromArgb(40, 40, 44);
             nameBox.ForeColor = Color.White;
