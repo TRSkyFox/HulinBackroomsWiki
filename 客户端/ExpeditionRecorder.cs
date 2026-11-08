@@ -3535,6 +3535,7 @@ namespace ExpeditionRecorder
         bool _rebuilding;
         bool _saving;
         bool _dirty;
+        bool _normalized;
         bool _firstShown;
 
         int Px(int v) { return UiScale.Px(v); }
@@ -3688,6 +3689,8 @@ namespace ExpeditionRecorder
             _relayout = new System.Windows.Forms.Timer();
             _relayout.Interval = 160;
             _relayout.Tick += delegate { _relayout.Stop(); RelayoutFields(); };
+            /* 開啟時若把折行的結果併過段，就排一次存檔，讓 JSONL 也變成合併後的樣子。 */
+            if (_normalized) ScheduleSave();
             KeyDown += delegate (object s, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Escape) Close();
@@ -4184,8 +4187,16 @@ namespace ExpeditionRecorder
 
         void AddResults(Dictionary<string, object> st)
         {
-            var old = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
-            int n = old == null ? 0 : old.Count;
+            var raw = st.ContainsKey("results") ? st["results"] as System.Collections.ArrayList : null;
+            /* 把「被折行的一段話」併回一筆；有變動就讓下一次存檔寫回去。
+               本來就沒有 results 的記錄不要因此被塞一個空陣列。 */
+            var old = Program.NormalizeResults(raw);
+            if (raw != null && raw.Count != old.Count)
+            {
+                st["results"] = old;
+                _normalized = true;
+            }
+            int n = old.Count;
             if (n == 0)
             {
                 var t0 = AddRaw("選擇結果", "", true, 24);
@@ -4200,7 +4211,7 @@ namespace ExpeditionRecorder
             for (int i = 0; i < n; i++)
             {
                 int idx = i;
-                string label = n == 1 ? "選擇結果" : "結果 " + (i + 1);
+                string label = n == 1 ? "選擇結果" : "選擇結果 " + (i + 1);
                 var t = AddRaw(label, Convert.ToString(old[i]), true, 24);
                 _savers.Add(delegate
                 {
@@ -4215,6 +4226,37 @@ namespace ExpeditionRecorder
                     arr[idx] = t.Text.Trim();
                 });
             }
+        }
+
+        /* 選項層級的標記：勾了就表示「選這個不會讓事件通過」（附加選項）。 */
+        void AddSideOptionRow(Dictionary<string, object> od)
+        {
+            int rowTop = _y;
+            bool narrow = Narrow;
+            bool on;
+            try { on = string.Equals(S(od, "sideOption"), "true", StringComparison.OrdinalIgnoreCase); }
+            catch { on = false; }
+            var cb = new CheckBox();
+            cb.Text = "選擇不會導致通過該事件";
+            cb.ForeColor = Color.FromArgb(225, 225, 230);
+            cb.Checked = on;
+            AddLabel("附加選項", rowTop, _fieldH, Color.FromArgb(150, 195, 220));
+            if (narrow)
+            {
+                cb.SetBounds(PageLeft, rowTop + _fieldH + Px(2), FieldW, _fieldH);
+                _y = rowTop + (_fieldH + Px(2)) * 2 + RowGap;
+            }
+            else
+            {
+                cb.SetBounds(FieldX, rowTop, Math.Min(FieldW, Px(300)), _fieldH);
+                _y = rowTop + _fieldH + RowGap;
+            }
+            _panel.Controls.Add(cb);
+            _savers.Add(delegate
+            {
+                if (cb.Checked) od["sideOption"] = true;
+                else od.Remove("sideOption");
+            });
         }
 
         void AddOptionText(Dictionary<string, object> d)
@@ -4731,6 +4773,7 @@ namespace ExpeditionRecorder
                         string optName = "選項 " + (oi + 1);
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
+                        AddSideOptionRow(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         bool condOpt = IsConditionOption(od);
                         string condType = condOpt ? InferConditionType(od) : "";
@@ -6565,7 +6608,7 @@ namespace ExpeditionRecorder
                 rec["characters"] = chars;
                 if (chars.Count == 1) rec["character"] = chars[0];
             }
-            rec["results"] = results;
+            rec["results"] = Program.NormalizeResults(results);
             return rec;
         }
 
@@ -7067,10 +7110,74 @@ namespace ExpeditionRecorder
             return "普通事件";
         }
 
+        /* ── 結果分段 ────────────────────────────────────────────
+           記錄器是按「畫面上的行」寫 results 的：一段話被折成 3 行，就會變成 3 筆結果。
+           這裡把「明顯是同一段」的行併回一筆：
+             · 某一行以標點開頭（，。、；：！？）」』…）＝上一行被切斷；
+             · 某一行很長卻沒有句末標點（≥ 20 字）＝下一行是它的續行。
+           只要組裡出現任一個訊號，就把整組併成一段。
+           空字串代表「段落分隔」：分段處理，不會把兩段黏在一起。 */
+        internal static System.Collections.ArrayList NormalizeResults(System.Collections.IList src)
+        {
+            var outp = new System.Collections.ArrayList();
+            if (src == null) return outp;
+            var lines = new List<string>();
+            foreach (var x in src) lines.Add((Convert.ToString(x) ?? "").Trim());
+            var groups = new List<List<string>>();
+            var cur = new List<string>();
+            foreach (var s in lines)
+            {
+                if (s.Length == 0)
+                {
+                    if (cur.Count > 0) { groups.Add(cur); cur = new List<string>(); }
+                }
+                else cur.Add(s);
+            }
+            if (cur.Count > 0) groups.Add(cur);
+            if (groups.Count == 0)
+            {
+                if (lines.Count > 0) outp.Add("");
+                return outp;
+            }
+            foreach (var g in groups)
+            {
+                bool wrapped = false;
+                for (int i = 1; i < g.Count && !wrapped; i++)
+                {
+                    if (StartsContinuation(g[i])) wrapped = true;
+                    else if (g[i - 1].Length >= 20 && !EndsSentence(g[i - 1])) wrapped = true;
+                }
+                if (!wrapped)
+                {
+                    foreach (var s in g) outp.Add(s);
+                }
+                else
+                {
+                    var sb = new StringBuilder();
+                    foreach (var s in g) sb.Append(s);
+                    outp.Add(sb.ToString());
+                }
+            }
+            return outp;
+        }
+
+        static bool StartsContinuation(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            const string marks = "，。、；：！？）」』】·…～,.;:!?)]";
+            return marks.IndexOf(s[0]) >= 0;
+        }
+
+        static bool EndsSentence(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            const string marks = "。！？…；：!?;:」』】\"”）)";
+            return marks.IndexOf(s[s.Length - 1]) >= 0;
+        }
+
         internal static string CleanOptionText(string s)
         {
-            if (string.IsNullOrEmpty(s)) return s ?? "";
-            return System.Text.RegularExpressions.Regex.Replace(s, "[★☆]", "").Trim();
+            if (string.IsNullOrEmpty(s)) return s ?? "";            return System.Text.RegularExpressions.Regex.Replace(s, "[★☆]", "").Trim();
         }
 
         internal static void MoveChecksToOptions(Dictionary<string, object> rec)
