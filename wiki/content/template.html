@@ -1128,6 +1128,12 @@ aside li>a.navrow .cnt{margin-left:auto;color:var(--tx2);font-size:.88rem;font-w
 #pageView .cprail.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:700}
 #pageView .cprail .cnt{margin-left:auto;color:var(--tx3);font-size:.84rem;font-variant-numeric:tabular-nums}
 #pageView .cprail.on .cnt{color:var(--acc)}
+/* 已歸檔：刻意壓暗，不要跟現役角色搶目光（2026-11-09） */
+#pageView .cprail.arch{color:var(--tx3);opacity:.8}
+#pageView .cprail.arch:hover{color:var(--tx2);opacity:1}
+#pageView .cprail.arch.on{color:var(--tx2);opacity:1;background:color-mix(in srgb,var(--tx3) 18%,transparent)}
+#pageView .cprail.arch.on .cnt{color:var(--tx2)}
+#pageView .cpsec.arch .cpsech{color:var(--tx3)}
 #pageView #cplist{display:flex;flex-direction:column;gap:.15rem;height:100%;
   overflow-y:auto;scrollbar-gutter:stable;padding-right:.35rem}
 #pageView .cpsec{margin-bottom:.4rem}
@@ -4266,6 +4272,11 @@ body{overflow:hidden}
 #pageView.cdx .evb.codex .cprail.on{background:color-mix(in srgb,var(--t-acc) 16%,transparent);color:var(--t-acc)}
 #pageView.cdx .evb.codex .cprail .cnt{color:var(--t-dim)}
 #pageView.cdx .evb.codex .cprail.on .cnt{color:var(--t-acc)}
+/* 已歸檔：終端機色票裡的暗色，不要跟現役角色搶目光（2026-11-09） */
+#pageView.cdx .evb.codex .cprail.arch{color:color-mix(in srgb,var(--t-dim) 62%,transparent);opacity:.82}
+#pageView.cdx .evb.codex .cprail.arch:hover{color:var(--t-dim);opacity:1}
+#pageView.cdx .evb.codex .cprail.arch.on{color:var(--t-dim);opacity:1;background:color-mix(in srgb,var(--t-dim) 14%,transparent)}
+#pageView.cdx .evb.codex .cpsec.arch .cpsech{color:var(--t-dim)}
 #pageView.cdx .evb.codex .cpsech{color:var(--t-acc);border-bottom-color:var(--t-line)}
 #pageView.cdx .evb.codex .cpsech .cnt{color:var(--t-dim)}
 #pageView.cdx .evb.codex .cprow .nm{color:var(--t-tx) !important}
@@ -9318,7 +9329,19 @@ function openPageView(key){
 var CP = __WIKI_CP__;
 var CP_ENT = __WIKI_CP_ENT__;
 var CP_SKILLS = __WIKI_CP_SKILLS__;
-var CP_SP_ORDER = ['自訂','人類','犬·狼','狐狸','貓','龍','鼠','兔','羊','鳥','兩棲','未分類','特殊角色'];
+/* 角色分類（2026-11-09 使用者指定）：鳥 → 兩棲 → 羊 → 其他 → 特殊角色 → 已歸檔。
+   不在這幾類的種族一律歸「其他」；已歸檔目前是 霧雨、余生。 */
+var CP_CATS = ['鳥','兩棲','羊','其他','特殊角色','已歸檔'];
+var CP_ARCHIVED = ['霧雨','余生'];
+function cpCatOf(c){
+  if(!c) return '其他';
+  if(CP_ARCHIVED.indexOf(String(c.n || '')) >= 0) return '已歸檔';
+  var k = String(c.sp || '');
+  if(k === '狐') k = '狐狸';
+  if(k === '鳥' || k === '兩棲' || k === '羊' || k === '特殊角色') return k;
+  return '其他';
+}
+var CP_SP_ORDER = CP_CATS;
 var CPT = { tab:'chars', rail:null, sel:0, q:'' };
 
 function cpEsc(s){ return iEsc(s); }
@@ -9332,7 +9355,7 @@ function cpMaskHtml(s){
 }
 function cpSpeciesList(){
  var cnt = {};
- CP.chars.forEach(function(c){ var k = c.sp || '未分類'; cnt[k] = (cnt[k]||0)+1; });
+ CP.chars.forEach(function(c){ var k = cpCatOf(c); cnt[k] = (cnt[k]||0)+1; });
  return CP_SP_ORDER.filter(function(k){ return cnt[k]; }).map(function(k){ return { k:k, n:cnt[k] }; });
 }
 function cpStatusCats(){
@@ -9344,7 +9367,7 @@ function cpRows(){
  var q = CPT.q;
  if(CPT.tab === 'chars'){
  return CP.chars.filter(function(c){
- if(CPT.rail && (c.sp||'未分類') !== CPT.rail) return false;
+ if(CPT.rail && cpCatOf(c) !== CPT.rail) return false;
  if(!q) return true;
        /* 搜尋不只看名字：技能全文、自帶道具（名稱＋效果）、介紹、稱號全都可以比對 */
       var hay = [c.n, c.alias||'', c.title||'', c.bio||'', c.attrs||'', c.unlock||'', c.sp||''];
@@ -9382,7 +9405,7 @@ function cpRailHtml(){
  h += '<button type="button" class="cprail' + (CPT.rail? '':' on') + '" data-rail="">'
  + '<span>全部</span><span class="cnt">' + all + '</span></button><div class="sep"></div>';
  cpSpeciesList().forEach(function(x){
- h += '<button type="button" class="cprail' + (CPT.rail===x.k?' on':'') + '" data-rail="' + cpEsc(x.k) + '">'
+ h += '<button type="button" class="cprail' + (CPT.rail===x.k?' on':'') + (x.k==='已歸檔'?' arch':'') + '" data-rail="' + cpEsc(x.k) + '">'
  + '<span>' + cpEsc(x.k) + '</span><span class="cnt">' + x.n + '</span></button>';
  });
  }else if(CPT.tab === 'stats'){
@@ -9431,13 +9454,13 @@ function cpListHtml(){
  if(!rows.length) return '<div style="color:var(--tx3);padding:.5rem">（沒有符合的項目）</div>';
  if(CPT.tab === 'chars'){
  if(CPT.rail){ /* 已選種族：用和「全部」相同的容器，間距才一致 */
- return '<div class="cpsec"><div class="cpsech">' + cpEsc(CPT.rail) + '<span class="cnt">' + rows.length + ' 位</span></div>'
+ return '<div class="cpsec' + (CPT.rail==='已歸檔'?' arch':'') + '"><div class="cpsech">' + cpEsc(CPT.rail) + '<span class="cnt">' + rows.length + ' 位</span></div>'
  + rows.map(function(c){ var i = CP.chars.indexOf(c); return cpCharRow(c,i); }).join('') + '</div>';
  }
  return cpSpeciesList().map(function(sp){
- var g = rows.filter(function(c){ return (c.sp||'未分類')===sp.k; });
+ var g = rows.filter(function(c){ return cpCatOf(c)===sp.k; });
  if(!g.length) return '';
- return '<div class="cpsec"><div class="cpsech">' + cpEsc(sp.k) + '<span class="cnt">' + g.length + ' 位</span></div>'
+ return '<div class="cpsec' + (sp.k==='已歸檔'?' arch':'') + '"><div class="cpsech">' + cpEsc(sp.k) + '<span class="cnt">' + g.length + ' 位</span></div>'
  + g.map(function(c){ return cpCharRow(c, CP.chars.indexOf(c)); }).join('') + '</div>';
  }).join('');
  }
@@ -9987,13 +10010,12 @@ var ENT = { floor:null, sel:0, q:'' };
 var CDX = { tab:'chars', sel:'', q:'', cat:'' };
 function cdxChars(){ return (typeof CP !== 'undefined' && CP && CP.chars) ? CP.chars : []; }
 function cdxEnts(){ return (typeof CP_ENT !== 'undefined' && CP_ENT) ? CP_ENT : []; }
-/* 角色分類固定順序（照使用者截圖由左到右） */
-var CDX_SP_ORDER = ['自訂','人類','犬·狼','狐狸','貓','龍','鼠','兔','羊','鳥','兩棲'];
+/* 角色分類固定順序（2026-11-09 使用者指定：鳥 → 兩棲 → 羊 → 其他 → 特殊角色 → 已歸檔） */
+var CDX_SP_ORDER = CP_CATS;
 function cdxSpRank(sp){
   var k = String(sp || '其他'); if(k === '狐') k = '狐狸';
-  if(k === '特殊角色') return 999;          /* 使用者的特殊角色永遠最後 */
   var i = CDX_SP_ORDER.indexOf(k);
-  return i < 0 ? 500 : i;
+  return i < 0 ? CDX_SP_ORDER.length : i;
 }
 /* 角色分類＝種族（sp）；實體分類＝第一個出現樓層 */
 function cdxEntFloors(e){
@@ -10011,8 +10033,7 @@ function cdxCats(){
   if(CDX.tab === 'chars'){
     var seen = {};
     (typeof CP !== 'undefined' && CP && CP.chars ? CP.chars : []).forEach(function(c){
-      var k = String(c.sp || '其他');
-      if(k === '狐') k = '狐狸';                 /* 「狐」併入「狐狸」 */
+      var k = cpCatOf(c);
       if(!seen[k]){ seen[k] = { k:k, n:0 }; out.push(seen[k]); }
       seen[k].n++;
     });
@@ -10029,7 +10050,7 @@ function cdxRailHtml(){
       + '<span>' + label + '</span><span class="cnt">' + n + '</span></button>';
   }
   function catBtn(k, label, n, on){
-    return '<button type="button" class="cprail' + (on ? ' on' : '') + '" data-cdxk="' + k + '" data-cdxcat="' + String(label).replace(/"/g,'') + '" style="padding-left:1.1rem">'
+    return '<button type="button" class="cprail' + (on ? ' on' : '') + (label === '已歸檔' ? ' arch' : '') + '" data-cdxk="' + k + '" data-cdxcat="' + String(label).replace(/"/g,'') + '" style="padding-left:1.1rem">'
       + '<span>' + label + '</span><span class="cnt">' + n + '</span></button>';
   }
   var html = CDX.lock ? '' : btn('chars', '角色', nC) + btn('ents', '實體', nE);
@@ -10045,8 +10066,7 @@ function cdxRows(){
   if(CDX.tab === 'all' || CDX.tab === 'chars'){
     cdxChars().forEach(function(c, k){
       if(CDX.tab === 'chars' && CDX.cat){
-        var _spc = String(c.sp || '其他'); if(_spc === '狐') _spc = '狐狸';
-        if(_spc !== CDX.cat) return;
+        if(cpCatOf(c) !== CDX.cat) return;
       }
       if(q){
         var hay = [c.n, c.alias || '', c.title || '', c.sp || '', c.attrs || '', c.bio || ''];
@@ -10057,9 +10077,9 @@ function cdxRows(){
       out.push({ k:'c', i:k, o:c });
     });
   }
-  /* 全部角色：照截圖的分類順序排列 */
+  /* 全部角色：照分類順序排列 */
   if(CDX.tab === 'chars' && !CDX.cat){
-    out.sort(function(a,b){ return cdxSpRank(a.o.sp) - cdxSpRank(b.o.sp); });
+    out.sort(function(a,b){ return cdxSpRank(cpCatOf(a.o)) - cdxSpRank(cpCatOf(b.o)); });
   }
   /* 「狐」那一位排到「狐狸」分類的最後面 */
   if(CDX.tab === 'chars' && CDX.cat === '狐狸'){
