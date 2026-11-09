@@ -9909,7 +9909,8 @@ function cpDetailHtml(){
  + '</div>';
  }).join('');
  var items = (c.items || []).map(function(it){
-  var _eff = itemEffText(it.n);
+  /* 物品庫還沒收錄時，用角色檔裡的 it.text 補一句（新角色的自帶道具就是這樣記的） */
+  var _eff = itemEffText(it.n) || it.text || '';
   return '<li><button type="button" class="cpitem" data-item="' + cpEsc(it.n) + '">' + cpEsc(it.n) + '</button>'
     + (_eff ? '　<span class="cpitem-sub">' + cpEsc(_eff) + '</span>' : '') + '</li>';
 }).join('');
@@ -10180,7 +10181,8 @@ function cdxCharHtml(c){
       + '</div>';
   }).join('');
   var items = (c.items || []).map(function(it){
-    var _eff = itemEffText(it.n);
+    /* 同角色詳情：物品庫沒有就用角色檔的 it.text */
+    var _eff = itemEffText(it.n) || it.text || '';
     return '<li><button type="button" class="cpitem" data-item="' + cpEsc(it.n) + '">' + cpEsc(it.n) + '</button>'
       + (_eff ? '　<span class="cpitem-sub">' + cpEsc(_eff) + '</span>' : '') + '</li>';
   }).join('');
