@@ -9329,16 +9329,17 @@ function openPageView(key){
 var CP = __WIKI_CP__;
 var CP_ENT = __WIKI_CP_ENT__;
 var CP_SKILLS = __WIKI_CP_SKILLS__;
-/* 角色分類（2026-11-09 使用者指定）：鳥 → 兩棲 → 羊 → 其他 → 特殊角色 → 已歸檔。
-   不在這幾類的種族一律歸「其他」；已歸檔目前是 霧雨、余生。 */
-var CP_CATS = ['鳥','兩棲','羊','其他','特殊角色','已歸檔'];
+/* 角色分類順序（2026-11-09 使用者截圖）：
+   自訂 → 人類 → 犬·狼 → 狐狸 → 貓 → 龍 → 鼠 → 兔 → 鳥 → 兩棲 → 羊 → 其他 → 特殊角色 → 已歸檔。
+   「其他」只收不在這份名單裡的種族（未分類、其他…），不是把大家合併；已歸檔目前是 霧雨、余生。 */
+var CP_CATS = ['自訂','人類','犬·狼','狐狸','貓','龍','鼠','兔','鳥','兩棲','羊','其他','特殊角色','已歸檔'];
 var CP_ARCHIVED = ['霧雨','余生'];
 function cpCatOf(c){
   if(!c) return '其他';
   if(CP_ARCHIVED.indexOf(String(c.n || '')) >= 0) return '已歸檔';
   var k = String(c.sp || '');
   if(k === '狐') k = '狐狸';
-  if(k === '鳥' || k === '兩棲' || k === '羊' || k === '特殊角色') return k;
+  if(k && k !== '其他' && CP_CATS.indexOf(k) >= 0) return k;
   return '其他';
 }
 var CP_SP_ORDER = CP_CATS;
