@@ -4390,13 +4390,13 @@ namespace ExpeditionRecorder
         }
 
         /* 「＋ 新增影響」：選種類（+對象）。
-           體力／理智／飢餓／飽食／口渴 只選「恢復／損失」，不填數字；
+           體力／理智／飢餓／口渴 只選「恢復／損失」，不填數字；
            經驗／記憶碎片／出口進度 才填數字。文字一律由程式產生。 */
         void AddEffectAdder(Dictionary<string, object> st)
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度", "物品" };
+            string[] kinds = { "體力", "理智", "飢餓", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度", "物品" };
             AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
@@ -6036,7 +6036,7 @@ namespace ExpeditionRecorder
             if (ed == null) return "";
             string text = Str(ed, "text");
             string amount = Str(ed, "amount");
-            /* 體力／理智／飢餓／飽食／口渴 只記方向，不顯示數字 */
+            /* 體力／理智／飢餓／口渴 只記方向，不顯示數字 */
             bool plain = OverlayForm.IsStatKind(Str(ed, "kind"));
             if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + amount).Trim();
             else if (!plain && amount != "" && amount != "0" && text.IndexOf(amount, StringComparison.Ordinal) < 0)
@@ -7307,7 +7307,7 @@ namespace ExpeditionRecorder
                     list.Add(d);
                     continue;
                 }
-                var mr = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|飽食|饱食|口渴|生命|精神|算力|耐久|經驗|经验)\s*([+-]?\s*\d+)\s*$");
+                var mr = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神|算力|耐久|經驗|经验)\s*([+-]?\s*\d+)\s*$");
                 if (mr.Success)
                 {
                     string kind = EffectKind(mr.Groups[1].Value);
@@ -7316,7 +7316,7 @@ namespace ExpeditionRecorder
                     d["target"] = target; d["kind"] = kind;
                     if (IsStatKind(kind))
                     {
-                        /* 體力／理智／飢餓／飽食／口渴 只記方向，遊戲不給數字 */
+                        /* 體力／理智／飢餓／口渴 只記方向，遊戲不給數字 */
                         d["amount"] = amount < 0 ? -1 : 1;
                         d["text"] = EffectPlainText(kind, amount);
                         d["plain"] = true;
@@ -7329,7 +7329,7 @@ namespace ExpeditionRecorder
                     list.Add(d);
                     continue;
                 }
-                var mv = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|飽食|饱食|口渴|生命|精神|算力|耐久)\s*(\d+)\s*$");
+                var mv = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神|算力|耐久)\s*(\d+)\s*$");
                 if (mv.Success)
                 {
                     string kind = EffectKind(mv.Groups[1].Value);
@@ -7361,7 +7361,6 @@ namespace ExpeditionRecorder
         {
             if (kind == "体力") return "體力";
             if (kind == "饥饿") return "飢餓";
-            if (kind == "饱食") return "飽食";
             if (kind == "经验") return "經驗";
             if (kind == "算力") return "理智";     /* 算力就是理智 */
             if (kind == "耐久") return "體力";     /* 耐久就是體力 */
@@ -7374,13 +7373,13 @@ namespace ExpeditionRecorder
             string k = kind ?? "";
             return k == "體力" || k == "生命" || k == "耐久"
                 || k == "理智" || k == "精神" || k == "算力"
-                || k == "飢餓" || k == "飽食" || k == "口渴";
+                || k == "飢餓" || k == "口渴";
         }
 
         internal static string EffectPlainText(string kind, int amount)
         {
             bool neg = amount < 0;
-            if (kind == "飢餓" || kind == "飽食" || kind == "口渴") return (neg ? "減少" : "增加") + kind;
+            if (kind == "飢餓" || kind == "口渴") return (neg ? "減少" : "增加") + kind;
             return (neg ? "損失" : "恢復") + kind;
         }
 
