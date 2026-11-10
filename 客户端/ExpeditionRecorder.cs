@@ -4320,6 +4320,14 @@ namespace ExpeditionRecorder
                 {
                     var ed = eff[ei] as Dictionary<string, object>;
                     if (ed == null) continue;
+                    /* 舊記錄裡如果有具體角色／玩家名，開起來就順手改成「你／所有人」 */
+                    string rawTarget = S(ed, "target");
+                    string fixedTarget = OverlayForm.EffectTargetLabel(rawTarget);
+                    if (fixedTarget != rawTarget)
+                    {
+                        ed["target"] = fixedTarget;
+                        _normalized = true;
+                    }
                     n++;
                     int rowTop = _y;
                     int vy = Narrow ? rowTop + _fieldH + Px(2) : rowTop;
@@ -4390,20 +4398,24 @@ namespace ExpeditionRecorder
             AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
-            int cw = Math.Min(Px(132), Math.Max(Px(96), ComboWidth(kinds)));
+            int cw = Math.Min(Px(120), Math.Max(Px(92), ComboWidth(kinds)));
             var cb = AddComboCore(x0, y, cw, kinds, 0, Color.White);
+            /* 對象只給「你／所有人」，不寫具體角色名 */
+            string[] who = { "你", "所有人" };
+            int ww = Math.Min(Px(94), Math.Max(Px(70), ComboWidth(who)));
+            var wb = AddComboCore(x0 + cw + Px(8), y, ww, who, 0, Color.White);
             var amt = new TextBox();
             amt.BackColor = Color.FromArgb(40, 40, 44);
             amt.ForeColor = Color.White;
             amt.BorderStyle = BorderStyle.FixedSingle;
-            amt.SetBounds(x0 + cw + Px(8), y + Px(2), Px(62), _fieldH);
+            amt.SetBounds(x0 + cw + ww + Px(16), y + Px(2), Px(56), _fieldH);
             _panel.Controls.Add(amt);
             var tip = new ToolTip();
             tip.SetToolTip(amt, "要加多少：回復填 2、損失填 -2");
             int bh = Math.Max(_fieldH, _buttonH);
             var add = new Button();
             add.Text = "加入";
-            add.SetBounds(x0 + cw + Px(8) + Px(62) + Px(8), y, Math.Max(Px(58), TextW("加入", BasePt) + Px(22)), bh);
+            add.SetBounds(x0 + cw + ww + Px(16) + Px(56) + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
             add.FlatStyle = FlatStyle.Flat;
             add.BackColor = Color.FromArgb(44, 48, 44);
             add.ForeColor = Color.FromArgb(214, 236, 214);
@@ -4417,7 +4429,7 @@ namespace ExpeditionRecorder
                     SetStatus("數值要填整數，例如 2 或 -2", Color.FromArgb(240, 186, 120));
                     return;
                 }
-                ApplyNewEffect(st, kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex], amount);
+                ApplyNewEffect(st, kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex], amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex]);
                 amt.Text = "";
                 QueueRelayout(true);
             };
@@ -4425,7 +4437,7 @@ namespace ExpeditionRecorder
             _y = y + bh + RowGap;
         }
 
-        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount)
+        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount, string target)
         {
             if (st == null) return;
             if (kind == "出口進度")
@@ -4440,7 +4452,7 @@ namespace ExpeditionRecorder
             var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
             if (arr == null) { arr = new System.Collections.ArrayList(); st["effects"] = arr; }
             var d = new Dictionary<string, object>();
-            d["target"] = Party.LocalCharacter != "" ? Party.LocalCharacter : "你";
+            d["target"] = OverlayForm.EffectTargetLabel(target);
             d["kind"] = kind;
             d["amount"] = amount;
             d["text"] = OverlayForm.EffectText(kind, amount);
@@ -7152,7 +7164,8 @@ namespace ExpeditionRecorder
             }
             /* “天狐（慢了一步）：体力 -3” 里括号是状态说明，不是名字。 */
             target = System.Text.RegularExpressions.Regex.Replace(target ?? "", @"[（(][^）)]*[）)]", "").Trim();
-            if (target == "") target = "你";
+            /* 影響只記「你」或「所有人」，不寫具體角色／玩家名 */
+            target = EffectTargetLabel(target);
 
             /* （某段记忆被留了下来……这次冒险的记忆碎片 +1） */
             var mm = System.Text.RegularExpressions.Regex.Match(t, @"(?:记忆碎片|記憶碎片)\s*([+-]?\s*\d+)");
@@ -7266,6 +7279,25 @@ namespace ExpeditionRecorder
             if (kind == "記憶碎片") return "記憶碎片 " + sign;
             if (kind == "出口進度") return "出口進度 " + sign;
             return kind + " " + sign;
+        }
+
+        /* 影響的對象只寫「你」或「所有人」：不接受任何具體角色／玩家名。
+           隊伍欄對照到本機角色、或是認不出來的，都當「你」。 */
+        internal static string EffectTargetLabel(string target)
+        {
+            string t = (target ?? "").Trim();
+            if (t == "" || t == "你") return "你";
+            if (t == "所有人") return "所有人";
+            if (t.StartsWith("各") || t.StartsWith("每人") || t.StartsWith("都")) return "所有人";
+            if (t.IndexOf("所有人", StringComparison.Ordinal) >= 0
+                || t.IndexOf("全體", StringComparison.Ordinal) >= 0
+                || t.IndexOf("全体", StringComparison.Ordinal) >= 0
+                || t.IndexOf("大家", StringComparison.Ordinal) >= 0
+                || t.IndexOf("團隊", StringComparison.Ordinal) >= 0
+                || t.IndexOf("团队", StringComparison.Ordinal) >= 0
+                || t.IndexOf("全隊", StringComparison.Ordinal) >= 0
+                || t.IndexOf("全队", StringComparison.Ordinal) >= 0) return "所有人";
+            return "你";
         }
     }
 
