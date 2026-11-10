@@ -163,6 +163,15 @@ cmd /c '"D:\Project\HulinBackroomsWiki\客户端\啟動.bat"'
 **限制**：wiki 的 `events.json` 还没有「步骤链」结构，`import-manual` 会把 options-only 的步骤过滤掉；
 要真正写进 wiki 得先定 schema（如 `branches[].next`）。截图 `after/15-多步事件步骤区块.png`。
 
+**23:45 角色事件认不出角色（Party.Scan）**：队伍栏实际是「玩家名 Lv1（你）」一条、角色稱號另一条，
+OCR 拆成两行、同一列。原来 `Scan` 只接受严格「上方 60px」且要求稱號跟 characters.json **完全一致**，
+而 `s2t.json` 缺字（`游/遊` 根本不在表里），于是 `游走各地的宝藏猎人 ≠ 遊走各地的寶藏獵人` → 整条对不上，
+`NameToChar` 空 → 角色事件的 角色 字段永远是空。
+修法：① 標題改成模糊比對（容許 長度÷6 個字不同，至少 1）；② 名字行允許「同一列」並優先挑帶 `Lv` 的；
+③ `CleanPlayerName` 去掉名字後面的「（你」；④ 掃描結果先建暫存表，這次沒掃到就不覆蓋舊表；
+⑤ `ScanParty` 節流 30s→5s、不再限定 `Mode == ""`，`CaptureStep` 開頭先刷新一次。
+驗證：對真實隊伍欄截圖，`--selftest` 由 `party=[] local=[]` 變成 `天狐=Kiia`、`local=Kiia`。
+
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

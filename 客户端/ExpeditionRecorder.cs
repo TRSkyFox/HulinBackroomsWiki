@@ -1567,16 +1567,52 @@ namespace ExpeditionRecorder
         {
             s = System.Text.RegularExpressions.Regex.Replace(s ?? "", @"Lv\s*\d+[★☆]?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             s = System.Text.RegularExpressions.Regex.Replace(s, @"[★☆].*$", "");
+            /* 本機玩家的「（你）」是遊戲畫在名字後面的標記，不屬於名字 */
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"[（(]\s*你\s*[）)]?", "");
             s = System.Text.RegularExpressions.Regex.Replace(s, @"\s+", " ").Trim();
             s = s.Trim('★', '☆', '·', '・', ' ', '　', '（', '）', '(', ')');
             return s;
+        }
+
+        /* 標題比對：OCR 讀到的是簡體、characters.json 是繁體，而 s2t 表本來就缺字
+           （例如「游／遊」整組不在表裡），精確比對會讓整條對不上。
+           先精確找，找不到再容許 1～3 個字不同（長度 ÷ 6，至少 1）。 */
+        static int FindTitle(string hay, string title)
+        {
+            if (string.IsNullOrEmpty(hay) || string.IsNullOrEmpty(title)) return -1;
+            int exact = hay.IndexOf(title, StringComparison.Ordinal);
+            if (exact >= 0) return exact;
+            if (hay.Length < title.Length) return -1;
+            int allow = Math.Max(1, title.Length / 6);
+            int bestDiff = allow + 1, bestAt = -1;
+            for (int i = 0; i + title.Length <= hay.Length; i++)
+            {
+                int diff = 0;
+                for (int k = 0; k < title.Length; k++)
+                {
+                    if (hay[i + k] != title[k]) diff++;
+                    if (diff > allow) break;
+                }
+                if (diff <= allow && diff < bestDiff) { bestDiff = diff; bestAt = i; if (diff == 0) break; }
+            }
+            return bestAt;
+        }
+
+        static int TitleDiff(string hay, string title, int at)
+        {
+            if (at < 0 || at + title.Length > hay.Length) return 99;
+            int diff = 0;
+            for (int k = 0; k < title.Length; k++) if (hay[at + k] != title[k]) diff++;
+            return diff;
         }
 
         public static void Scan(List<OcrLine> lines, int W)
         {
             lock (Sync)
             {
-            NameToChar.Clear(); LocalName = ""; LocalCharacter = "";
+            /* 先建在暫存表裡：這次沒掃到任何角色（例如只截到左半邊）就不要把上次的對照表清掉。 */
+            var map = new Dictionary<string, string>();
+            string localName = "", localChar = "";
             var right = new List<OcrLine>();
             foreach (var l in lines) right.Add(l);
             right.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
@@ -1591,54 +1627,91 @@ namespace ExpeditionRecorder
                 string nm = CleanPlayerName(t.Substring(0, li));
                 if (nm.Length == 0 || nm.Length >= 24) continue;
                 bool isLocal = t.IndexOf("（你", StringComparison.Ordinal) >= 0 || t.IndexOf("(你", StringComparison.Ordinal) >= 0;
-                if (isLocal) LocalName = nm;
                 string tail = ToHant(t.Substring(li));
                 CharacterInfo best = null;
+                int bestDiff = 99;
                 foreach (var c in All)
                 {
                     if (c.title.Length < 3) continue;
-                    if (tail.IndexOf(c.title, StringComparison.Ordinal) < 0) continue;
-                    if (best == null || c.title.Length > best.title.Length) best = c;
+                    int at = FindTitle(tail, c.title);
+                    if (at < 0) continue;
+                    int d = TitleDiff(tail, c.title, at);
+                    if (best == null || d < bestDiff || (d == bestDiff && c.title.Length > best.title.Length))
+                    {
+                        best = c; bestDiff = d;
+                    }
                 }
                 if (best != null)
                 {
-                    NameToChar[nm] = best.n;
-                    if (isLocal) LocalCharacter = best.n;
+                    map[nm] = best.n;
+                    if (isLocal) { localName = nm; localChar = best.n; }
                 }
             }
 
+            /* 名字和稱號在畫面上是同一列、OCR 會拆成兩條（名字在左、稱號在右），
+               所以配對允許「同一列」或「上方 60px 內」，並優先挑帶 Lv 的那條。 */
             foreach (var l in right)
             {
                 string t = (l.Text ?? "").Trim();
+                if (t.Length < 3) continue;
+                string tt = ToHant(t);
+                CharacterInfo best = null;
+                int bestIdx = -1, bestDiff = 99;
                 foreach (var c in All)
                 {
                     if (c.title.Length < 3) continue;
-                    string tt = ToHant(t);
-                    int idx = tt.IndexOf(c.title, StringComparison.Ordinal);
+                    int idx = FindTitle(tt, c.title);
                     if (idx < 0) continue;
-
-                    string nameLine = null;
-                    string name = "";
-                    if (idx > 0) name = t.Substring(0, idx).Trim();
-                    else
+                    int d = TitleDiff(tt, c.title, idx);
+                    if (best == null || d < bestDiff || (d == bestDiff && c.title.Length > best.title.Length))
                     {
-                        foreach (var q in right)
-                        {
-                            if (q.Y < l.Y && l.Y - q.Y < 60 && q.X < l.X) { nameLine = (q.Text ?? "").Trim(); break; }
-                        }
-                        name = nameLine ?? "";
+                        best = c; bestIdx = idx; bestDiff = d;
                     }
-                    bool isLocal = name.IndexOf("（你", StringComparison.Ordinal) >= 0 || name.IndexOf("(你", StringComparison.Ordinal) >= 0
-                        || t.IndexOf("（你", StringComparison.Ordinal) >= 0 || t.IndexOf("(你", StringComparison.Ordinal) >= 0;
-                    name = CleanPlayerName(name);
-                    if (name.Length > 0 && name.Length < 24 && !NameToChar.ContainsKey(name)) NameToChar[name] = c.n;
-                    if (isLocal)
-                    {
-                        if (LocalName == "" && name != "") LocalName = name;
-                        if (LocalCharacter == "") LocalCharacter = c.n;
-                    }
-                    break;
                 }
+                if (best == null) continue;
+
+                string name = bestIdx > 0 ? t.Substring(0, bestIdx).Trim() : "";
+                OcrLine nameLine = null;
+                int nameScore = 99;
+                if (name == "")
+                {
+                    foreach (var q in right)
+                    {
+                        if (ReferenceEquals(q, l)) continue;
+                        if (q.X >= l.X) continue;
+                        int dy = Math.Abs(q.Y - l.Y);
+                        bool sameRow = dy < 26;
+                        bool above = q.Y < l.Y && l.Y - q.Y < 60;
+                        if (!sameRow && !above) continue;
+                        bool hasLv = (q.Text ?? "").IndexOf("Lv", StringComparison.OrdinalIgnoreCase) >= 0;
+                        int score = (sameRow ? 0 : 10) + (hasLv ? 0 : 5);
+                        if (score < nameScore) { nameLine = q; nameScore = score; }
+                    }
+                    name = nameLine != null ? (nameLine.Text ?? "").Trim() : "";
+                }
+                bool isLocal = name.IndexOf("（你", StringComparison.Ordinal) >= 0
+                    || name.IndexOf("(你", StringComparison.Ordinal) >= 0
+                    || t.IndexOf("（你", StringComparison.Ordinal) >= 0
+                    || t.IndexOf("(你", StringComparison.Ordinal) >= 0;
+                if (!isLocal && nameLine != null)
+                {
+                    string nt = nameLine.Text ?? "";
+                    isLocal = nt.IndexOf("（你", StringComparison.Ordinal) >= 0 || nt.IndexOf("(你", StringComparison.Ordinal) >= 0;
+                }
+                name = CleanPlayerName(name);
+                if (name.Length > 0 && name.Length < 24 && !map.ContainsKey(name)) map[name] = best.n;
+                if (isLocal)
+                {
+                    if (localName == "" && name != "") localName = name;
+                    if (localChar == "") localChar = best.n;
+                }
+            }
+
+            if (map.Count > 0)
+            {
+                NameToChar = map;
+                LocalName = localName;
+                LocalCharacter = localChar;
             }
             }
         }
@@ -8036,7 +8109,7 @@ namespace ExpeditionRecorder
                 string recText = "已記錄 " + n, pendText = "待處理 " + p;
                 if (RecordsBtn != null) UiText.SetText(RecordsBtn, recText);
                 if (PendingBtn != null) UiText.SetText(PendingBtn, pendText);
-                if (GameHwnd != IntPtr.Zero && Mode == "") ScanPartyAsync();
+                if (GameHwnd != IntPtr.Zero) ScanPartyAsync();
             }
             catch { }
         }
@@ -8534,7 +8607,8 @@ namespace ExpeditionRecorder
         /* 同步版本只给后台线程/演示模式用；E 的响应链路不再调用它。 */
         static void ScanParty()
         {
-            if ((DateTime.Now - _partyScanned).TotalSeconds < 30) return;
+            /* 5 秒內掃過就跳過；角色事件每步都要用到這張對照表 */
+            if ((DateTime.Now - _partyScanned).TotalSeconds < 5) return;
             try
             {
                 Rectangle pr; double px, py;
@@ -8630,6 +8704,8 @@ namespace ExpeditionRecorder
         {
             if (GameHwnd == IntPtr.Zero) EnsureClient(false);
             if (GameHwnd == IntPtr.Zero) { SetState("找不到客戶端視窗"); return; }
+            /* 角色事件要靠隊伍欄的「玩家名 → 角色」對照表，記錄前先刷新一次（5 秒內掃過就跳過） */
+            try { ScanParty(); } catch { }
             ShowBusy("辨識中…");
             var sw = Stopwatch.StartNew();
             CaptureSw = sw;
@@ -10375,7 +10451,7 @@ namespace ExpeditionRecorder
                 rec["texts"] = texts;
                 rec["party"] = party;
                 rec["local"] = Party.LocalCharacter;
-                File.WriteAllText(outp, new JavaScriptSerializer().Serialize(rec), new UTF8Encoding(false));
+                                                File.WriteAllText(outp, new JavaScriptSerializer().Serialize(rec), new UTF8Encoding(false));
                 shot.Dispose();
                 Ocr.Stop();
             }
