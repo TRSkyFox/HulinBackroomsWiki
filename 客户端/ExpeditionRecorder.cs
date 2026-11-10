@@ -1848,7 +1848,34 @@ namespace ExpeditionRecorder
             { "搜尋", "Search" },
             { "篩選", "Filter" },
             { "重整", "Refresh" },
-            { "開啟資料夾", "Open folder" }
+            { "開啟資料夾", "Open folder" },
+            /* 影響面板 */
+            { "新增影響", "Add effect" },
+            { "健康", "Health" },
+            { "物資", "Supplies" },
+            { "事件", "Events" },
+            { "體力", "HP" },
+            { "理智", "SAN" },
+            { "飢餓", "Hunger" },
+            { "口渴", "Thirst" },
+            { "狀態效果", "Status" },
+            { "物品", "Item" },
+            { "硬幣", "Coins" },
+            { "經驗", "EXP" },
+            { "出口進度", "Exit progress" },
+            { "記憶碎片", "Memory shard" },
+            { "實體", "Entity" },
+            { "切層", "Floor change" },
+            { "恢復", "Restore" },
+            { "損失", "Lose" },
+            { "獲得", "Gain" },
+            { "消除", "Remove" },
+            { "加入", "Add" },
+            { "刪除", "Delete" },
+            { "你", "You" },
+            { "所有人", "Everyone" },
+            { "先選一個分類，再選要加的東西", "Pick a category, then what to add" },
+            { "（還沒有影響）", "(no effects yet)" }
         };
 
         static void Ensure()
@@ -4330,7 +4357,7 @@ namespace ExpeditionRecorder
             int rowTop = _y;
             bool narrow = Narrow;
             int bw = narrow ? FieldW : (FieldRight - FieldX);
-            int bh = Px(276);
+            int bh = Px(300);
             AddLabel("影響", rowTop, narrow ? _fieldH : _comboH, null);
             int by = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             var box = new EffectBox(st, bw, bh, delegate { _normalized = true; ScheduleSave(); });
@@ -5573,7 +5600,33 @@ namespace ExpeditionRecorder
             return Convert.ToString(d[k]);
         }
 
-        Color CatColor { get { return _cat >= 0 && _cat < CatColors.Length ? CatColors[_cat] : Color.FromArgb(150, 150, 160); } }
+        /* 影響種類的顏色：體力／理智／飢餓／口渴 用 HUD 四條的顏色，
+           硬幣用金幣色、記憶碎片用尋寶紫、實體用戰鬥紅。 */
+        static readonly Color CHp = Color.FromArgb(0xD0, 0x7A, 0x5F);
+        static readonly Color CSan = Color.FromArgb(0x86, 0xAF, 0xC6);
+        static readonly Color CHunger = Color.FromArgb(0xD7, 0xB9, 0x83);
+        static readonly Color CThirst = Color.FromArgb(0x70, 0xA3, 0xB8);
+        static readonly Color CCoin = Color.FromArgb(0xE3, 0xCD, 0x5B);
+        static readonly Color CShard = Color.FromArgb(0xA0, 0x91, 0xBB);
+        static readonly Color CEntity = Color.FromArgb(0xE0, 0x70, 0x5A);
+        static readonly Color CNeutral = Color.FromArgb(150, 150, 162);
+
+        static Color KindColor(string kind)
+        {
+            switch (kind)
+            {
+                case "體力": return CHp;
+                case "理智": return CSan;
+                case "飢餓": return CHunger;
+                case "口渴": return CThirst;
+                case "硬幣": return CCoin;
+                case "記憶碎片": return CShard;
+                case "實體": return CEntity;
+            }
+            return CNeutral;
+        }
+
+        Color CatColor { get { return _cat >= 0 && _cat < CatColors.Length ? CatColors[_cat] : CNeutral; } }
 
         public EffectBox(Dictionary<string, object> st, int width, int height, Action changed)
         {
@@ -5585,6 +5638,7 @@ namespace ExpeditionRecorder
 
             _list.BackColor = BackColor;
             _list.AutoScroll = true;
+            _list.HandleCreated += delegate { try { Native.DarkScroll(_list); } catch { } };
 
             _ops.BackColor = Color.FromArgb(38, 38, 44);
 
@@ -5593,11 +5647,11 @@ namespace ExpeditionRecorder
             try { Native.DarkScroll(_list); } catch { }
 
             int pad = P(8);
-            int opsH = P(118);
+            int opsH = P(112);
             _list.SetBounds(pad, pad, Width - pad * 2, Height - opsH - pad * 3);
             _ops.SetBounds(pad, Height - opsH - pad, Width - pad * 2, opsH);
 
-            _tabs.Items = Cats;
+            _tabs.Items = new[] { UiText.T(Cats[0]), UiText.T(Cats[1]), UiText.T(Cats[2]) };
             _tabs.Accents = CatColors;
             _tabs.SetBounds(P(8), P(8), _ops.Width - P(16), P(30));
             _tabs.Changed += delegate
@@ -5652,7 +5706,7 @@ namespace ExpeditionRecorder
             foreach (var c in old) c.Dispose();
         }
 
-        FxChip MkChip(string text, int x, int y, int w, Color accent, bool on, Action click)
+        FxChip MkChip(string text, string tip, int x, int y, int w, Color accent, bool on, Action click)
         {
             var c = new FxChip();
             c.Text = text;
@@ -5660,6 +5714,7 @@ namespace ExpeditionRecorder
             c.On = on;
             c.SetBounds(x, y, w, P(26));
             c.Font = Font;
+            if (tip != null) { var t = new ToolTip(); t.SetToolTip(c, tip); }
             c.Click += delegate { click(); };
             return c;
         }
@@ -5688,7 +5743,7 @@ namespace ExpeditionRecorder
                     n++;
                     any = true;
                     int idx = i;
-                    AddRow(n + ". " + RecordsForm.EventEffectText(ed), y, w, delegate
+                    AddRow(n + ". " + RecordsForm.EventEffectText(ed), y, w, KindColor(Str(ed, "kind")), delegate
                     {
                         var arr = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
                         if (arr != null && idx >= 0 && idx < arr.Count) arr.RemoveAt(idx);
@@ -5702,7 +5757,7 @@ namespace ExpeditionRecorder
             if (pg != null && (Str(pg, "delta") != "" || Str(pg, "current") != ""))
             {
                 any = true;
-                AddRow("出口進度  " + ProgressText(pg), y, w, delegate
+                AddRow(UiText.T("出口進度") + "  " + ProgressText(pg), y, w, CNeutral, delegate
                 {
                     _st.Remove("progress");
                     RebuildList();
@@ -5710,28 +5765,33 @@ namespace ExpeditionRecorder
                 });
                 y += P(26);
             }
-            _list.AutoScrollMinSize = new Size(0, y + P(4));
             if (!any)
             {
                 var empty = new Label();
-                empty.Text = "（還沒有影響）";
+                empty.Text = UiText.T("（還沒有影響）");
                 empty.ForeColor = Color.FromArgb(140, 140, 148);
                 empty.SetBounds(0, P(4), w, P(20));
                 _list.Controls.Add(empty);
             }
+            _list.AutoScrollMinSize = new Size(0, y + P(4));
             _list.ResumeLayout();
         }
 
-        void AddRow(string text, int y, int w, Action del)
+        void AddRow(string text, int y, int w, Color accent, Action del)
         {
+            var dot = new Panel();
+            dot.BackColor = accent;
+            dot.SetBounds(P(2), y + P(7), P(3), P(14));
+            _list.Controls.Add(dot);
+
             var lb = new Label();
             lb.Text = text;
             lb.AutoEllipsis = true;
             lb.ForeColor = Color.FromArgb(224, 224, 232);
-            lb.SetBounds(0, y + P(4), w - P(60), P(20));
+            lb.SetBounds(P(10), y + P(4), w - P(68), P(20));
             _list.Controls.Add(lb);
-            var c = MkChip("刪除", w - P(54), y, P(54), Color.FromArgb(210, 110, 110), false, del);
-            _list.Controls.Add(c);
+
+            _list.Controls.Add(MkChip(UiText.T("刪除"), null, w - P(54), y, P(54), Color.FromArgb(210, 110, 110), false, del));
         }
 
         void RebuildOps()
@@ -5740,12 +5800,13 @@ namespace ExpeditionRecorder
             /* 頁籤是常駐控制項，Clear 會把它 Dispose 掉，先拿出來 */
             if (_tabs.Parent == _ops) _ops.Controls.Remove(_tabs);
             Clear(_ops);
+            _tabs.Items = new[] { UiText.T(Cats[0]), UiText.T(Cats[1]), UiText.T(Cats[2]) };
             _tabs.SetBounds(P(8), P(8), Math.Min(_ops.Width - P(16), P(420)), P(30));
             _ops.Controls.Add(_tabs);
             if (_cat < 0)
             {
                 var hint = new Label();
-                hint.Text = "先選一個分類，再選要加的東西";
+                hint.Text = UiText.T("先選一個分類，再選要加的東西");
                 hint.ForeColor = Color.FromArgb(120, 120, 130);
                 hint.Font = Font;
                 hint.SetBounds(P(12), P(48), _ops.Width - P(24), P(24));
@@ -5759,8 +5820,9 @@ namespace ExpeditionRecorder
             foreach (var k0 in Kinds[_cat])
             {
                 string kk = k0;
-                int w = ChipW(kk);
-                var c = MkChip(kk, x, y, w, acc, _kind == kk, delegate
+                string disp = UiText.T(kk);
+                int w = ChipW(disp);
+                var c = MkChip(disp, kk, x, y, w, KindColor(kk), _kind == kk, delegate
                 {
                     _kind = (_kind == kk ? "" : kk);
                     RebuildOps();
@@ -5779,14 +5841,14 @@ namespace ExpeditionRecorder
                 {
                     string dn = dirs[i];
                     int dir = i == 0 ? 1 : -1;
-                    int w = ChipW(dn);
-                    bool pos = i == 0;
-                    var c = MkChip(dn, x, y, w, pos ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
-                    {
-                        AddEffect(kind, dir, "你", "");
-                        RebuildList();
-                        if (_changed != null) _changed();
-                    });
+                    int w = ChipW(UiText.T(dn));
+                    var c = MkChip(UiText.T(dn), null, x, y, w,
+                        i == 0 ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
+                        {
+                            AddEffect(kind, dir, "你", "");
+                            RebuildList();
+                            if (_changed != null) _changed();
+                        });
                     c.Strong = true;
                     _ops.Controls.Add(c);
                     x += w + P(6);
@@ -5812,8 +5874,9 @@ namespace ExpeditionRecorder
                 for (int i = 0; i < who.Length; i++)
                 {
                     int wi = i;
-                    int w = ChipW(who[i]);
-                    _ops.Controls.Add(MkChip(who[i], x, y, w, CatColor, _who == wi, delegate
+                    string disp = UiText.T(who[i]);
+                    int w = ChipW(disp);
+                    _ops.Controls.Add(MkChip(disp, null, x, y, w, CCoin, _who == wi, delegate
                     {
                         _who = wi;
                         RebuildOps();
@@ -5828,16 +5891,17 @@ namespace ExpeditionRecorder
                 {
                     string op = ops[i];
                     int dir = i == 0 ? 1 : -1;
-                    int w = ChipW(op);
-                    var c = MkChip(op, x, y, w, i == 0 ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
-                    {
-                        string nm = (box.Text ?? "").Trim();
-                        if (nm == "") return;
-                        AddEffect(kind, dir, "你", nm);
-                        box.Text = "";
-                        RebuildList();
-                        if (_changed != null) _changed();
-                    });
+                    int w = ChipW(UiText.T(op));
+                    var c = MkChip(UiText.T(op), null, x, y, w,
+                        i == 0 ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
+                        {
+                            string nm = (box.Text ?? "").Trim();
+                            if (nm == "") return;
+                            AddEffect(kind, dir, "你", nm);
+                            box.Text = "";
+                            RebuildList();
+                            if (_changed != null) _changed();
+                        });
                     c.Strong = true;
                     _ops.Controls.Add(c);
                     x += w + P(6);
@@ -5845,8 +5909,8 @@ namespace ExpeditionRecorder
             }
             else
             {
-                int w = ChipW("加入");
-                var c = MkChip("加入", x, y, w, Color.FromArgb(120, 200, 140), false, delegate
+                int w = ChipW(UiText.T("加入"));
+                var c = MkChip(UiText.T("加入"), null, x, y, w, Color.FromArgb(120, 200, 140), false, delegate
                 {
                     string raw = (box.Text ?? "").Trim();
                     int amount = 0;
