@@ -3,6 +3,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -119,7 +120,61 @@ static class Probe
             if (panel != null) CaptureControl(panel, Path.Combine(OutDir, tag + "-panel.png"));
         }
         Dump(f, tag);
-        string clickFx = Environment.GetEnvironmentVariable("PROBE_CLICKFX");
+        string probeItem = Environment.GetEnvironmentVariable("PROBE_ITEM");
+        if (!string.IsNullOrEmpty(probeItem))
+        {
+            Control box = null;
+            foreach (Control c in AllControls(f)) if (c.GetType().Name == "EffectBox") { box = c; break; }
+            var onMouseUp = typeof(Control).GetMethod("OnMouseUp", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var onClick = typeof(Control).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Action<Control> hit = delegate (Control c)
+            {
+                if (c == null) return;
+                /* FxTabs 覆寫 OnMouseUp；FxChip 用 Click 事件，兩個都送 */
+                try { onMouseUp.Invoke(c, new object[] { new MouseEventArgs(MouseButtons.Left, 1, 5, 5, 0) }); } catch { }
+                try { onClick.Invoke(c, new object[] { EventArgs.Empty }); } catch { }
+                Pump(250);
+            };
+            Func<string, Control> find = delegate (string text)
+            {
+                foreach (Control c in AllControls(box)) if (c.Text == text && !(c is Label)) return c;
+                return null;
+            };
+            if (box != null)
+            {
+                Control tabsCtl = null;
+                foreach (Control c in AllControls(box)) if (c.GetType().Name == "FxTabs") { tabsCtl = c; break; }
+                if (tabsCtl != null)
+                {
+                    /* 第二個頁籤（物資）大約在 x=110 */
+                    onMouseUp.Invoke(tabsCtl, new object[] { new MouseEventArgs(MouseButtons.Left, 1, 110, 10, 0) });
+                    Pump(300);
+                }
+                Log.AppendLine("tabs=" + (tabsCtl == null ? "none" : "ok") + " afterTabChildren=" + (box == null ? -1 : AllControls(box).Count()));
+                var itemChip = find("物品");
+                Log.AppendLine("itemChip=" + (itemChip == null ? "none" : "ok"));
+                hit(itemChip);
+                var tb = (TextBox)AllControls(box).FirstOrDefault(c => c is TextBox);
+                Log.AppendLine("textbox: " + (tb == null ? "none" : "ok"));
+                if (tb != null)
+                {
+                    foreach (var line in new[] { "麵包 2", "麵包", "罐頭×3" })
+                    {
+                        tb.Text = line;
+                        hit(find("加入"));
+                        Log.AppendLine("added: " + line);
+                    }
+                }
+                var dataField = f.GetType().GetField("_data", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                if (dataField != null)
+                {
+                    var data = dataField.GetValue(f) as Dictionary<string, object>;
+                    var js = new System.Web.Script.Serialization.JavaScriptSerializer();
+                    Log.AppendLine("DATA: " + js.Serialize(data));
+                }
+                CaptureClient(f, Path.Combine(OutDir, tag + "-item.png"));
+            }
+        }        string clickFx = Environment.GetEnvironmentVariable("PROBE_CLICKFX");
         if (!string.IsNullOrEmpty(clickFx))
         {
             Control box = null;

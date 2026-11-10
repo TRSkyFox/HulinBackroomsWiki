@@ -5907,6 +5907,11 @@ namespace ExpeditionRecorder
             box.Font = Font;
             box.SetBounds(x, y + P(3), bw, P(22));
             _ops.Controls.Add(box);
+            _tip.SetToolTip(box, needName
+                ? (kind == "物品" ? "可多個，用、分隔；數量寫在後面：麵包 2、罐頭×3"
+                   : kind == "戰鬥" ? "實體名稱，多個用、分隔"
+                   : kind == "切層" ? "樓層編號，例如 3" : "名稱")
+                : "填數字，例如 5 或 -2");
             x += bw + P(8);
 
             if (kind == "硬幣")
@@ -5976,6 +5981,75 @@ namespace ExpeditionRecorder
             Freeze(_ops, false);
         }
 
+        /* 「麵包 2」「麵包x2」「麵包×2」→ 名稱＋數量；沒寫就是 1 */
+        static void ParseItemToken(string raw, out string name, out int count)
+        {
+            name = (raw ?? "").Trim().Trim('「', '」');
+            count = 1;
+            var m = System.Text.RegularExpressions.Regex.Match(name, @"^(.*?)\s*[xX×*]\s*(\d+)$");
+            if (!m.Success) m = System.Text.RegularExpressions.Regex.Match(name, @"^(.*?)\s+(\d+)$");
+            if (m.Success)
+            {
+                string n2 = m.Groups[1].Value.Trim();
+                int c2;
+                if (n2 != "" && int.TryParse(m.Groups[2].Value, out c2) && c2 > 0)
+                {
+                    name = n2;
+                    count = c2;
+                }
+            }
+        }
+
+        /* 物品：同一條影響裡同名累加數量，顯示成「麵包」×2 */
+        bool MergeItem(System.Collections.ArrayList arr, string target, string nm, int count)
+        {
+            if (arr == null) return false;
+            for (int i = arr.Count - 1; i >= 0; i--)
+            {
+                var ed = arr[i] as Dictionary<string, object>;
+                if (ed == null) continue;
+                if (Str(ed, "kind") != "item") continue;
+                if (Str(ed, "name") == "硬幣") continue;
+                if (Str(ed, "target") != target) continue;
+                var cs = ed.ContainsKey("counts") ? ed["counts"] as Dictionary<string, object> : null;
+                if (cs == null)
+                {
+                    cs = new Dictionary<string, object>();
+                    foreach (var p0 in Str(ed, "name").Split('、'))
+                    {
+                        string s0 = (p0 ?? "").Trim();
+                        if (s0 != "") cs[s0] = 1;
+                    }
+                    ed["counts"] = cs;
+                }
+                int old = cs.ContainsKey(nm) ? Convert.ToInt32(cs[nm]) : 0;
+                cs[nm] = old + count;
+                RebuildItemText(ed, cs);
+                return true;
+            }
+            return false;
+        }
+
+        static void RebuildItemText(Dictionary<string, object> ed, Dictionary<string, object> cs)
+        {
+            var names = new List<string>();
+            foreach (var p0 in Str(ed, "name").Split('、'))
+            {
+                string s0 = (p0 ?? "").Trim();
+                if (s0 != "" && !names.Contains(s0)) names.Add(s0);
+            }
+            foreach (var k0 in cs.Keys)
+                if (!names.Contains(k0)) names.Add(k0);
+            var segs = new List<string>();
+            foreach (var n0 in names)
+            {
+                int c0 = cs.ContainsKey(n0) ? Convert.ToInt32(cs[n0]) : 1;
+                segs.Add(c0 > 1 ? "「" + n0 + "」×" + c0 : "「" + n0 + "」");
+            }
+            ed["name"] = string.Join("、", names.ToArray());
+            ed["text"] = "得到" + string.Join("、", segs.ToArray());
+        }
+
         /* 第二條以後的同類影響併進同一行，用、分隔（物品／狀態／戰鬥）。
            回傳 true＝已經併進去，不用再加新的一條。 */
         bool MergeOrAdd(System.Collections.ArrayList arr, string target, string kind, string nm, string prefix)
@@ -6037,8 +6111,31 @@ namespace ExpeditionRecorder
             {
                 case "物品":
                     if (nm == "") return;
-                    if (MergeOrAdd(arr, tg, "item", nm, "得到")) return;
-                    d["kind"] = "item"; d["name"] = nm; d["text"] = "得到「" + nm + "」";
+                    {
+                        /* 可一次輸入多個（麵包 2、罐頭），同名累加數量 */
+                        bool anyItem = false;
+                        foreach (var one in System.Text.RegularExpressions.Regex.Split(nm, @"[、,，;；]"))
+                        {
+                            string itemName;
+                            int cnt;
+                            ParseItemToken(one, out itemName, out cnt);
+                            if (itemName == "") continue;
+                            if (!MergeItem(arr, tg, itemName, cnt))
+                            {
+                                var di = new Dictionary<string, object>();
+                                di["target"] = tg;
+                                di["kind"] = "item";
+                                di["name"] = itemName;
+                                var csm = new Dictionary<string, object>();
+                                csm[itemName] = cnt;
+                                di["counts"] = csm;
+                                di["text"] = "得到「" + itemName + (cnt > 1 ? "」×" + cnt : "」");
+                                arr.Add(di);
+                            }
+                            anyItem = true;
+                        }
+                        if (anyItem) return;
+                    }
                     break;
                 case "硬幣":
                     d["kind"] = "item"; d["name"] = "硬幣"; d["amount"] = amount;
