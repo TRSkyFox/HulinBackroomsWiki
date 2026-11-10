@@ -527,6 +527,10 @@ namespace ExpeditionRecorder
             s = s.Replace('｡', '。');
             s = s.Replace('．', '。');
             s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff]),(?=[\u4e00-\u9fff])", "，");
+            /* 「。」被讀成小圈：°（度數）、˚、∘、º。這種字幾乎不會出現在中文正文，
+               只要旁邊是中文就換成句號（「底下°」→「底下。」、「°你」→「。你」）。 */
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff])[°˚∘º]", "。");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"[°˚∘º](?=[\u4e00-\u9fff])", "。");
             /* 短詞裡的間隔號是資料本身（例如種族「犬·狼」），不要當成句號 */
             if (System.Text.RegularExpressions.Regex.IsMatch(s, @"^[\u4e00-\u9fff]{1,3}[·・‧•][\u4e00-\u9fff]{1,3}$")) return s;
             s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff])[·・‧•](?=[\u4e00-\u9fff])", "。");
@@ -10439,7 +10443,9 @@ namespace ExpeditionRecorder
                 "墙上挂着一面落地镜·镜子里的你，看起来比现在干净一点丶健康一点",
                 "你开始数：「一、二丶三·……··」",
                 "犬·狼 是種族，1,000 硬幣、0.99 版",
-                "他说,你好.再见"
+                "他说,你好.再见",
+                "悄悄话说：「地毯的第三块底下°」 你掀开地毯——真的有东西°",
+                "室溫 30°C 不算冷"
             };
             foreach (var s in samples) sb.AppendLine(s + "  →  " + Parse.FixPunct(s));
 
