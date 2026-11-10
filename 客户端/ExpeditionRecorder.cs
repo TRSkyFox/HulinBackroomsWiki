@@ -538,6 +538,15 @@ namespace ExpeditionRecorder
             return max > 150 && c.R >= c.G && c.G >= c.B && (c.R - c.B) > 45 && (max - min) > 35;
         }
 
+        /* 面板最上面那句提示（「要走哪條路？」「選一個去做」）也是金色，但比選項明顯更飽和：
+           提示 R-B≈140、選項 R-B≈65。用它把提示和選項分開。 */
+        static bool IsPromptGold(Color c)
+        {
+            if (c.A == 0) return false;
+            int max = Math.Max(c.R, Math.Max(c.G, c.B));
+            return max > 150 && c.R >= c.G && c.G >= c.B && (c.R - c.B) >= 100;
+        }
+
         static bool IsGrayText(Color c)
         {
             if (c.A == 0) return false;
@@ -560,8 +569,11 @@ namespace ExpeditionRecorder
             return false;
         }
 
-        public static void Classify(List<OcrLine> lines, int imgH)
+        public static void Classify(List<OcrLine> lines, int imgH, int imgW = 0)
         {
+            /* 選項在畫面左下；右邊的隊伍聊天室不是選項。
+               有給寬度就按比例收（聊天室約在 0.65W 之後），沒給就沿用舊的固定值。 */
+            int optMaxX = imgW > 0 ? Math.Min(1100, (int)(imgW * 0.62)) : 1100;
             FloorId = ""; FloorName = ""; FloorType = "normal";
             foreach (var l in lines)
             {
@@ -588,10 +600,33 @@ namespace ExpeditionRecorder
                     continue;
                 }
                 if (t.IndexOf('【') >= 0 && t.IndexOf('】') > t.IndexOf('【')) l.IsTitle = true;
-                if (l.Y > imgH * 0.56 && l.X < 1100) l.IsOption = true;
+                if (l.Y > imgH * 0.56 && l.X < optMaxX) l.IsOption = true;
             }
             var opts = lines.FindAll(delegate (OcrLine l) { return l.IsOption; });
             opts.Sort(delegate (OcrLine a, OcrLine b) { return a.Y.CompareTo(b.Y); });
+            /* 面板頂端那句提示（「選一個去做」「要走哪條路？」）不算選項：
+               它是最上面那一條、短句，而且顏色比下面所有選項飽和得多
+               （提示 R-B≈140、選項 R-B≈65）。要求兩個條件同時成立，才不會誤殺金色選項。 */
+            if (opts.Count >= 2 && !IsChrome(opts[0].Text))
+            {
+                string t0 = (opts[0].Text ?? "").Trim();
+                var c0 = opts[0].TextColor;
+                int rb0 = c0.A == 0 ? -1 : c0.R - c0.B;
+                int rbOther = -1;
+                for (int oi = 1; oi < opts.Count; oi++)
+                {
+                    var co = opts[oi].TextColor;
+                    if (co.A == 0) continue;
+                    int rb = co.R - co.B;
+                    if (rb > rbOther) rbOther = rb;
+                }
+                bool hotter = IsPromptGold(c0) && rbOther >= 0 && rb0 - rbOther >= 40;
+                if (t0.Length > 0 && t0.Length <= 20 && !t0.StartsWith("★") && hotter)
+                {
+                    opts[0].IsOption = false;
+                    opts[0].IsChrome = true;
+                }
+            }
             int g = 0;
             /* opts 里同时有“选项”和“条件”行；条件行不增加 g，所以不能再用
                opts[g-1] 找上一条选项，否则第二条条件会挂到第一条条件/选项上。
@@ -599,6 +634,7 @@ namespace ExpeditionRecorder
             OcrLine lastOption = null;
             foreach (var l in opts)
             {
+                if (!l.IsOption) continue;   /* 頂端提示已經被排除 */
                 bool sub = false;
                 foreach (var a in Attrs)
                 {
@@ -606,6 +642,14 @@ namespace ExpeditionRecorder
                     { sub = true; break; }
                 }
                 if (l.Text.TrimStart().StartsWith("★") || l.Text.TrimStart().StartsWith("「")) sub = true;
+                if (!sub)
+                {
+                    /* 選項下面只有一個屬性名（「感知」「感知 +2」「感知·12」）或只有「難度 12」：
+                       這是這一項的檢定，不能當成新選項吃掉。 */
+                    string bare = (l.Text ?? "").Trim().TrimStart('★', ' ', '　');
+                    if (System.Text.RegularExpressions.Regex.IsMatch(bare, @"^(力量|敏捷|體質|体质|感知|智力|魅力)\s*[·・|｜:：/／]?\s*[+＋]?\s*[0-9]*\s*$")) sub = true;
+                    else if (System.Text.RegularExpressions.Regex.IsMatch(bare, @"^(難度|难度)\s*[0-9Xx]+\s*$")) sub = true;
+                }
                 if (sub && lastOption != null)
                 {
                     var prev = lastOption;
@@ -616,6 +660,11 @@ namespace ExpeditionRecorder
                         bool consumed = subText.IndexOf("会用掉", StringComparison.Ordinal) >= 0 || subText.IndexOf("會用掉", StringComparison.Ordinal) >= 0;
                         var mchk = System.Text.RegularExpressions.Regex.Match(subText, @"(力量|敏捷|體質|体质|感知|智力|魅力)\s*(?:檢定|检定)?\s*難度\s*([0-9Xx]+)");
                         if (mchk.Success) prev.Check = mchk.Groups[1].Value;
+                        else
+                        {
+                            var mbare = System.Text.RegularExpressions.Regex.Match(subText, @"^(力量|敏捷|體質|体质|感知|智力|魅力)\s*[·・|｜:：/／]?\s*[+＋]?\s*[0-9]*\s*$");
+                            if (mbare.Success) prev.Check = mbare.Groups[1].Value;
+                        }
                         if (t.StartsWith("★"))
                         {
                             var mi = System.Text.RegularExpressions.Regex.Match(subText, "「([^」]+)」");
@@ -7452,6 +7501,7 @@ namespace ExpeditionRecorder
                 if (args.Length > 2 && args[0] == "--capturedemo") return CaptureDemo(args[1], args[2], args.Length > 3 ? args[3] : "event");
                 if (args.Length > 1 && args[0] == "--checktest") return CheckTest(args[1]);
                 if (args.Length > 0 && args[0] == "--parsetest") return ParseTest();
+                if (args.Length > 2 && args[0] == "--parsedump") return ParseDump(args[1], args[2]);
                 if (args.Length > 2 && args[0] == "--dimdemo") return DimDemo(args[1], args[2]);
                 if (args.Length > 2 && args[0] == "--cropdemo") return CropDemo(args[1], args[2], args.Length > 3 ? args[3] : "event");
                 if (args.Length > 1 && args[0] == "--pwtest") return PwTest(args[1]);
@@ -8618,8 +8668,9 @@ namespace ExpeditionRecorder
             }
             if (crop.X != 0 || crop.Y != 0)
                 foreach (var l in lines) { l.X += crop.X; l.Y += crop.Y; }
-            Parse.Classify(lines, shot.Height);
+            Parse.Classify(lines, shot.Height, shot.Width);
             PerfLog("parse", sw.ElapsedMilliseconds - last, "lines=" + lines.Count); last = sw.ElapsedMilliseconds;
+            DumpOcr(lines, "event");
             ScaleLines(lines, sx, sy);
             HideBusy();
             var f = new OverlayForm(Step + 1, lines, rect, GameHwnd, "event");
@@ -9290,6 +9341,33 @@ namespace ExpeditionRecorder
             Mode = ""; Step = 0; Steps.Clear();
             UiText.SetText(StepLabel, "已存一條事件");
             SetState("已存一條事件（" + string.Join("+", ef.Scopes.ToArray()) + " / " + string.Join("+", ef.Outcomes.ToArray()) + "），按 " + VkName(ModeVk) + " 再記");
+        }
+
+        /* 除錯：把最近一次 OCR 的每一行（座標／顏色／分類結果）留在 logs/manual/_last-ocr.json。
+           選項判斷或判定抓錯時，直接看這個檔就知道當時辨識到什麼。 */
+        static void DumpOcr(List<OcrLine> lines, string kind)
+        {
+            try
+            {
+                var arr = new List<object>();
+                foreach (var l in lines)
+                {
+                    var d = new Dictionary<string, object>();
+                    d["t"] = l.Text;
+                    d["x"] = l.X; d["y"] = l.Y; d["w"] = l.W; d["h"] = l.H;
+                    d["c"] = l.TextColor == Color.Empty ? "" : ColorTranslator.ToHtml(l.TextColor);
+                    d["chrome"] = l.IsChrome; d["opt"] = l.IsOption; d["grp"] = l.OptionGroup;
+                    d["cond"] = l.IsCondition; d["check"] = l.Check; d["req"] = l.Requirement;
+                    arr.Add(d);
+                }
+                var root = new Dictionary<string, object>();
+                root["kind"] = kind;
+                root["ts"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                root["lines"] = arr;
+                File.WriteAllText(Path.Combine(DataDir(), "_last-ocr.json"),
+                    new JavaScriptSerializer().Serialize(root), new UTF8Encoding(false));
+            }
+            catch { }
         }
 
         public static string DataDir()
@@ -10057,17 +10135,79 @@ namespace ExpeditionRecorder
             return 0;
         }
 
+        /* 除錯用：對一張截圖跑 OCR＋分類，把每一行的座標／顏色／旗標倒成 JSON。
+           用法：ExpeditionRecorder.exe --parsedump <圖片> <輸出.json> */
+        static int ParseDump(string image, string outp)
+        {
+            try
+            {
+                if (!Ocr.Start(AppDomain.CurrentDomain.BaseDirectory))
+                {
+                    File.WriteAllText(outp, "{\"error\":\"ocr start failed\"}", new UTF8Encoding(false));
+                    return 1;
+                }
+                List<OcrLine> lines;
+                int h;
+                using (var bmp = new Bitmap(image))
+                {
+                    h = bmp.Height;
+                    lines = Ocr.Recognize(bmp);
+                    Parse.Classify(lines, bmp.Height, bmp.Width);
+                }
+                var arr = new List<object>();
+                foreach (var l in lines)
+                {
+                    var d = new Dictionary<string, object>();
+                    d["t"] = l.Text;
+                    d["x"] = l.X; d["y"] = l.Y; d["w"] = l.W; d["h"] = l.H;
+                    d["imgH"] = h;
+                    d["c"] = l.TextColor == Color.Empty ? "" : ColorTranslator.ToHtml(l.TextColor);
+                    d["chrome"] = l.IsChrome;
+                    d["opt"] = l.IsOption;
+                    d["grp"] = l.OptionGroup;
+                    d["cond"] = l.IsCondition;
+                    d["check"] = l.Check;
+                    d["req"] = l.Requirement;
+                    d["desc"] = l.Desc;
+                    arr.Add(d);
+                }
+                File.WriteAllText(outp, new JavaScriptSerializer().Serialize(arr), new UTF8Encoding(false));
+                Ocr.Stop();
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                try { File.WriteAllText(outp, "{\"error\":" + new JavaScriptSerializer().Serialize(ex.Message) + "}", new UTF8Encoding(false)); } catch { }
+                return 1;
+            }
+        }
+
         static int ParseTest()
         {
+            var sb = new StringBuilder();
+            /* 情境一：岔路面板——頂端提示是飽和金色，選項是淡金色 */
             var lines = new List<OcrLine>();
             lines.Add(new OcrLine { Text = "Level 0「大厅」", X = 10, Y = 10, W = 200, H = 30 });
             lines.Add(new OcrLine { Text = "【测试事件】", X = 30, Y = 120, W = 140, H = 30 });
-            lines.Add(new OcrLine { Text = "要 怎 么 做 ？", X = 30, Y = 520, W = 160, H = 30 });
-            lines.Add(new OcrLine { Text = "选项一", X = 30, Y = 570, W = 100, H = 30 });
-            lines.Add(new OcrLine { Text = "选项二", X = 30, Y = 610, W = 100, H = 30 });
-            Parse.Classify(lines, 890);
-            var sb = new StringBuilder();
+            lines.Add(new OcrLine { Text = "要走哪条路？", X = 27, Y = 525, W = 111, H = 24, TextColor = ColorTranslator.FromHtml("#EFD860") });
+            lines.Add(new OcrLine { Text = "选项一", X = 30, Y = 563, W = 193, H = 20, TextColor = ColorTranslator.FromHtml("#F1E4AF") });
+            lines.Add(new OcrLine { Text = "选项二", X = 30, Y = 597, W = 256, H = 24, TextColor = ColorTranslator.FromHtml("#F7EBB5") });
+            Parse.Classify(lines, 802);
+            sb.AppendLine("── 情境一：提示不是選項 ──");
             foreach (var l in lines) sb.AppendLine(l.Text + " chrome=" + l.IsChrome + " option=" + l.IsOption + " group=" + l.OptionGroup);
+
+            /* 情境二：事件面板——提示「選一個去做」+ 兩個選項 + 選項下方的判定（只有屬性名） */
+            var l2 = new List<OcrLine>();
+            l2.Add(new OcrLine { Text = "【数门】", X = 30, Y = 180, W = 120, H = 30 });
+            l2.Add(new OcrLine { Text = "选一个去做", X = 30, Y = 560, W = 110, H = 24, TextColor = ColorTranslator.FromHtml("#E3CD5B") });
+            l2.Add(new OcrLine { Text = "随便推开一扇门", X = 30, Y = 600, W = 200, H = 22, TextColor = ColorTranslator.FromHtml("#E8DCA8") });
+            l2.Add(new OcrLine { Text = "感知", X = 40, Y = 624, W = 40, H = 18, TextColor = ColorTranslator.FromHtml("#E8DCA8") });
+            l2.Add(new OcrLine { Text = "闭上眼睛数自己的呼吸就好", X = 30, Y = 650, W = 260, H = 22, TextColor = ColorTranslator.FromHtml("#E8DCA8") });
+            Parse.Classify(l2, 890);
+            sb.AppendLine();
+            sb.AppendLine("── 情境二：提示 + 選項 + 判定 ──");
+            foreach (var l in l2) sb.AppendLine(l.Text + " chrome=" + l.IsChrome + " option=" + l.IsOption + " cond=" + l.IsCondition + " group=" + l.OptionGroup + " check=" + l.Check);
+
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "parsetest.txt"), sb.ToString(), new UTF8Encoding(false));
             return 0;
         }
@@ -10086,7 +10226,7 @@ namespace ExpeditionRecorder
                 }
                 if (!EnsureOcr()) return 2;
                 var lines = Ocr.Recognize(bmp);
-                Parse.Classify(lines, bmp.Height);
+                Parse.Classify(lines, bmp.Height, bmp.Width);
                 var orig = new Bitmap(bmp);
                 using (var g = Graphics.FromImage(bmp))
                 {
