@@ -43,6 +43,14 @@ static class Probe
         SetProcessDPIAware();
         Application.EnableVisualStyles();
         Asm = Assembly.UnsafeLoadFrom(Path.GetFullPath(args[0]));
+        /* 讓 Probe 也有繁簡對照表（正式程式在 Main 裡會載入），否則 UiText 的逐字轉換會失效 */
+        try
+        {
+            var party = Asm.GetType("ExpeditionRecorder.Party");
+            var load = party != null ? party.GetMethod("Load", BindingFlags.Public | BindingFlags.Static) : null;
+            if (load != null) load.Invoke(null, new object[] { Path.GetDirectoryName(Path.GetFullPath(args[0])) });
+        }
+        catch { }
         OutDir = args[1];
         Directory.CreateDirectory(OutDir);
         float scale = float.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);

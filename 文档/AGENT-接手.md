@@ -222,6 +222,10 @@ BeginInvoke → 無限排隊、UI 執行緒永遠沒回到閒置（未回應）�
 `EffectBox.MergeOrAdd()`：物品（不含硬幣）、狀態（獲得／消除不混）、戰鬥（kind 仍是 entity）會找同 target 的既有條目，
 把名稱接上去並重寫成 `得到「A」、「B」` / `獲得「X」、「Y」` / `戰鬥「Z」、「W」`。
 分類「事件」底下的「實體」改名「戰鬥」（顯示與文字都改，存檔 kind 不變，En 字典加 Combat）。
+**05:50 影響文字跟著介面語言**：影響清單每行的文字改成 `UiText.T(EventEffectText(...))`，簡體會把「實體／硬幣／獲得經驗」轉成簡體。
+另外修掉殘留的鬼影 tooltip（每個晶片各自 new 一個 ToolTip，其中種類晶片還帶自己的名字）→ 改成整個面板共用一個 `_tip`、種類晶片不設 tooltip。
+**教訓**：探針（Probe）沒有跑 Main，`Party.Load` 也沒呼叫，所以 `UiText` 的逐字繁簡表是空的——探針截圖會「看起來沒轉換」。
+已在 Probe 開頭補上反射呼叫 `Party.Load(exeDir)`，並在沙箱放 `structured/s2t.json`、`characters.json`。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

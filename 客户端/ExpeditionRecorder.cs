@@ -5575,6 +5575,7 @@ namespace ExpeditionRecorder
         readonly Panel _list = new BufferedPanel();
         readonly Panel _ops = new BufferedPanel();
         readonly FxTabs _tabs = new FxTabs();
+        readonly ToolTip _tip = new ToolTip();
         int _cat = -1;
         string _kind = "";
         int _who = 0;
@@ -5727,7 +5728,7 @@ namespace ExpeditionRecorder
             c.On = on;
             c.SetBounds(x, y, w, P(26));
             c.Font = Font;
-            if (tip != null) { var t = new ToolTip(); t.SetToolTip(c, tip); }
+            if (tip != null) _tip.SetToolTip(c, tip);
             c.Click += delegate { click(); };
             return c;
         }
@@ -5757,7 +5758,7 @@ namespace ExpeditionRecorder
                     n++;
                     any = true;
                     int idx = i;
-                    AddRow(n + ". " + RecordsForm.EventEffectText(ed), y, w, KindColor(Str(ed, "kind")), delegate
+                    AddRow(n + ". " + UiText.T(RecordsForm.EventEffectText(ed)), y, w, KindColor(Str(ed, "kind")), delegate
                     {
                         var arr = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
                         if (arr != null && idx >= 0 && idx < arr.Count) arr.RemoveAt(idx);
@@ -5861,7 +5862,7 @@ namespace ExpeditionRecorder
                 string kk = k0;
                 string disp = UiText.T(kk);
                 int w = ChipW(disp);
-                var c = MkChip(disp, kk, x, y, w, KindColor(kk), _kind == kk, delegate
+                var c = MkChip(disp, null, x, y, w, KindColor(kk), _kind == kk, delegate
                 {
                     _kind = (_kind == kk ? "" : kk);
                     RebuildOps();
