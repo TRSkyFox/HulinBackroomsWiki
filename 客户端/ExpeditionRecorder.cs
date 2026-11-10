@@ -4389,9 +4389,11 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(b);
         }
 
-        /* 「＋ 新增影響」：選種類（+對象）。
-           體力／理智／飢餓／口渴 只選「恢復／損失」，不填數字；
-           經驗／記憶碎片／出口進度 才填數字。文字一律由程式產生。 */
+        /* 「＋ 新增影響」：選種類才出現對應的欄位。
+           體力／理智／飢餓／口渴 → 只出現「恢復／損失」；
+           硬幣 → 數字 + 對象（你／所有人）；
+           經驗／記憶碎片／出口進度 → 只出現數字；
+           物品 → 只出現名稱。文字一律由程式產生。 */
         void AddEffectAdder(Dictionary<string, object> st)
         {
             int rowTop = _y;
@@ -4402,44 +4404,48 @@ namespace ExpeditionRecorder
             int x0 = narrow ? PageLeft : FieldX;
             int cw = Math.Min(Px(112), Math.Max(Px(88), ComboWidth(kinds)));
             var cb = AddComboCore(x0, y, cw, kinds, 0, Color.White);
-            /* 對象只給「你／所有人」，不寫具體角色名 */
-            string[] who = { "你", "所有人" };
-            int ww = Math.Min(Px(94), Math.Max(Px(70), ComboWidth(who)));
-            var wb = AddComboCore(x0 + cw + Px(8), y, ww, who, 0, Color.White);
-            /* 恢復／損失：只有上面那幾種體力類才用得到 */
+            /* 恢復／損失：體力類才出現 */
             string[] dirs = { "恢復", "損失" };
             int dw = Math.Min(Px(88), Math.Max(Px(64), ComboWidth(dirs)));
-            var db = AddComboCore(x0 + cw + ww + Px(16), y, dw, dirs, 0, Color.White);
+            var db = AddComboCore(x0 + cw + Px(8), y, dw, dirs, 0, Color.White);
+            /* 數字或名稱 */
             var amt = new TextBox();
             amt.BackColor = Color.FromArgb(40, 40, 44);
             amt.ForeColor = Color.White;
             amt.BorderStyle = BorderStyle.FixedSingle;
-            amt.SetBounds(x0 + cw + ww + dw + Px(24), y + Px(2), Px(52), _fieldH);
+            amt.SetBounds(x0 + cw + Px(8), y + Px(2), Px(104), _fieldH);
             _panel.Controls.Add(amt);
+            /* 對象：只有硬幣才出現 */
+            string[] who = { "你", "所有人" };
+            int ww = Math.Min(Px(94), Math.Max(Px(70), ComboWidth(who)));
+            var wb = AddComboCore(x0 + cw + Px(8), y, ww, who, 0, Color.White);
             var tip = new ToolTip();
-            tip.SetToolTip(amt, "經驗／記憶碎片／出口進度 才填數字，例如 5 或 -2");
-            Action sync = delegate
-            {
-                string k = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
-                bool stat = OverlayForm.IsStatKind(k);
-                db.Enabled = stat;
-                amt.Enabled = !stat;
-                db.BackColor = stat ? Color.FromArgb(44, 44, 47) : Color.FromArgb(40, 40, 44);
-                amt.BackColor = stat ? Color.FromArgb(40, 40, 44) : Color.FromArgb(40, 40, 44);
-                amt.ForeColor = stat ? Color.FromArgb(120, 120, 128) : Color.White;
-                db.ForeColor = stat ? Color.White : Color.FromArgb(120, 120, 128);
-                tip.SetToolTip(amt, k == "物品" ? "填物品名稱" : (stat ? "這一類只選恢復／損失，不用填數字" : "填數字，例如 5 或 -2"));
-            };
-            cb.SelectedIndexChanged += delegate { sync(); };
-            sync();
             int bh = Math.Max(_fieldH, _buttonH);
             var add = new Button();
             add.Text = "加入";
-            add.SetBounds(x0 + cw + ww + dw + Px(24) + Px(52) + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
+            add.SetBounds(x0 + cw + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
             add.FlatStyle = FlatStyle.Flat;
             add.BackColor = Color.FromArgb(44, 48, 44);
             add.ForeColor = Color.FromArgb(214, 236, 214);
             add.FlatAppearance.BorderColor = Color.FromArgb(70, 96, 70);
+            Action sync = delegate
+            {
+                string k = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
+                bool stat = OverlayForm.IsStatKind(k);
+                bool coin = k == "硬幣";
+                int x = x0 + cw + Px(8);
+                db.Visible = stat;
+                if (stat) { db.Left = x; x += dw + Px(8); }
+                amt.Visible = !stat;
+                if (!stat) { amt.Left = x; x += amt.Width + Px(8); }
+                wb.Visible = coin;
+                if (coin) { wb.Left = x; x += ww + Px(8); }
+                else if (wb.SelectedIndex != 0) wb.SelectedIndex = 0;   /* 非硬幣一律記「你」 */
+                add.Left = x;
+                tip.SetToolTip(amt, k == "物品" ? "填物品名稱" : "填數字，例如 5 或 -2");
+            };
+            cb.SelectedIndexChanged += delegate { sync(); };
+            sync();
             add.Click += delegate
             {
                 string kind = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
