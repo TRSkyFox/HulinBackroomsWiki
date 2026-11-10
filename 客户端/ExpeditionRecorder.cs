@@ -1865,6 +1865,7 @@ namespace ExpeditionRecorder
             { "出口進度", "Exit progress" },
             { "記憶碎片", "Memory shard" },
             { "實體", "Entity" },
+            { "戰鬥", "Combat" },
             { "切層", "Floor change" },
             { "恢復", "Restore" },
             { "損失", "Lose" },
@@ -5589,7 +5590,7 @@ namespace ExpeditionRecorder
         {
             new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" },
             new[] { "物品", "硬幣", "經驗", "出口進度", "記憶碎片" },
-            new[] { "實體", "切層" }
+            new[] { "戰鬥", "切層" }
         };
 
         static int P(int v) { return UiScale.Px(v); }
@@ -5633,7 +5634,7 @@ namespace ExpeditionRecorder
                 case "口渴": return CThirst;
                 case "硬幣": return CCoin;
                 case "記憶碎片": return CShard;
-                case "實體": return CEntity;
+                case "戰鬥": return CEntity;
             }
             return CNeutral;
         }
@@ -5896,7 +5897,7 @@ namespace ExpeditionRecorder
                 return;
             }
 
-            bool needName = kind == "物品" || kind == "狀態效果" || kind == "實體" || kind == "切層";
+            bool needName = kind == "物品" || kind == "狀態效果" || kind == "戰鬥" || kind == "切層";
             int bw = needName ? P(180) : P(70);
             var box = new TextBox();
             box.BackColor = Color.FromArgb(30, 30, 34);
@@ -5974,6 +5975,33 @@ namespace ExpeditionRecorder
             Freeze(_ops, false);
         }
 
+        /* 第二條以後的同類影響併進同一行，用、分隔（物品／狀態／戰鬥）。
+           回傳 true＝已經併進去，不用再加新的一條。 */
+        bool MergeOrAdd(System.Collections.ArrayList arr, string target, string kind, string nm, string prefix)
+        {
+            if (arr == null) return false;
+            for (int i = arr.Count - 1; i >= 0; i--)
+            {
+                var ed = arr[i] as Dictionary<string, object>;
+                if (ed == null) continue;
+                if (Str(ed, "kind") != kind) continue;
+                if (kind == "item" && Str(ed, "name") == "硬幣") continue;   /* 硬幣各自一條 */
+                if (Str(ed, "target") != target) continue;
+                if (kind == "status" && !Str(ed, "text").StartsWith(prefix)) continue;  /* 獲得／消除 不混 */
+                var parts = new List<string>();
+                foreach (var p in Str(ed, "name").Split('、'))
+                {
+                    string s = (p ?? "").Trim();
+                    if (s != "" && !parts.Contains(s)) parts.Add(s);
+                }
+                if (!parts.Contains(nm)) parts.Add(nm);
+                ed["name"] = string.Join("、", parts.ToArray());
+                ed["text"] = prefix + "「" + string.Join("」、「", parts.ToArray()) + "」";
+                return true;
+            }
+            return false;
+        }
+
         void AddEffect(string kind, int amount, string target, string name)
         {
             if (_st == null) return;
@@ -5991,16 +6019,13 @@ namespace ExpeditionRecorder
                 pg["delta"] = cur + amount;
                 return;
             }
-            if (kind == "實體")
+            if (kind == "戰鬥")
             {
                 if (nm == "") return;
                 foreach (var one in System.Text.RegularExpressions.Regex.Split(nm, @"[、,，;；]"))
                 {
                     string e = (one ?? "").Trim().Trim('「', '」');
-                    if (e == "") continue;
-                    var de = new Dictionary<string, object>();
-                    de["target"] = tg; de["kind"] = "entity"; de["name"] = e; de["text"] = "實體「" + e + "」";
-                    arr.Add(de);
+                    if (e != "") MergeOrAdd(arr, tg, "entity", e, "戰鬥");
                 }
                 return;
             }
@@ -6011,6 +6036,7 @@ namespace ExpeditionRecorder
             {
                 case "物品":
                     if (nm == "") return;
+                    if (MergeOrAdd(arr, tg, "item", nm, "得到")) return;
                     d["kind"] = "item"; d["name"] = nm; d["text"] = "得到「" + nm + "」";
                     break;
                 case "硬幣":
@@ -6020,6 +6046,7 @@ namespace ExpeditionRecorder
                     break;
                 case "狀態效果":
                     if (nm == "") return;
+                    if (MergeOrAdd(arr, tg, "status", nm, amount < 0 ? "消除" : "獲得")) return;
                     d["kind"] = "status"; d["name"] = nm;
                     d["text"] = (amount < 0 ? "消除「" : "獲得「") + nm + "」";
                     break;

@@ -218,6 +218,10 @@ BeginInvoke → 無限排隊、UI 執行緒永遠沒回到閒置（未回應）�
 正確寫法：`RebuildOps()` 只是派送器（已排隊就直接 return），真正做事的是 `RebuildOpsCore()`；
 `RebuildList()`／`RebuildListCore()` 同理。探針加了 `PROBE_CLICKFX=1`：用反射呼叫 FxTabs.OnMouseUp 模擬點擊，
 驗證連點三次仍正常、面板內容有更新（已納入測試流程）。
+**05:40 同類影響合併＋實體改名戰鬥**：使用者：得到第二個以上的物品／狀態／戰鬥時，併進同一行影響、用「、」分隔。
+`EffectBox.MergeOrAdd()`：物品（不含硬幣）、狀態（獲得／消除不混）、戰鬥（kind 仍是 entity）會找同 target 的既有條目，
+把名稱接上去並重寫成 `得到「A」、「B」` / `獲得「X」、「Y」` / `戰鬥「Z」、「W」`。
+分類「事件」底下的「實體」改名「戰鬥」（顯示與文字都改，存檔 kind 不變，En 字典加 Combat）。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

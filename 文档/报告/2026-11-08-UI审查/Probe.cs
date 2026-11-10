@@ -131,7 +131,7 @@ static class Probe
                         mi.Invoke(tabs, new object[] { new MouseEventArgs(MouseButtons.Left, 1, x, 10, 0) });
                         Pump(400);
                         Log.AppendLine("after click " + k + " at x=" + x + ": box children=" + box.Controls.Count + " alive=1");
-                        x += 130;
+                        x += 95;
                     }
                     CaptureClient(f, Path.Combine(OutDir, tag + "-fx.png"));
                 }
