@@ -294,7 +294,7 @@ namespace ExpeditionRecorder
                     int rw = Math.Max(1, maxX - minX);
                     int rh = Math.Max(1, maxY - minY);
                     Color tc = SampleTextColor(bmp, new Rectangle(minX, minY, rw, rh));
-                    list.Add(new OcrLine { Text = text, Score = score, X = minX, Y = minY, W = rw, H = rh, TextColor = tc });
+                    list.Add(new OcrLine { Text = Parse.FixPunct(text), Score = score, X = minX, Y = minY, W = rw, H = rh, TextColor = tc });
                 }
             }
             catch
@@ -515,6 +515,23 @@ namespace ExpeditionRecorder
         public static bool IsNormalFloorId(string id)
         {
             return System.Text.RegularExpressions.Regex.IsMatch((id ?? "").Trim(), @"^\d+(?:\.\d+)?$");
+        }
+
+        /* OCR 常把中文標點認錯：「。」被讀成 middle dot、「、」被讀成「丶」、逗號變半形。
+           只在「夾著中文」時修，數字（1,000、0.99）與真正的間隔號（犬·狼）不動；
+           連續的點（省略號）也不動。 */
+        public static string FixPunct(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            s = s.Replace('丶', '、');          /* U+4E36「丶」不是標點，幾乎都是「、」 */
+            s = s.Replace('｡', '。');
+            s = s.Replace('．', '。');
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff]),(?=[\u4e00-\u9fff])", "，");
+            /* 短詞裡的間隔號是資料本身（例如種族「犬·狼」），不要當成句號 */
+            if (System.Text.RegularExpressions.Regex.IsMatch(s, @"^[\u4e00-\u9fff]{1,3}[·・‧•][\u4e00-\u9fff]{1,3}$")) return s;
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff])[·・‧•](?=[\u4e00-\u9fff])", "。");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<=[\u4e00-\u9fff])\.(?=[\u4e00-\u9fff])", "。");
+            return s;
         }
 
         public static bool IsChrome(string t)
@@ -10283,6 +10300,17 @@ namespace ExpeditionRecorder
             sb.AppendLine();
             sb.AppendLine("── 情境二：提示 + 選項 + 判定 ──");
             foreach (var l in l2) sb.AppendLine(l.Text + " chrome=" + l.IsChrome + " option=" + l.IsOption + " cond=" + l.IsCondition + " group=" + l.OptionGroup + " check=" + l.Check);
+
+            /* 標點修正：OCR 把「。」讀成「·」、「、」讀成「丶」 */
+            sb.AppendLine();
+            sb.AppendLine("── 標點修正 ──");
+            string[] samples = {
+                "墙上挂着一面落地镜·镜子里的你，看起来比现在干净一点丶健康一点",
+                "你开始数：「一、二丶三·……··」",
+                "犬·狼 是種族，1,000 硬幣、0.99 版",
+                "他说,你好.再见"
+            };
+            foreach (var s in samples) sb.AppendLine(s + "  →  " + Parse.FixPunct(s));
 
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "parsetest.txt"), sb.ToString(), new UTF8Encoding(false));
             return 0;
