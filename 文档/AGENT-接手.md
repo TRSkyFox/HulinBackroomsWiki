@@ -213,6 +213,11 @@ OCR 拆成两行、同一列。原来 `Scan` 只接受严格「上方 60px」且
 種類晶片也用各自顏色。面板文字全部走 `UiText.T()`（並補了 En 字典：Health/Supplies/Events、HP/SAN…），
 繁／簡／英三種都渲染確認過。框高改成 300（1.0），5 條影響＋出口進度不用捲。
 **往後每次改 UI 都要檢查三種語言**（探針環境變數 `PROBE_LANG` 可切簡體／英文）。
+**05:30 修「點一下面板就未回應」**：上一版的延後重建寫成「先清旗標再遞迴呼叫」，於是 RebuildOps 每次呼叫都再排一次
+BeginInvoke → 無限排隊、UI 執行緒永遠沒回到閒置（未回應）。
+正確寫法：`RebuildOps()` 只是派送器（已排隊就直接 return），真正做事的是 `RebuildOpsCore()`；
+`RebuildList()`／`RebuildListCore()` 同理。探針加了 `PROBE_CLICKFX=1`：用反射呼叫 FxTabs.OnMouseUp 模擬點擊，
+驗證連點三次仍正常、面板內容有更新（已納入測試流程）。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 

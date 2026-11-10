@@ -5737,15 +5737,8 @@ namespace ExpeditionRecorder
             return TextRenderer.MeasureText(text, f).Width + P(22);
         }
 
-        void RebuildList()
+        void RebuildListCore()
         {
-            if (IsHandleCreated && !_listDefer)
-            {
-                _listDefer = true;
-                try { BeginInvoke((Action)(delegate { _listDefer = false; RebuildList(); })); return; }
-                catch { _listDefer = false; }
-            }
-            _listDefer = false;
             _list.SuspendLayout();
             Freeze(_list, true);
             Clear(_list);
@@ -5818,16 +5811,27 @@ namespace ExpeditionRecorder
         bool _opsDefer, _listDefer;
 
         /* 從按鈕自己的 Click 事件重建時會被 Dispose 掉（畫面抖一下），
-           統一丟到訊息迴圈下一輪再做。 */
+           統一丟到訊息迴圈下一輪再做；已經排隊就直接跳過，避免無限排隊。 */
         void RebuildOps()
         {
-            if (IsHandleCreated && !_opsDefer)
-            {
-                _opsDefer = true;
-                try { BeginInvoke((Action)(delegate { _opsDefer = false; RebuildOps(); })); return; }
-                catch { _opsDefer = false; }
-            }
-            _opsDefer = false;
+            if (!IsHandleCreated) { RebuildOpsCore(); return; }
+            if (_opsDefer) return;
+            _opsDefer = true;
+            try { BeginInvoke((Action)(delegate { _opsDefer = false; RebuildOpsCore(); })); }
+            catch { _opsDefer = false; RebuildOpsCore(); }
+        }
+
+        void RebuildList()
+        {
+            if (!IsHandleCreated) { RebuildListCore(); return; }
+            if (_listDefer) return;
+            _listDefer = true;
+            try { BeginInvoke((Action)(delegate { _listDefer = false; RebuildListCore(); })); }
+            catch { _listDefer = false; RebuildListCore(); }
+        }
+
+        void RebuildOpsCore()
+        {
             _ops.SuspendLayout();
             Freeze(_ops, true);
             /* 頁籤是常駐控制項，Clear 會把它 Dispose 掉，先拿出來 */

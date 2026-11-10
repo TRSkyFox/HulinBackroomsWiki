@@ -111,6 +111,32 @@ static class Probe
             if (panel != null) CaptureControl(panel, Path.Combine(OutDir, tag + "-panel.png"));
         }
         Dump(f, tag);
+        string clickFx = Environment.GetEnvironmentVariable("PROBE_CLICKFX");
+        if (!string.IsNullOrEmpty(clickFx))
+        {
+            Control box = null;
+            foreach (Control c in AllControls(f)) if (c.GetType().Name == "EffectBox") { box = c; break; }
+            Log.AppendLine("FX box: " + (box == null ? "none" : "found"));
+            if (box != null)
+            {
+                Control tabs = null;
+                foreach (Control c in AllControls(box)) if (c.GetType().Name == "FxTabs") { tabs = c; break; }
+                Log.AppendLine("FX tabs: " + (tabs == null ? "none" : ("found w=" + tabs.Width)));
+                if (tabs != null)
+                {
+                    var mi = typeof(Control).GetMethod("OnMouseUp", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    int x = 20;
+                    for (int k = 0; k < 3; k++)
+                    {
+                        mi.Invoke(tabs, new object[] { new MouseEventArgs(MouseButtons.Left, 1, x, 10, 0) });
+                        Pump(400);
+                        Log.AppendLine("after click " + k + " at x=" + x + ": box children=" + box.Controls.Count + " alive=1");
+                        x += 130;
+                    }
+                    CaptureClient(f, Path.Combine(OutDir, tag + "-fx.png"));
+                }
+            }
+        }
         if (Environment.GetEnvironmentVariable("PROBE_FLOW") == "1")
         {
             Panel sp = null;
