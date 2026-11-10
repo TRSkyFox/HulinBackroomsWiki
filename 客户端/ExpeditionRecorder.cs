@@ -4396,7 +4396,7 @@ namespace ExpeditionRecorder
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度" };
+            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度", "物品" };
             AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
@@ -4428,6 +4428,7 @@ namespace ExpeditionRecorder
                 amt.BackColor = stat ? Color.FromArgb(40, 40, 44) : Color.FromArgb(40, 40, 44);
                 amt.ForeColor = stat ? Color.FromArgb(120, 120, 128) : Color.White;
                 db.ForeColor = stat ? Color.White : Color.FromArgb(120, 120, 128);
+                tip.SetToolTip(amt, k == "物品" ? "填物品名稱" : (stat ? "這一類只選恢復／損失，不用填數字" : "填數字，例如 5 或 -2"));
             };
             cb.SelectedIndexChanged += delegate { sync(); };
             sync();
@@ -4442,21 +4443,25 @@ namespace ExpeditionRecorder
             add.Click += delegate
             {
                 string kind = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
-                int amount;
+                string raw = (amt.Text ?? "").Trim();
+                int amount = 0;
                 if (OverlayForm.IsStatKind(kind))
                 {
                     amount = (db.SelectedIndex < 0 ? 0 : db.SelectedIndex) == 0 ? 1 : -1;
                 }
+                else if (kind == "物品")
+                {
+                    if (raw == "") { SetStatus("物品要填名稱", Color.FromArgb(240, 186, 120)); return; }
+                }
                 else
                 {
-                    string raw = (amt.Text ?? "").Trim().Replace("＋", "+").Replace("−", "-").Replace("－", "-");
-                    if (!int.TryParse(raw, out amount))
+                    if (!int.TryParse(raw.Replace("＋", "+").Replace("−", "-").Replace("－", "-"), out amount))
                     {
                         SetStatus("這個種類要填數字，例如 5 或 -2", Color.FromArgb(240, 186, 120));
                         return;
                     }
                 }
-                ApplyNewEffect(st, kind, amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex]);
+                ApplyNewEffect(st, kind, amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex], raw);
                 amt.Text = "";
                 QueueRelayout(true);
             };
@@ -4464,7 +4469,7 @@ namespace ExpeditionRecorder
             _y = y + bh + RowGap;
         }
 
-        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount, string target)
+        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount, string target, string name)
         {
             if (st == null) return;
             if (kind == "出口進度")
@@ -4474,6 +4479,20 @@ namespace ExpeditionRecorder
                 int cur = 0;
                 int.TryParse(S(pg, "delta"), out cur);
                 pg["delta"] = cur + amount;
+                return;
+            }
+            if (kind == "物品")
+            {
+                string nm = (name ?? "").Trim().Trim('「', '」');
+                if (nm == "") return;
+                var arri = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (arri == null) { arri = new System.Collections.ArrayList(); st["effects"] = arri; }
+                var di = new Dictionary<string, object>();
+                di["target"] = OverlayForm.EffectTargetLabel(target);
+                di["kind"] = "item";
+                di["name"] = nm;
+                di["text"] = "得到「" + nm + "」";
+                arri.Add(di);
                 return;
             }
             if (kind == "硬幣")
