@@ -3680,10 +3680,6 @@ namespace ExpeditionRecorder
         bool _dirty;
         bool _normalized;
         bool _firstShown;
-        /* 新增影響面板的狀態：0=健康 1=物資 2=事件；-1 表示還沒選 */
-        int _fxCat = -1;
-        string _fxKind = "";
-        int _fxWho = 0;
 
         int Px(int v) { return UiScale.Px(v); }
 
@@ -4311,358 +4307,36 @@ namespace ExpeditionRecorder
             AddOutcomeDirection(st);
         }
 
-        /* 影響（效果）只能「新增一條」或「刪除一條」：
-           文字與數值都由記錄器產生，玩家不能手改，避免把數值改爛。
-           出口進度不是 effects，但一樣只給數字。 */
+        /* 影響（效果）整塊放進固定大小的操作面板 EffectBox：
+           新增／刪除只在框內重畫，不會重建整個表單。 */
         void AddEffectsEditor(Dictionary<string, object> st)
         {
             var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-            int n = 0;
-            if (eff != null)
+            if ((eff == null || eff.Count == 0) && (S(st, "status") != "" || S(st, "coins") != "" || S(st, "items") != ""))
             {
-                for (int ei = 0; ei < eff.Count; ei++)
-                {
-                    var ed = eff[ei] as Dictionary<string, object>;
-                    if (ed == null) continue;
-                    /* 舊記錄裡如果有具體角色／玩家名，開起來就順手改成「你／所有人」 */
-                    string rawTarget = S(ed, "target");
-                    string fixedTarget = OverlayForm.EffectTargetLabel(rawTarget);
-                    if (fixedTarget != rawTarget)
-                    {
-                        ed["target"] = fixedTarget;
-                        _normalized = true;
-                    }
-                    n++;
-                    int rowTop = _y;
-                    int vy = Narrow ? rowTop + _fieldH + Px(2) : rowTop;
-                    AddLabel("影響 " + n, rowTop, _fieldH, null);
-                    var v = new Label();
-                    v.Text = RecordsForm.EventEffectText(ed);
-                    v.ForeColor = Color.FromArgb(222, 222, 228);
-                    v.SetBounds(Narrow ? PageLeft : FieldX, vy + Px(3), Math.Max(Px(80), (Narrow ? FieldW : FieldRight - FieldX) - Px(66)), _fieldH);
-                    v.AutoEllipsis = true;
-                    _panel.Controls.Add(v);
-                    int idx = ei;
-                    AddMiniButton("刪除", vy, delegate
-                    {
-                        var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                        if (arr != null && idx >= 0 && idx < arr.Count) arr.RemoveAt(idx);
-                        QueueRelayout(true);
-                    });
-                    _y = vy + _fieldH + RowGap;
-                }
+                int r0 = _y;
+                int vy0 = Narrow ? r0 + _fieldH + Px(2) : r0;
+                AddLabel("舊資料", r0, _fieldH, null);
+                var lb0 = new Label();
+                lb0.Text = S(st, "status")
+                    + (S(st, "coins") != "" ? "　硬幣：" + S(st, "coins") : "")
+                    + (S(st, "items") != "" ? "　物品：" + S(st, "items") : "");
+                lb0.ForeColor = Color.FromArgb(150, 150, 158);
+                lb0.SetBounds(Narrow ? PageLeft : FieldX, vy0 + Px(3), Math.Max(Px(80), Narrow ? FieldW : FieldRight - FieldX), _fieldH);
+                _panel.Controls.Add(lb0);
+                _y = vy0 + _fieldH + RowGap;
             }
-            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-            if (pg != null && (S(pg, "delta") != "" || S(pg, "current") != ""))
-            {
-                int rowTop = _y;
-                int vy = Narrow ? rowTop + _fieldH + Px(2) : rowTop;
-                AddLabel("出口進度", rowTop, _fieldH, null);
-                var v = new Label();
-                {
-                    string dlt = S(pg, "delta");
-                    int dv;
-                    string pv = int.TryParse(dlt, out dv) ? (dv >= 0 ? "+" : "") + dv : dlt;
-                    if (S(pg, "current") != "") pv += "（" + S(pg, "current") + "/" + S(pg, "total") + "）";
-                    v.Text = pv == "" ? "（無）" : pv;
-                }
-                v.ForeColor = Color.FromArgb(222, 222, 228);
-                v.SetBounds(Narrow ? PageLeft : FieldX, vy + Px(3), Math.Max(Px(80), (Narrow ? FieldW : FieldRight - FieldX) - Px(66)), _fieldH);
-                _panel.Controls.Add(v);
-                AddMiniButton("刪除", vy, delegate { st.Remove("progress"); QueueRelayout(true); });
-                _y = vy + _fieldH + RowGap;
-            }
-            /* 舊記錄只有文字欄位時，至少讓它看得到（不可改） */
-            if (n == 0 && S(st, "status") != "") AddFixed("狀態影響", S(st, "status"));
-            if (S(st, "coins") != "") AddFixed("獲得硬幣", S(st, "coins"));
-            if (S(st, "items") != "") AddFixed("獲得物品", S(st, "items"));
-            AddEffectAdder(st);
-        }
 
-        void AddMiniButton(string text, int y, Action onClick)
-        {
-            var b = new Button();
-            b.Text = text;
-            int bw = Math.Max(Px(54), TextW(text, BasePt) + Px(18));
-            b.SetBounds(FieldRight - bw, y, bw, _fieldH);
-            b.FlatStyle = FlatStyle.Flat;
-            b.BackColor = Color.FromArgb(52, 44, 44);
-            b.ForeColor = Color.FromArgb(232, 214, 214);
-            b.FlatAppearance.BorderColor = Color.FromArgb(96, 70, 70);
-            b.Click += delegate { onClick(); };
-            _panel.Controls.Add(b);
-        }
-
-        /* 「＋ 新增影響」操作面板：三大類（健康／物資／事件）→ 種類 → 參數，全部按鈕式。
-           文字一律由程式產生，玩家只挑選、填名稱或數字。 */
-        void AddEffectAdder(Dictionary<string, object> st)
-        {
             int rowTop = _y;
             bool narrow = Narrow;
-            int bh = Math.Max(_fieldH, _buttonH);
-            AddLabel("新增影響", rowTop, _comboH, null);
-            int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
-            int x0 = narrow ? PageLeft : FieldX;
-
-            string[] cats = { "健康", "物資", "事件" };
-            int x = x0;
-            for (int i = 0; i < cats.Length; i++)
-            {
-                int ci = i;
-                int w = Math.Max(Px(62), TextW(cats[i], BasePt) + Px(22));
-                AddChip(cats[i], x, y, w, _fxCat == ci, delegate
-                {
-                    _fxCat = (_fxCat == ci ? -1 : ci);
-                    _fxKind = "";
-                    QueueRelayout(true);
-                });
-                x += w + Px(6);
-            }
-            _y = y + bh + Px(4);
-            if (_fxCat < 0) return;
-
-            string[] kinds = _fxCat == 0 ? new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" }
-                           : _fxCat == 1 ? new[] { "物品", "硬幣", "經驗", "出口進度", "記憶碎片" }
-                           : new[] { "實體", "切層" };
-            y = _y; x = x0;
-            foreach (var kk0 in kinds)
-            {
-                string kk = kk0;
-                int w = Math.Max(Px(56), TextW(kk, BasePt) + Px(20));
-                AddChip(kk, x, y, w, _fxKind == kk, delegate
-                {
-                    _fxKind = (_fxKind == kk ? "" : kk);
-                    QueueRelayout(true);
-                });
-                x += w + Px(6);
-            }
-            _y = y + bh + Px(4);
-            if (_fxKind == "") return;
-
-            y = _y; x = x0;
-            string kind = _fxKind;
-            Action add = delegate { QueueRelayout(true); };
-            if (OverlayForm.IsStatKind(kind))
-            {
-                /* 體力類：恢復／損失，按下去就加入 */
-                string[] dirs = { "恢復", "損失" };
-                for (int i = 0; i < dirs.Length; i++)
-                {
-                    string dname = dirs[i];
-                    int dir = i == 0 ? 1 : -1;
-                    int w = Math.Max(Px(56), TextW(dname, BasePt) + Px(20));
-                    AddChip(dname, x, y, w, false, delegate
-                    {
-                        ApplyNewEffect(st, kind, dir, "你", "");
-                        add();
-                    });
-                    x += w + Px(6);
-                }
-            }
-            else
-            {
-                bool needName = kind == "物品" || kind == "狀態效果" || kind == "實體" || kind == "切層";
-                int bw = needName ? Px(168) : Px(64);
-                var box = AddChipBox(x, y, bw, needName
-                    ? (kind == "實體" ? "實體名稱，多個用、分隔" : kind == "切層" ? "樓層編號，例如 3" : "填名稱")
-                    : "填數字，例如 5 或 -2");
-                x += bw + Px(6);
-                if (kind == "硬幣")
-                {
-                    string[] who = { "你", "所有人" };
-                    for (int i = 0; i < who.Length; i++)
-                    {
-                        int wi = i;
-                        int w = Math.Max(Px(52), TextW(who[i], BasePt) + Px(18));
-                        AddChip(who[i], x, y, w, _fxWho == wi, delegate
-                        {
-                            _fxWho = wi;
-                            QueueRelayout(true);
-                        });
-                        x += w + Px(6);
-                    }
-                }
-                if (kind == "狀態效果")
-                {
-                    string[] ops = { "獲得", "消除" };
-                    for (int i = 0; i < ops.Length; i++)
-                    {
-                        string op = ops[i];
-                        int dir = i == 0 ? 1 : -1;
-                        int w = Math.Max(Px(54), TextW(op, BasePt) + Px(18));
-                        AddChip(op, x, y, w, false, delegate
-                        {
-                            string nm = (box.Text ?? "").Trim();
-                            if (nm == "") { SetStatus("狀態效果要填名稱", Color.FromArgb(240, 186, 120)); return; }
-                            ApplyNewEffect(st, kind, dir, "你", nm);
-                            box.Text = "";
-                            add();
-                        });
-                        x += w + Px(6);
-                    }
-                }
-                else
-                {
-                    int w = Math.Max(Px(54), TextW("加入", BasePt) + Px(20));
-                    AddChip("加入", x, y, w, false, delegate
-                    {
-                        string raw = (box.Text ?? "").Trim();
-                        int amount = 0;
-                        if (kind == "物品" || kind == "實體" || kind == "切層")
-                        {
-                            if (raw == "") { SetStatus("要先填" + (kind == "實體" ? "實體名稱" : kind == "切層" ? "樓層編號" : "物品名稱"), Color.FromArgb(240, 186, 120)); return; }
-                        }
-                        else if (!int.TryParse(raw.Replace("＋", "+").Replace("−", "-").Replace("－", "-"), out amount))
-                        {
-                            SetStatus("這個種類要填數字，例如 5 或 -2", Color.FromArgb(240, 186, 120));
-                            return;
-                        }
-                        string target = kind == "硬幣" && _fxWho == 1 ? "所有人" : "你";
-                        ApplyNewEffect(st, kind, amount, target, raw);
-                        box.Text = "";
-                        add();
-                    });
-                    x += w + Px(6);
-                }
-            }
-            _y = y + bh + RowGap;
-        }
-
-        Button AddChip(string text, int x, int y, int w, bool on, Action onClick)
-        {
-            var b = new Button();
-            b.Text = text;
-            b.SetBounds(x, y, w, Math.Max(_fieldH, _buttonH));
-            b.FlatStyle = FlatStyle.Flat;
-            b.BackColor = on ? Color.FromArgb(48, 66, 52) : Color.FromArgb(44, 44, 47);
-            b.ForeColor = on ? Color.FromArgb(196, 240, 196) : Color.FromArgb(228, 228, 232);
-            b.FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(78, 78, 84);
-            b.Click += delegate { onClick(); };
-            _panel.Controls.Add(b);
-            return b;
-        }
-
-        TextBox AddChipBox(int x, int y, int w, string tip)
-        {
-            var t = new TextBox();
-            t.BackColor = Color.FromArgb(40, 40, 44);
-            t.ForeColor = Color.White;
-            t.BorderStyle = BorderStyle.FixedSingle;
-            t.SetBounds(x, y + Px(3), w, _fieldH);
-            _panel.Controls.Add(t);
-            if (!string.IsNullOrEmpty(tip)) { var tp = new ToolTip(); tp.SetToolTip(t, tip); }
-            return t;
-        }
-
-        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount, string target, string name)
-        {
-            if (st == null) return;
-            if (kind == "出口進度")
-            {
-                var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-                if (pg == null) { pg = new Dictionary<string, object>(); st["progress"] = pg; }
-                int cur = 0;
-                int.TryParse(S(pg, "delta"), out cur);
-                pg["delta"] = cur + amount;
-                return;
-            }
-            if (kind == "物品")
-            {
-                string nm = (name ?? "").Trim().Trim('「', '」');
-                if (nm == "") return;
-                var arri = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (arri == null) { arri = new System.Collections.ArrayList(); st["effects"] = arri; }
-                var di = new Dictionary<string, object>();
-                di["target"] = OverlayForm.EffectTargetLabel(target);
-                di["kind"] = "item";
-                di["name"] = nm;
-                di["text"] = "得到「" + nm + "」";
-                arri.Add(di);
-                return;
-            }
-            if (kind == "狀態效果")
-            {
-                string nm = (name ?? "").Trim().Trim('「', '」');
-                if (nm == "") return;
-                var arrs = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (arrs == null) { arrs = new System.Collections.ArrayList(); st["effects"] = arrs; }
-                var ds = new Dictionary<string, object>();
-                ds["target"] = OverlayForm.EffectTargetLabel(target);
-                ds["kind"] = "status";
-                ds["name"] = nm;
-                ds["text"] = (amount < 0 ? "消除「" : "獲得「") + nm + "」";
-                arrs.Add(ds);
-                return;
-            }
-            if (kind == "實體")
-            {
-                string nm = (name ?? "").Trim().Trim('「', '」');
-                if (nm == "") return;
-                var arre = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (arre == null) { arre = new System.Collections.ArrayList(); st["effects"] = arre; }
-                foreach (var one in System.Text.RegularExpressions.Regex.Split(nm, @"[、,，;；]"))
-                {
-                    string e = (one ?? "").Trim().Trim('「', '」');
-                    if (e == "") continue;
-                    var de = new Dictionary<string, object>();
-                    de["target"] = OverlayForm.EffectTargetLabel(target);
-                    de["kind"] = "entity";
-                    de["name"] = e;
-                    de["text"] = "實體「" + e + "」";
-                    arre.Add(de);
-                }
-                return;
-            }
-            if (kind == "切層")
-            {
-                string nm = (name ?? "").Trim().Replace("Level ", "").Replace("level ", "").Trim();
-                if (nm == "") return;
-                var arrf = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (arrf == null) { arrf = new System.Collections.ArrayList(); st["effects"] = arrf; }
-                var df = new Dictionary<string, object>();
-                df["target"] = OverlayForm.EffectTargetLabel(target);
-                df["kind"] = "floor";
-                df["name"] = nm;
-                df["text"] = "切層 Level " + nm;
-                arrf.Add(df);
-                return;
-            }
-            if (kind == "硬幣")
-            {
-                var arrc = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-                if (arrc == null) { arrc = new System.Collections.ArrayList(); st["effects"] = arrc; }
-                string tg = OverlayForm.EffectTargetLabel(target);
-                var dc = new Dictionary<string, object>();
-                dc["target"] = tg;
-                dc["kind"] = "item";
-                dc["name"] = "硬幣";
-                dc["amount"] = amount;
-                if (tg == "所有人")
-                {
-                    dc["shared"] = true;
-                    dc["text"] = "所有人 各得到 " + amount + " 硬幣";
-                }
-                else dc["text"] = "得到 " + amount + " 硬幣";
-                arrc.Add(dc);
-                return;
-            }
-            var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-            if (arr == null) { arr = new System.Collections.ArrayList(); st["effects"] = arr; }
-            var d = new Dictionary<string, object>();
-            d["target"] = OverlayForm.EffectTargetLabel(target);
-            d["kind"] = kind;
-            if (OverlayForm.IsStatKind(kind))
-            {
-                d["amount"] = amount < 0 ? -1 : 1;
-                d["text"] = OverlayForm.EffectPlainText(kind, amount);
-                d["plain"] = true;
-            }
-            else
-            {
-                d["amount"] = amount;
-                d["text"] = OverlayForm.EffectText(kind, amount);
-            }
-            arr.Add(d);
+            int bw = narrow ? FieldW : (FieldRight - FieldX);
+            int bh = Px(232);
+            AddLabel("影響", rowTop, narrow ? _fieldH : _comboH, null);
+            int by = narrow ? rowTop + _fieldH + Px(2) : rowTop;
+            var box = new EffectBox(st, bw, bh, delegate { _normalized = true; ScheduleSave(); });
+            box.SetBounds(narrow ? PageLeft : FieldX, by, bw, bh);
+            _panel.Controls.Add(box);
+            _y = by + bh + Px(10);
         }
 
         void AddOutcomeDirection(Dictionary<string, object> st)
@@ -5671,6 +5345,374 @@ namespace ExpeditionRecorder
             }
             if (_externalSave != null) DialogResult = DialogResult.OK;
             base.OnFormClosing(e);
+        }
+    }
+
+    /* 「影響」操作面板：固定大小，新增／刪除只在框內重畫，不會重建整個表單。
+       三層：健康／物資／事件 → 種類 → 參數（按鈕式，文字全部由程式產生）。 */
+    class EffectBox : Panel
+    {
+        readonly Dictionary<string, object> _st;
+        readonly Action _changed;
+        readonly Panel _list = new Panel();
+        readonly Panel _ops = new Panel();
+        int _cat = -1;
+        string _kind = "";
+        int _who = 0;
+
+        static readonly string[] Cats = { "健康", "物資", "事件" };
+        static readonly string[][] Kinds =
+        {
+            new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" },
+            new[] { "物品", "硬幣", "經驗", "出口進度", "記憶碎片" },
+            new[] { "實體", "切層" }
+        };
+
+        static int P(int v) { return UiScale.Px(v); }
+
+        static string Str(Dictionary<string, object> d, string k)
+        {
+            if (d == null || !d.ContainsKey(k) || d[k] == null) return "";
+            return Convert.ToString(d[k]);
+        }
+
+        public EffectBox(Dictionary<string, object> st, int width, int height, Action changed)
+        {
+            _st = st;
+            _changed = changed;
+            DoubleBuffered = true;
+            BackColor = Color.FromArgb(34, 34, 38);
+            SetBounds(0, 0, width, height);
+            _list.BackColor = BackColor;
+            _list.AutoScroll = true;
+            _ops.BackColor = BackColor;
+            Controls.Add(_list);
+            Controls.Add(_ops);
+            int pad = P(6);
+            int opsH = P(96);
+            _list.SetBounds(pad, pad, Width - pad * 2, Height - opsH - pad * 3);
+            _ops.SetBounds(pad, Height - opsH - pad, Width - pad * 2, opsH);
+            Paint += delegate (object s, PaintEventArgs e)
+            {
+                using (var pen = new Pen(Color.FromArgb(72, 72, 80)))
+                    e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+            };
+            NormalizeTargets();
+            RebuildList();
+            RebuildOps();
+        }
+
+        /* 舊記錄裡的具體角色名，開起來就改成「你／所有人」 */
+        void NormalizeTargets()
+        {
+            var eff = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
+            if (eff == null) return;
+            bool hit = false;
+            foreach (var x in eff)
+            {
+                var ed = x as Dictionary<string, object>;
+                if (ed == null) continue;
+                string raw = Str(ed, "target");
+                string fixedTarget = OverlayForm.EffectTargetLabel(raw);
+                if (fixedTarget != raw) { ed["target"] = fixedTarget; hit = true; }
+            }
+            if (hit && _changed != null) _changed();
+        }
+
+        static string ProgressText(Dictionary<string, object> pg)
+        {
+            string dlt = Str(pg, "delta");
+            int dv;
+            string pv = int.TryParse(dlt, out dv) ? (dv >= 0 ? "+" : "") + dv : dlt;
+            if (Str(pg, "current") != "") pv += "（" + Str(pg, "current") + "/" + Str(pg, "total") + "）";
+            return pv;
+        }
+
+        int TextW(string t)
+        {
+            Font f = Font ?? SystemFonts.DefaultFont;
+            return TextRenderer.MeasureText(t, f).Width;
+        }
+
+        Button Chip(string text, int x, int y, int w, int h, bool on, Action click)
+        {
+            var b = new Button();
+            b.Text = text;
+            b.SetBounds(x, y, w, h);
+            b.FlatStyle = FlatStyle.Flat;
+            b.BackColor = on ? Color.FromArgb(48, 66, 52) : Color.FromArgb(46, 46, 50);
+            b.ForeColor = on ? Color.FromArgb(196, 240, 196) : Color.FromArgb(228, 228, 232);
+            b.FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(80, 80, 86);
+            b.TabStop = false;
+            b.Click += delegate { click(); };
+            return b;
+        }
+
+        static void Clear(Control host)
+        {
+            var old = new List<Control>();
+            foreach (Control c in host.Controls) old.Add(c);
+            host.Controls.Clear();
+            foreach (var c in old) c.Dispose();
+        }
+
+        void RebuildList()
+        {
+            _list.SuspendLayout();
+            Clear(_list);
+            int y = 0;
+            int w = Math.Max(P(140), _list.Width - P(16));
+            int n = 0;
+            var eff = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
+            bool any = false;
+            if (eff != null)
+            {
+                for (int i = 0; i < eff.Count; i++)
+                {
+                    var ed = eff[i] as Dictionary<string, object>;
+                    if (ed == null) continue;
+                    n++;
+                    any = true;
+                    int idx = i;
+                    AddRow(n + ". " + RecordsForm.EventEffectText(ed), y, w, delegate
+                    {
+                        var arr = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
+                        if (arr != null && idx >= 0 && idx < arr.Count) arr.RemoveAt(idx);
+                        RebuildList();
+                        if (_changed != null) _changed();
+                    });
+                    y += P(24);
+                }
+            }
+            var pg = _st.ContainsKey("progress") ? _st["progress"] as Dictionary<string, object> : null;
+            if (pg != null && (Str(pg, "delta") != "" || Str(pg, "current") != ""))
+            {
+                any = true;
+                AddRow("出口進度  " + ProgressText(pg), y, w, delegate
+                {
+                    _st.Remove("progress");
+                    RebuildList();
+                    if (_changed != null) _changed();
+                });
+                y += P(24);
+            }
+            if (!any)
+            {
+                var empty = new Label();
+                empty.Text = "（還沒有影響）";
+                empty.ForeColor = Color.FromArgb(140, 140, 148);
+                empty.SetBounds(0, P(4), w, P(20));
+                _list.Controls.Add(empty);
+            }
+            _list.ResumeLayout();
+        }
+
+        void AddRow(string text, int y, int w, Action del)
+        {
+            var lb = new Label();
+            lb.Text = text;
+            lb.AutoEllipsis = true;
+            lb.ForeColor = Color.FromArgb(222, 222, 228);
+            lb.SetBounds(0, y + P(3), w - P(56), P(20));
+            _list.Controls.Add(lb);
+            _list.Controls.Add(Chip("刪除", w - P(52), y, P(52), P(22), false, del));
+        }
+
+        void RebuildOps()
+        {
+            _ops.SuspendLayout();
+            Clear(_ops);
+            int bh = P(24), gap = P(4), y = 0, x = 0;
+
+            for (int i = 0; i < Cats.Length; i++)
+            {
+                int ci = i;
+                string t = Cats[i];
+                int w = TextW(t) + P(18);
+                _ops.Controls.Add(Chip(t, x, y, w, bh, _cat == ci, delegate
+                {
+                    _cat = (_cat == ci ? -1 : ci);
+                    _kind = "";
+                    RebuildOps();
+                }));
+                x += w + gap;
+            }
+            if (_cat < 0) { _ops.ResumeLayout(); return; }
+
+            y += bh + gap; x = 0;
+            foreach (var k0 in Kinds[_cat])
+            {
+                string kk = k0;
+                int w = TextW(kk) + P(16);
+                _ops.Controls.Add(Chip(kk, x, y, w, bh, _kind == kk, delegate
+                {
+                    _kind = (_kind == kk ? "" : kk);
+                    RebuildOps();
+                }));
+                x += w + gap;
+            }
+            if (_kind == "") { _ops.ResumeLayout(); return; }
+
+            y += bh + gap; x = 0;
+            string kind = _kind;
+            if (OverlayForm.IsStatKind(kind))
+            {
+                string[] dirs = { "恢復", "損失" };
+                for (int i = 0; i < dirs.Length; i++)
+                {
+                    string dn = dirs[i];
+                    int dir = i == 0 ? 1 : -1;
+                    int w = TextW(dn) + P(16);
+                    _ops.Controls.Add(Chip(dn, x, y, w, bh, false, delegate
+                    {
+                        AddEffect(kind, dir, "你", "");
+                        RebuildList();
+                        if (_changed != null) _changed();
+                    }));
+                    x += w + gap;
+                }
+                _ops.ResumeLayout();
+                return;
+            }
+
+            bool needName = kind == "物品" || kind == "狀態效果" || kind == "實體" || kind == "切層";
+            int bw = needName ? P(170) : P(64);
+            var box = new TextBox();
+            box.BackColor = Color.FromArgb(40, 40, 44);
+            box.ForeColor = Color.White;
+            box.BorderStyle = BorderStyle.FixedSingle;
+            box.SetBounds(x, y + P(2), bw, P(22));
+            _ops.Controls.Add(box);
+            x += bw + gap;
+
+            if (kind == "硬幣")
+            {
+                string[] who = { "你", "所有人" };
+                for (int i = 0; i < who.Length; i++)
+                {
+                    int wi = i;
+                    int w = TextW(who[i]) + P(16);
+                    _ops.Controls.Add(Chip(who[i], x, y, w, bh, _who == wi, delegate
+                    {
+                        _who = wi;
+                        RebuildOps();
+                    }));
+                    x += w + gap;
+                }
+            }
+            if (kind == "狀態效果")
+            {
+                string[] ops = { "獲得", "消除" };
+                for (int i = 0; i < ops.Length; i++)
+                {
+                    string op = ops[i];
+                    int dir = i == 0 ? 1 : -1;
+                    int w = TextW(op) + P(16);
+                    _ops.Controls.Add(Chip(op, x, y, w, bh, false, delegate
+                    {
+                        string nm = (box.Text ?? "").Trim();
+                        if (nm == "") { return; }
+                        AddEffect(kind, dir, "你", nm);
+                        box.Text = "";
+                        RebuildList();
+                        if (_changed != null) _changed();
+                    }));
+                    x += w + gap;
+                }
+            }
+            else
+            {
+                int w = TextW("加入") + P(18);
+                _ops.Controls.Add(Chip("加入", x, y, w, bh, false, delegate
+                {
+                    string raw = (box.Text ?? "").Trim();
+                    int amount = 0;
+                    if (needName)
+                    {
+                        if (raw == "") return;
+                    }
+                    else if (!int.TryParse(raw.Replace("＋", "+").Replace("−", "-").Replace("－", "-"), out amount))
+                    {
+                        return;
+                    }
+                    AddEffect(kind, amount, kind == "硬幣" && _who == 1 ? "所有人" : "你", raw);
+                    box.Text = "";
+                    RebuildList();
+                    if (_changed != null) _changed();
+                }));
+                x += w + gap;
+            }
+            _ops.ResumeLayout();
+        }
+
+        void AddEffect(string kind, int amount, string target, string name)
+        {
+            if (_st == null) return;
+            var arr = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
+            if (arr == null) { arr = new System.Collections.ArrayList(); _st["effects"] = arr; }
+            string tg = OverlayForm.EffectTargetLabel(target);
+            string nm = (name ?? "").Trim().Trim('「', '」');
+
+            if (kind == "出口進度")
+            {
+                var pg = _st.ContainsKey("progress") ? _st["progress"] as Dictionary<string, object> : null;
+                if (pg == null) { pg = new Dictionary<string, object>(); _st["progress"] = pg; }
+                int cur = 0;
+                int.TryParse(Str(pg, "delta"), out cur);
+                pg["delta"] = cur + amount;
+                return;
+            }
+            if (kind == "實體")
+            {
+                if (nm == "") return;
+                foreach (var one in System.Text.RegularExpressions.Regex.Split(nm, @"[、,，;；]"))
+                {
+                    string e = (one ?? "").Trim().Trim('「', '」');
+                    if (e == "") continue;
+                    var de = new Dictionary<string, object>();
+                    de["target"] = tg; de["kind"] = "entity"; de["name"] = e; de["text"] = "實體「" + e + "」";
+                    arr.Add(de);
+                }
+                return;
+            }
+
+            var d = new Dictionary<string, object>();
+            d["target"] = tg;
+            switch (kind)
+            {
+                case "物品":
+                    if (nm == "") return;
+                    d["kind"] = "item"; d["name"] = nm; d["text"] = "得到「" + nm + "」";
+                    break;
+                case "硬幣":
+                    d["kind"] = "item"; d["name"] = "硬幣"; d["amount"] = amount;
+                    if (tg == "所有人") { d["shared"] = true; d["text"] = "所有人 各得到 " + amount + " 硬幣"; }
+                    else d["text"] = "得到 " + amount + " 硬幣";
+                    break;
+                case "狀態效果":
+                    if (nm == "") return;
+                    d["kind"] = "status"; d["name"] = nm;
+                    d["text"] = (amount < 0 ? "消除「" : "獲得「") + nm + "」";
+                    break;
+                case "切層":
+                    if (nm == "") return;
+                    d["kind"] = "floor"; d["name"] = nm; d["text"] = "切層 Level " + nm;
+                    break;
+                default:
+                    if (OverlayForm.IsStatKind(kind))
+                    {
+                        d["kind"] = kind; d["amount"] = amount < 0 ? -1 : 1;
+                        d["text"] = OverlayForm.EffectPlainText(kind, amount);
+                        d["plain"] = true;
+                    }
+                    else
+                    {
+                        d["kind"] = kind; d["amount"] = amount;
+                        d["text"] = OverlayForm.EffectText(kind, amount);
+                    }
+                    break;
+            }
+            arr.Add(d);
         }
     }
 

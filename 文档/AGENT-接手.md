@@ -199,6 +199,11 @@ OCR 拆成两行、同一列。原来 `Scan` 只接受严格「上方 60px」且
 事件（實體/切層）。按類別 → 出現該類按鈕 → 再出現參數列（體力類是「恢復/損失」兩個按鈕，按了直接加）。
 新增效果種類：狀態效果用「獲得/消除」＋自填名稱、實體（可多個，用、分隔，拆成多條）、切層（填樓層編號，記「切層 Level N」）。
 「所有人」只在硬幣出現。面板狀態存在 `_fxCat/_fxKind/_fxWho`，用 `QueueRelayout(true)` 重建。
+**04:10 影響改成固定大小操作框 EffectBox**：使用者：「每次點擊都刷新整個頁面，很不方便」。
+新增 `class EffectBox : Panel`（固定寬高、自帶邊框），框內上半是可捲動的影響清單（每列＋刪除），
+下半是三排按鈕（健康/物資/事件 → 種類 → 參數）。**分類/種類的點擊只重畫框內的 ops 區**（`RebuildOps()`），
+不再 `QueueRelayout`；只有真的新增/刪除一條影響才 `RebuildList()`，並叫 `ScheduleSave()`。
+舊的 `AddEffectAdder / AddChip / AddChipBox / ApplyNewEffect / AddMiniButton` 全部移除。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 
