@@ -4296,29 +4296,151 @@ namespace ExpeditionRecorder
                     AddFixed("同選加成", "+" + S(ck, "sameChoiceBonus"));
             }
             AddResults(st);
-            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
-            string summary = StatusSummary(eff);
+            var eff0 = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+            string summary = StatusSummary(eff0);
             if (summary != "" && S(st, "status") == "") st["status"] = summary;
-            if (S(st, "status") != "") AddText(st, "status", "狀態影響");
-            if (S(st, "coins") != "") AddText(st, "coins", "獲得硬幣");
-            if (S(st, "items") != "") AddText(st, "items", "獲得物品");
-            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
-            if (pg != null && S(pg, "delta") != "") AddText(pg, "delta", "出口進度");
+            AddEffectsEditor(st);
+            AddOutcomeDirection(st);
+        }
+
+        /* 影響（效果）只能「新增一條」或「刪除一條」：
+           文字與數值都由記錄器產生，玩家不能手改，避免把數值改爛。
+           出口進度不是 effects，但一樣只給數字。 */
+        void AddEffectsEditor(Dictionary<string, object> st)
+        {
+            var eff = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+            int n = 0;
             if (eff != null)
             {
                 for (int ei = 0; ei < eff.Count; ei++)
                 {
                     var ed = eff[ei] as Dictionary<string, object>;
                     if (ed == null) continue;
-                    string kind = S(ed, "kind");
-                    if (kind.IndexOf("体力", StringComparison.Ordinal) >= 0 || kind.IndexOf("體力", StringComparison.Ordinal) >= 0
-                        || kind.IndexOf("理智", StringComparison.Ordinal) >= 0 || kind.IndexOf("饥饿", StringComparison.Ordinal) >= 0
-                        || kind.IndexOf("飢餓", StringComparison.Ordinal) >= 0 || kind.IndexOf("口渴", StringComparison.Ordinal) >= 0
-                        || kind.IndexOf("算力", StringComparison.Ordinal) >= 0 || kind.IndexOf("耐久", StringComparison.Ordinal) >= 0) continue;
-                    if (ed.ContainsKey("text")) AddText(ed, "text", "影響 " + (ei + 1));
+                    n++;
+                    int rowTop = _y;
+                    int vy = Narrow ? rowTop + _fieldH + Px(2) : rowTop;
+                    AddLabel("影響 " + n, rowTop, _fieldH, null);
+                    var v = new Label();
+                    v.Text = RecordsForm.EventEffectText(ed);
+                    v.ForeColor = Color.FromArgb(222, 222, 228);
+                    v.SetBounds(Narrow ? PageLeft : FieldX, vy + Px(3), Math.Max(Px(80), (Narrow ? FieldW : FieldRight - FieldX) - Px(66)), _fieldH);
+                    v.AutoEllipsis = true;
+                    _panel.Controls.Add(v);
+                    int idx = ei;
+                    AddMiniButton("刪除", vy, delegate
+                    {
+                        var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                        if (arr != null && idx >= 0 && idx < arr.Count) arr.RemoveAt(idx);
+                        QueueRelayout(true);
+                    });
+                    _y = vy + _fieldH + RowGap;
                 }
             }
-            AddOutcomeDirection(st);
+            var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+            if (pg != null && (S(pg, "delta") != "" || S(pg, "current") != ""))
+            {
+                int rowTop = _y;
+                int vy = Narrow ? rowTop + _fieldH + Px(2) : rowTop;
+                AddLabel("出口進度", rowTop, _fieldH, null);
+                var v = new Label();
+                {
+                    string dlt = S(pg, "delta");
+                    int dv;
+                    string pv = int.TryParse(dlt, out dv) ? (dv >= 0 ? "+" : "") + dv : dlt;
+                    if (S(pg, "current") != "") pv += "（" + S(pg, "current") + "/" + S(pg, "total") + "）";
+                    v.Text = pv == "" ? "（無）" : pv;
+                }
+                v.ForeColor = Color.FromArgb(222, 222, 228);
+                v.SetBounds(Narrow ? PageLeft : FieldX, vy + Px(3), Math.Max(Px(80), (Narrow ? FieldW : FieldRight - FieldX) - Px(66)), _fieldH);
+                _panel.Controls.Add(v);
+                AddMiniButton("刪除", vy, delegate { st.Remove("progress"); QueueRelayout(true); });
+                _y = vy + _fieldH + RowGap;
+            }
+            /* 舊記錄只有文字欄位時，至少讓它看得到（不可改） */
+            if (n == 0 && S(st, "status") != "") AddFixed("狀態影響", S(st, "status"));
+            if (S(st, "coins") != "") AddFixed("獲得硬幣", S(st, "coins"));
+            if (S(st, "items") != "") AddFixed("獲得物品", S(st, "items"));
+            AddEffectAdder(st);
+        }
+
+        void AddMiniButton(string text, int y, Action onClick)
+        {
+            var b = new Button();
+            b.Text = text;
+            int bw = Math.Max(Px(54), TextW(text, BasePt) + Px(18));
+            b.SetBounds(FieldRight - bw, y, bw, _fieldH);
+            b.FlatStyle = FlatStyle.Flat;
+            b.BackColor = Color.FromArgb(52, 44, 44);
+            b.ForeColor = Color.FromArgb(232, 214, 214);
+            b.FlatAppearance.BorderColor = Color.FromArgb(96, 70, 70);
+            b.Click += delegate { onClick(); };
+            _panel.Controls.Add(b);
+        }
+
+        /* 「＋ 新增影響」：選種類 + 填數字，文字由程式產生。 */
+        void AddEffectAdder(Dictionary<string, object> st)
+        {
+            int rowTop = _y;
+            bool narrow = Narrow;
+            string[] kinds = { "體力", "理智", "飢餓", "口渴", "經驗", "記憶碎片", "出口進度" };
+            AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
+            int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
+            int x0 = narrow ? PageLeft : FieldX;
+            int cw = Math.Min(Px(132), Math.Max(Px(96), ComboWidth(kinds)));
+            var cb = AddComboCore(x0, y, cw, kinds, 0, Color.White);
+            var amt = new TextBox();
+            amt.BackColor = Color.FromArgb(40, 40, 44);
+            amt.ForeColor = Color.White;
+            amt.BorderStyle = BorderStyle.FixedSingle;
+            amt.SetBounds(x0 + cw + Px(8), y + Px(2), Px(62), _fieldH);
+            _panel.Controls.Add(amt);
+            var tip = new ToolTip();
+            tip.SetToolTip(amt, "要加多少：回復填 2、損失填 -2");
+            int bh = Math.Max(_fieldH, _buttonH);
+            var add = new Button();
+            add.Text = "加入";
+            add.SetBounds(x0 + cw + Px(8) + Px(62) + Px(8), y, Math.Max(Px(58), TextW("加入", BasePt) + Px(22)), bh);
+            add.FlatStyle = FlatStyle.Flat;
+            add.BackColor = Color.FromArgb(44, 48, 44);
+            add.ForeColor = Color.FromArgb(214, 236, 214);
+            add.FlatAppearance.BorderColor = Color.FromArgb(70, 96, 70);
+            add.Click += delegate
+            {
+                int amount;
+                string raw = (amt.Text ?? "").Trim().Replace("＋", "+").Replace("−", "-").Replace("－", "-");
+                if (!int.TryParse(raw, out amount))
+                {
+                    SetStatus("數值要填整數，例如 2 或 -2", Color.FromArgb(240, 186, 120));
+                    return;
+                }
+                ApplyNewEffect(st, kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex], amount);
+                amt.Text = "";
+                QueueRelayout(true);
+            };
+            _panel.Controls.Add(add);
+            _y = y + bh + RowGap;
+        }
+
+        void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount)
+        {
+            if (st == null) return;
+            if (kind == "出口進度")
+            {
+                var pg = st.ContainsKey("progress") ? st["progress"] as Dictionary<string, object> : null;
+                if (pg == null) { pg = new Dictionary<string, object>(); st["progress"] = pg; }
+                int cur = 0;
+                int.TryParse(S(pg, "delta"), out cur);
+                pg["delta"] = cur + amount;
+                return;
+            }
+            var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+            if (arr == null) { arr = new System.Collections.ArrayList(); st["effects"] = arr; }
+            var d = new Dictionary<string, object>();
+            d["target"] = Party.LocalCharacter != "" ? Party.LocalCharacter : "你";
+            d["kind"] = kind;
+            d["amount"] = amount;
+            d["text"] = OverlayForm.EffectText(kind, amount);
+            arr.Add(d);
         }
 
         void AddOutcomeDirection(Dictionary<string, object> st)
@@ -5819,20 +5941,24 @@ namespace ExpeditionRecorder
             return string.Join("、", parts.ToArray());
         }
 
-        static string EventEffectText(Dictionary<string, object> ed)
+        internal static string EventEffectText(Dictionary<string, object> ed)
         {
             if (ed == null) return "";
             string text = Str(ed, "text");
             string amount = Str(ed, "amount");
             if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + amount).Trim();
             else if (amount != "" && amount != "0" && text.IndexOf(amount, StringComparison.Ordinal) < 0)
-                text += " " + amount;
+            {
+                /* 舊記錄的文字沒帶正負號（例如「獲得經驗」），顯示時補上 + */
+                int av;
+                text += " " + (int.TryParse(amount, out av) && av > 0 ? "+" + av : amount);
+            }
             string target = Str(ed, "target");
             if (target != "" && text.IndexOf(target, StringComparison.Ordinal) < 0) return target + "：" + text;
             return text;
         }
 
-        static string EventProgressText(Dictionary<string, object> pg)
+        internal static string EventProgressText(Dictionary<string, object> pg)
         {
             if (pg == null) return "";
             string txt = "出口進度";
@@ -7116,7 +7242,7 @@ namespace ExpeditionRecorder
             return list;
         }
 
-        static string EffectKind(string kind)
+        internal static string EffectKind(string kind)
         {
             if (kind == "体力") return "體力";
             if (kind == "饥饿") return "飢餓";
@@ -7124,13 +7250,18 @@ namespace ExpeditionRecorder
             return kind;
         }
 
-        static string EffectText(string kind, int amount)
+        /* 影響的文字固定帶數值（經驗／記憶碎片／出口進度都一樣）。
+           編輯器只讓玩家新增／刪除一條，不能改文字。 */
+        internal static string EffectText(string kind, int amount)
         {
-            if (kind == "體力" || kind == "生命") return amount < 0 ? "損失" + kind : "恢復" + kind;
-            if (kind == "理智" || kind == "精神") return amount < 0 ? "損失" + kind : "恢復" + kind;
-            if (kind == "飢餓" || kind == "口渴") return amount < 0 ? "減少" + kind : "增加" + kind;
-            if (kind == "經驗") return amount < 0 ? "失去經驗" : "獲得經驗";
-            return kind + (amount >= 0 ? " +" : " ") + amount;
+            string sign = (amount >= 0 ? "+" : "") + amount;
+            if (kind == "體力" || kind == "生命") return (amount < 0 ? "損失" : "恢復") + kind + " " + sign;
+            if (kind == "理智" || kind == "精神") return (amount < 0 ? "損失" : "恢復") + kind + " " + sign;
+            if (kind == "飢餓" || kind == "口渴") return (amount < 0 ? "減少" : "增加") + kind + " " + sign;
+            if (kind == "經驗") return (amount < 0 ? "失去經驗 " : "獲得經驗 ") + sign;
+            if (kind == "記憶碎片") return "記憶碎片 " + sign;
+            if (kind == "出口進度") return "出口進度 " + sign;
+            return kind + " " + sign;
         }
     }
 
