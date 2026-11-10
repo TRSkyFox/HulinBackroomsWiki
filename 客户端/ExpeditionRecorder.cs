@@ -5571,8 +5571,8 @@ namespace ExpeditionRecorder
     {
         readonly Dictionary<string, object> _st;
         readonly Action _changed;
-        readonly Panel _list = new Panel();
-        readonly Panel _ops = new Panel();
+        readonly Panel _list = new BufferedPanel();
+        readonly Panel _ops = new BufferedPanel();
         readonly FxTabs _tabs = new FxTabs();
         int _cat = -1;
         string _kind = "";
@@ -5593,6 +5593,18 @@ namespace ExpeditionRecorder
         };
 
         static int P(int v) { return UiScale.Px(v); }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        const int WM_SETREDRAW = 0x000B;
+
+        /* 重建框內控制項時先停止重畫，做完再打開，避免閃爍 */
+        static void Freeze(Control c, bool on)
+        {
+            if (c == null || !c.IsHandleCreated) return;
+            SendMessage(c.Handle, WM_SETREDRAW, (IntPtr)(on ? 0 : 1), IntPtr.Zero);
+            if (!on) { c.Invalidate(true); c.Update(); }
+        }
 
         static string Str(Dictionary<string, object> d, string k)
         {
@@ -5727,7 +5739,15 @@ namespace ExpeditionRecorder
 
         void RebuildList()
         {
+            if (IsHandleCreated && !_listDefer)
+            {
+                _listDefer = true;
+                try { BeginInvoke((Action)(delegate { _listDefer = false; RebuildList(); })); return; }
+                catch { _listDefer = false; }
+            }
+            _listDefer = false;
             _list.SuspendLayout();
+            Freeze(_list, true);
             Clear(_list);
             int y = 0;
             int w = Math.Max(P(140), _list.ClientSize.Width - P(6));
@@ -5775,6 +5795,7 @@ namespace ExpeditionRecorder
             }
             _list.AutoScrollMinSize = new Size(0, y + P(4));
             _list.ResumeLayout();
+            Freeze(_list, false);
         }
 
         void AddRow(string text, int y, int w, Color accent, Action del)
@@ -5794,9 +5815,21 @@ namespace ExpeditionRecorder
             _list.Controls.Add(MkChip(UiText.T("刪除"), null, w - P(54), y, P(54), Color.FromArgb(210, 110, 110), false, del));
         }
 
+        bool _opsDefer, _listDefer;
+
+        /* 從按鈕自己的 Click 事件重建時會被 Dispose 掉（畫面抖一下），
+           統一丟到訊息迴圈下一輪再做。 */
         void RebuildOps()
         {
+            if (IsHandleCreated && !_opsDefer)
+            {
+                _opsDefer = true;
+                try { BeginInvoke((Action)(delegate { _opsDefer = false; RebuildOps(); })); return; }
+                catch { _opsDefer = false; }
+            }
+            _opsDefer = false;
             _ops.SuspendLayout();
+            Freeze(_ops, true);
             /* 頁籤是常駐控制項，Clear 會把它 Dispose 掉，先拿出來 */
             if (_tabs.Parent == _ops) _ops.Controls.Remove(_tabs);
             Clear(_ops);
@@ -5812,6 +5845,7 @@ namespace ExpeditionRecorder
                 hint.SetBounds(P(12), P(48), _ops.Width - P(24), P(24));
                 _ops.Controls.Add(hint);
                 _ops.ResumeLayout();
+                Freeze(_ops, false);
                 return;
             }
 
@@ -5830,7 +5864,7 @@ namespace ExpeditionRecorder
                 _ops.Controls.Add(c);
                 x += w + P(6);
             }
-            if (_kind == "") { _ops.ResumeLayout(); return; }
+            if (_kind == "") { _ops.ResumeLayout(); Freeze(_ops, false); return; }
 
             x = P(8); y = P(76);
             string kind = _kind;
@@ -5854,6 +5888,7 @@ namespace ExpeditionRecorder
                     x += w + P(6);
                 }
                 _ops.ResumeLayout();
+                Freeze(_ops, false);
                 return;
             }
 
@@ -5932,6 +5967,7 @@ namespace ExpeditionRecorder
                 x += w + P(6);
             }
             _ops.ResumeLayout();
+            Freeze(_ops, false);
         }
 
         void AddEffect(string kind, int amount, string target, string name)
