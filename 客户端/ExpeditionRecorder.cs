@@ -4330,7 +4330,7 @@ namespace ExpeditionRecorder
             int rowTop = _y;
             bool narrow = Narrow;
             int bw = narrow ? FieldW : (FieldRight - FieldX);
-            int bh = Px(232);
+            int bh = Px(276);
             AddLabel("影響", rowTop, narrow ? _fieldH : _comboH, null);
             int by = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             var box = new EffectBox(st, bw, bh, delegate { _normalized = true; ScheduleSave(); });
@@ -5348,19 +5348,216 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* 「影響」操作面板：固定大小，新增／刪除只在框內重畫，不會重建整個表單。
-       三層：健康／物資／事件 → 種類 → 參數（按鈕式，文字全部由程式產生）。 */
+    /* ══ 影響清單＋新增影響（固定大小的整體）══════════════════════
+       上半：可捲動的影響清單（每列一顆刪除）。
+       下半：有特殊外觀的「新增影響」面板——三色分類頁籤 → 同色種類晶片 → 參數列。
+       所有操作只重畫框內，不會重建整個表單。 */
+    static class Fx
+    {
+        public static GraphicsPath Round(Rectangle r, int rad)
+        {
+            var p = new GraphicsPath();
+            int d = Math.Max(2, Math.Min(rad * 2, Math.Min(r.Width, r.Height)));
+            p.AddArc(r.X, r.Y, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure();
+            return p;
+        }
+    }
+
+    /* 圓角晶片：比預設 Button 好看，選中／滑過都用分類色。 */
+    class FxChip : Control
+    {
+        public Color Accent = Color.FromArgb(150, 150, 160);
+        public bool On;
+        public bool Strong;
+        bool _hot;
+
+        public FxChip()
+        {
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Cursor = Cursors.Hand;
+            TabStop = false;
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { _hot = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { _hot = false; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.Clear(Parent != null ? Parent.BackColor : Color.FromArgb(38, 38, 44));
+            var r = new Rectangle(0, 0, Width - 1, Height - 1);
+            using (var path = Fx.Round(r, UiScale.Px(5)))
+            {
+                if (On || Strong)
+                {
+                    using (var b = new SolidBrush(Color.FromArgb(Strong ? 90 : 62, Accent))) g.FillPath(b, path);
+                    using (var pen = new Pen(Color.FromArgb(220, Accent), 1.4f)) g.DrawPath(pen, path);
+                }
+                else if (_hot)
+                {
+                    using (var b = new SolidBrush(Color.FromArgb(34, Accent))) g.FillPath(b, path);
+                    using (var pen = new Pen(Color.FromArgb(150, Accent), 1f)) g.DrawPath(pen, path);
+                }
+                else
+                {
+                    using (var pen = new Pen(Color.FromArgb(72, Accent), 1f)) g.DrawPath(pen, path);
+                }
+            }
+            Color fg = (On || Strong) ? Color.FromArgb(246, 246, 252)
+                     : (_hot ? Color.FromArgb(232, 232, 240) : Color.FromArgb(198, 198, 208));
+            TextRenderer.DrawText(g, Text, Font, r, fg,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+        }
+    }
+
+    /* 三色分類頁籤：健康／物資／事件，各自有自己的顏色與圖示。 */
+    class FxTabs : Control
+    {
+        public string[] Items = new string[0];
+        public Color[] Accents = new Color[0];
+        public int Selected = -1;
+        public event EventHandler Changed;
+        int _hot = -1;
+        int[] _xs = new int[0];
+        int[] _ws = new int[0];
+
+        public FxTabs()
+        {
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+            Cursor = Cursors.Hand;
+            TabStop = false;
+        }
+
+        void Measure()
+        {
+            if (_xs.Length != Items.Length) { _xs = new int[Items.Length]; _ws = new int[Items.Length]; }
+            int x = 0, gap = UiScale.Px(6);
+            for (int i = 0; i < Items.Length; i++)
+            {
+                int tw = TextRenderer.MeasureText(Items[i], Font).Width;
+                _ws[i] = tw + UiScale.Px(46);
+                _xs[i] = x;
+                x += _ws[i] + gap;
+            }
+        }
+
+        int Hit(int px)
+        {
+            for (int i = 0; i < _xs.Length; i++)
+                if (px >= _xs[i] && px < _xs[i] + _ws[i]) return i;
+            return -1;
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            int h = Hit(e.X);
+            if (h != _hot) { _hot = h; Invalidate(); }
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e) { _hot = -1; Invalidate(); base.OnMouseLeave(e); }
+
+        protected override void OnMouseUp(MouseEventArgs e)
+        {
+            int i = Hit(e.X);
+            if (i >= 0)
+            {
+                Selected = (Selected == i ? -1 : i);
+                Invalidate();
+                if (Changed != null) Changed(this, EventArgs.Empty);
+            }
+            base.OnMouseUp(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Measure();
+            var g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.Clear(Parent != null ? Parent.BackColor : Color.FromArgb(38, 38, 44));
+            for (int i = 0; i < Items.Length; i++)
+            {
+                bool sel = i == Selected, hot = i == _hot;
+                Color acc = i < Accents.Length ? Accents[i] : Color.FromArgb(150, 150, 160);
+                var r = new Rectangle(_xs[i], 0, _ws[i] - 1, Height - 1);
+                using (var path = Fx.Round(r, UiScale.Px(6)))
+                {
+                    if (sel)
+                    {
+                        using (var b = new SolidBrush(Color.FromArgb(66, acc))) g.FillPath(b, path);
+                        using (var pen = new Pen(Color.FromArgb(225, acc), 1.5f)) g.DrawPath(pen, path);
+                    }
+                    else if (hot)
+                    {
+                        using (var b = new SolidBrush(Color.FromArgb(28, acc))) g.FillPath(b, path);
+                        using (var pen = new Pen(Color.FromArgb(130, acc), 1f)) g.DrawPath(pen, path);
+                    }
+                    else
+                    {
+                        using (var pen = new Pen(Color.FromArgb(62, 66, 74), 1f)) g.DrawPath(pen, path);
+                    }
+                }
+                int cy = Height / 2;
+                DrawIcon(g, i, _xs[i] + UiScale.Px(10), cy, acc, sel);
+                var tr = new Rectangle(_xs[i] + UiScale.Px(28), 0, Math.Max(0, _ws[i] - UiScale.Px(34)), Height);
+                TextRenderer.DrawText(g, Items[i], Font, tr,
+                    sel ? Color.FromArgb(246, 246, 252) : (hot ? Color.FromArgb(230, 230, 238) : Color.FromArgb(192, 192, 202)),
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPadding);
+            }
+        }
+
+        void DrawIcon(Graphics g, int idx, int x, int cy, Color acc, bool sel)
+        {
+            int s = UiScale.Px(12);
+            using (var pen = new Pen(Color.FromArgb(sel ? 255 : 205, acc), 1.6f))
+            using (var br = new SolidBrush(Color.FromArgb(sel ? 215 : 125, acc)))
+            {
+                if (idx == 0)          /* 健康：十字 */
+                {
+                    int t = Math.Max(2, s / 3);
+                    g.FillRectangle(br, x + (s - t) / 2, cy - s / 2, t, s);
+                    g.FillRectangle(br, x, cy - t / 2, s, t);
+                }
+                else if (idx == 1)     /* 物資：箱子 */
+                {
+                    g.DrawRectangle(pen, x, cy - s / 2 + 1, s, s - 2);
+                    g.DrawLine(pen, x + 1, cy, x + s - 1, cy);
+                }
+                else                   /* 事件：菱形 */
+                {
+                    var pts = new Point[] {
+                        new Point(x + s / 2, cy - s / 2), new Point(x + s, cy),
+                        new Point(x + s / 2, cy + s / 2), new Point(x, cy)
+                    };
+                    g.DrawPolygon(pen, pts);
+                }
+            }
+        }
+    }
+
     class EffectBox : Panel
     {
         readonly Dictionary<string, object> _st;
         readonly Action _changed;
         readonly Panel _list = new Panel();
         readonly Panel _ops = new Panel();
+        readonly FxTabs _tabs = new FxTabs();
         int _cat = -1;
         string _kind = "";
         int _who = 0;
 
         static readonly string[] Cats = { "健康", "物資", "事件" };
+        static readonly Color[] CatColors =
+        {
+            Color.FromArgb(222, 118, 118),
+            Color.FromArgb(216, 176, 96),
+            Color.FromArgb(126, 158, 220)
+        };
         static readonly string[][] Kinds =
         {
             new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" },
@@ -5376,33 +5573,52 @@ namespace ExpeditionRecorder
             return Convert.ToString(d[k]);
         }
 
+        Color CatColor { get { return _cat >= 0 && _cat < CatColors.Length ? CatColors[_cat] : Color.FromArgb(150, 150, 160); } }
+
         public EffectBox(Dictionary<string, object> st, int width, int height, Action changed)
         {
             _st = st;
             _changed = changed;
             DoubleBuffered = true;
-            BackColor = Color.FromArgb(34, 34, 38);
+            BackColor = Color.FromArgb(32, 32, 36);
             SetBounds(0, 0, width, height);
+
             _list.BackColor = BackColor;
             _list.AutoScroll = true;
-            _ops.BackColor = BackColor;
+
+            _ops.BackColor = Color.FromArgb(38, 38, 44);
+
             Controls.Add(_list);
             Controls.Add(_ops);
-            int pad = P(6);
-            int opsH = P(96);
+            try { Native.DarkScroll(_list); } catch { }
+
+            int pad = P(8);
+            int opsH = P(118);
             _list.SetBounds(pad, pad, Width - pad * 2, Height - opsH - pad * 3);
             _ops.SetBounds(pad, Height - opsH - pad, Width - pad * 2, opsH);
+
+            _tabs.Items = Cats;
+            _tabs.Accents = CatColors;
+            _tabs.SetBounds(P(8), P(8), _ops.Width - P(16), P(30));
+            _tabs.Changed += delegate
+            {
+                _cat = _tabs.Selected;
+                _kind = "";
+                RebuildOps();
+            };
+            _ops.Controls.Add(_tabs);
+
             Paint += delegate (object s, PaintEventArgs e)
             {
-                using (var pen = new Pen(Color.FromArgb(72, 72, 80)))
+                using (var pen = new Pen(Color.FromArgb(74, 74, 84)))
                     e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
             };
+
             NormalizeTargets();
             RebuildList();
             RebuildOps();
         }
 
-        /* 舊記錄裡的具體角色名，開起來就改成「你／所有人」 */
         void NormalizeTargets()
         {
             var eff = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
@@ -5428,26 +5644,6 @@ namespace ExpeditionRecorder
             return pv;
         }
 
-        int TextW(string t)
-        {
-            Font f = Font ?? SystemFonts.DefaultFont;
-            return TextRenderer.MeasureText(t, f).Width;
-        }
-
-        Button Chip(string text, int x, int y, int w, int h, bool on, Action click)
-        {
-            var b = new Button();
-            b.Text = text;
-            b.SetBounds(x, y, w, h);
-            b.FlatStyle = FlatStyle.Flat;
-            b.BackColor = on ? Color.FromArgb(48, 66, 52) : Color.FromArgb(46, 46, 50);
-            b.ForeColor = on ? Color.FromArgb(196, 240, 196) : Color.FromArgb(228, 228, 232);
-            b.FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(80, 80, 86);
-            b.TabStop = false;
-            b.Click += delegate { click(); };
-            return b;
-        }
-
         static void Clear(Control host)
         {
             var old = new List<Control>();
@@ -5456,15 +5652,33 @@ namespace ExpeditionRecorder
             foreach (var c in old) c.Dispose();
         }
 
+        FxChip MkChip(string text, int x, int y, int w, Color accent, bool on, Action click)
+        {
+            var c = new FxChip();
+            c.Text = text;
+            c.Accent = accent;
+            c.On = on;
+            c.SetBounds(x, y, w, P(26));
+            c.Font = Font;
+            c.Click += delegate { click(); };
+            return c;
+        }
+
+        int ChipW(string text)
+        {
+            Font f = Font ?? SystemFonts.DefaultFont;
+            return TextRenderer.MeasureText(text, f).Width + P(22);
+        }
+
         void RebuildList()
         {
             _list.SuspendLayout();
             Clear(_list);
             int y = 0;
-            int w = Math.Max(P(140), _list.Width - P(16));
+            int w = Math.Max(P(140), _list.ClientSize.Width - P(6));
             int n = 0;
-            var eff = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
             bool any = false;
+            var eff = _st.ContainsKey("effects") ? _st["effects"] as System.Collections.ArrayList : null;
             if (eff != null)
             {
                 for (int i = 0; i < eff.Count; i++)
@@ -5481,7 +5695,7 @@ namespace ExpeditionRecorder
                         RebuildList();
                         if (_changed != null) _changed();
                     });
-                    y += P(24);
+                    y += P(26);
                 }
             }
             var pg = _st.ContainsKey("progress") ? _st["progress"] as Dictionary<string, object> : null;
@@ -5494,8 +5708,9 @@ namespace ExpeditionRecorder
                     RebuildList();
                     if (_changed != null) _changed();
                 });
-                y += P(24);
+                y += P(26);
             }
+            _list.AutoScrollMinSize = new Size(0, y + P(4));
             if (!any)
             {
                 var empty = new Label();
@@ -5512,48 +5727,50 @@ namespace ExpeditionRecorder
             var lb = new Label();
             lb.Text = text;
             lb.AutoEllipsis = true;
-            lb.ForeColor = Color.FromArgb(222, 222, 228);
-            lb.SetBounds(0, y + P(3), w - P(56), P(20));
+            lb.ForeColor = Color.FromArgb(224, 224, 232);
+            lb.SetBounds(0, y + P(4), w - P(60), P(20));
             _list.Controls.Add(lb);
-            _list.Controls.Add(Chip("刪除", w - P(52), y, P(52), P(22), false, del));
+            var c = MkChip("刪除", w - P(54), y, P(54), Color.FromArgb(210, 110, 110), false, del);
+            _list.Controls.Add(c);
         }
 
         void RebuildOps()
         {
             _ops.SuspendLayout();
+            /* 頁籤是常駐控制項，Clear 會把它 Dispose 掉，先拿出來 */
+            if (_tabs.Parent == _ops) _ops.Controls.Remove(_tabs);
             Clear(_ops);
-            int bh = P(24), gap = P(4), y = 0, x = 0;
-
-            for (int i = 0; i < Cats.Length; i++)
+            _tabs.SetBounds(P(8), P(8), Math.Min(_ops.Width - P(16), P(420)), P(30));
+            _ops.Controls.Add(_tabs);
+            if (_cat < 0)
             {
-                int ci = i;
-                string t = Cats[i];
-                int w = TextW(t) + P(18);
-                _ops.Controls.Add(Chip(t, x, y, w, bh, _cat == ci, delegate
-                {
-                    _cat = (_cat == ci ? -1 : ci);
-                    _kind = "";
-                    RebuildOps();
-                }));
-                x += w + gap;
+                var hint = new Label();
+                hint.Text = "先選一個分類，再選要加的東西";
+                hint.ForeColor = Color.FromArgb(120, 120, 130);
+                hint.Font = Font;
+                hint.SetBounds(P(12), P(48), _ops.Width - P(24), P(24));
+                _ops.Controls.Add(hint);
+                _ops.ResumeLayout();
+                return;
             }
-            if (_cat < 0) { _ops.ResumeLayout(); return; }
 
-            y += bh + gap; x = 0;
+            int x = P(8), y = P(44);
+            Color acc = CatColor;
             foreach (var k0 in Kinds[_cat])
             {
                 string kk = k0;
-                int w = TextW(kk) + P(16);
-                _ops.Controls.Add(Chip(kk, x, y, w, bh, _kind == kk, delegate
+                int w = ChipW(kk);
+                var c = MkChip(kk, x, y, w, acc, _kind == kk, delegate
                 {
                     _kind = (_kind == kk ? "" : kk);
                     RebuildOps();
-                }));
-                x += w + gap;
+                });
+                _ops.Controls.Add(c);
+                x += w + P(6);
             }
             if (_kind == "") { _ops.ResumeLayout(); return; }
 
-            y += bh + gap; x = 0;
+            x = P(8); y = P(76);
             string kind = _kind;
             if (OverlayForm.IsStatKind(kind))
             {
@@ -5562,28 +5779,32 @@ namespace ExpeditionRecorder
                 {
                     string dn = dirs[i];
                     int dir = i == 0 ? 1 : -1;
-                    int w = TextW(dn) + P(16);
-                    _ops.Controls.Add(Chip(dn, x, y, w, bh, false, delegate
+                    int w = ChipW(dn);
+                    bool pos = i == 0;
+                    var c = MkChip(dn, x, y, w, pos ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
                     {
                         AddEffect(kind, dir, "你", "");
                         RebuildList();
                         if (_changed != null) _changed();
-                    }));
-                    x += w + gap;
+                    });
+                    c.Strong = true;
+                    _ops.Controls.Add(c);
+                    x += w + P(6);
                 }
                 _ops.ResumeLayout();
                 return;
             }
 
             bool needName = kind == "物品" || kind == "狀態效果" || kind == "實體" || kind == "切層";
-            int bw = needName ? P(170) : P(64);
+            int bw = needName ? P(180) : P(70);
             var box = new TextBox();
-            box.BackColor = Color.FromArgb(40, 40, 44);
+            box.BackColor = Color.FromArgb(30, 30, 34);
             box.ForeColor = Color.White;
             box.BorderStyle = BorderStyle.FixedSingle;
-            box.SetBounds(x, y + P(2), bw, P(22));
+            box.Font = Font;
+            box.SetBounds(x, y + P(3), bw, P(22));
             _ops.Controls.Add(box);
-            x += bw + gap;
+            x += bw + P(8);
 
             if (kind == "硬幣")
             {
@@ -5591,13 +5812,13 @@ namespace ExpeditionRecorder
                 for (int i = 0; i < who.Length; i++)
                 {
                     int wi = i;
-                    int w = TextW(who[i]) + P(16);
-                    _ops.Controls.Add(Chip(who[i], x, y, w, bh, _who == wi, delegate
+                    int w = ChipW(who[i]);
+                    _ops.Controls.Add(MkChip(who[i], x, y, w, CatColor, _who == wi, delegate
                     {
                         _who = wi;
                         RebuildOps();
                     }));
-                    x += w + gap;
+                    x += w + P(6);
                 }
             }
             if (kind == "狀態效果")
@@ -5607,23 +5828,25 @@ namespace ExpeditionRecorder
                 {
                     string op = ops[i];
                     int dir = i == 0 ? 1 : -1;
-                    int w = TextW(op) + P(16);
-                    _ops.Controls.Add(Chip(op, x, y, w, bh, false, delegate
+                    int w = ChipW(op);
+                    var c = MkChip(op, x, y, w, i == 0 ? Color.FromArgb(120, 200, 140) : Color.FromArgb(214, 110, 110), false, delegate
                     {
                         string nm = (box.Text ?? "").Trim();
-                        if (nm == "") { return; }
+                        if (nm == "") return;
                         AddEffect(kind, dir, "你", nm);
                         box.Text = "";
                         RebuildList();
                         if (_changed != null) _changed();
-                    }));
-                    x += w + gap;
+                    });
+                    c.Strong = true;
+                    _ops.Controls.Add(c);
+                    x += w + P(6);
                 }
             }
             else
             {
-                int w = TextW("加入") + P(18);
-                _ops.Controls.Add(Chip("加入", x, y, w, bh, false, delegate
+                int w = ChipW("加入");
+                var c = MkChip("加入", x, y, w, Color.FromArgb(120, 200, 140), false, delegate
                 {
                     string raw = (box.Text ?? "").Trim();
                     int amount = 0;
@@ -5639,8 +5862,10 @@ namespace ExpeditionRecorder
                     box.Text = "";
                     RebuildList();
                     if (_changed != null) _changed();
-                }));
-                x += w + gap;
+                });
+                c.Strong = true;
+                _ops.Controls.Add(c);
+                x += w + P(6);
             }
             _ops.ResumeLayout();
         }

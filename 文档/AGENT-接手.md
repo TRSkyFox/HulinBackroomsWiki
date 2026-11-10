@@ -204,6 +204,10 @@ OCR 拆成两行、同一列。原来 `Scan` 只接受严格「上方 60px」且
 下半是三排按鈕（健康/物資/事件 → 種類 → 參數）。**分類/種類的點擊只重畫框內的 ops 區**（`RebuildOps()`），
 不再 `QueueRelayout`；只有真的新增/刪除一條影響才 `RebuildList()`，並叫 `ScheduleSave()`。
 舊的 `AddEffectAdder / AddChip / AddChipBox / ApplyNewEffect / AddMiniButton` 全部移除。
+**04:23 新增影響面板改自繪 UI**：使用者：「所有添加影響的按鈕要是一個整體，裡面全部特殊外觀且規整」。
+新增 `FxTabs`（三色分類頁籤：健康＝紅十字、物資＝金箱子、事件＝藍菱形，圓角、hover/selected 都用分類色）
+與 `FxChip`（圓角晶片，選中填分類色）；`EffectBox` 下半改成一片 `#26262C` 的獨立面板：
+頁籤 → 同色種類晶片 → 參數列（恢復＝綠、損失＝紅、加入＝綠）。影響清單改用 FxChip 刪除鈕、深色捲軸、無水平捲軸。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 
