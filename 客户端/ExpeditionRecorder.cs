@@ -4389,47 +4389,74 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(b);
         }
 
-        /* 「＋ 新增影響」：選種類 + 填數字，文字由程式產生。 */
+        /* 「＋ 新增影響」：選種類（+對象）。
+           體力／理智／飢餓／飽食／口渴 只選「恢復／損失」，不填數字；
+           經驗／記憶碎片／出口進度 才填數字。文字一律由程式產生。 */
         void AddEffectAdder(Dictionary<string, object> st)
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string[] kinds = { "體力", "理智", "飢餓", "口渴", "經驗", "記憶碎片", "出口進度" };
+            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "經驗", "記憶碎片", "出口進度" };
             AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
-            int cw = Math.Min(Px(120), Math.Max(Px(92), ComboWidth(kinds)));
+            int cw = Math.Min(Px(112), Math.Max(Px(88), ComboWidth(kinds)));
             var cb = AddComboCore(x0, y, cw, kinds, 0, Color.White);
             /* 對象只給「你／所有人」，不寫具體角色名 */
             string[] who = { "你", "所有人" };
             int ww = Math.Min(Px(94), Math.Max(Px(70), ComboWidth(who)));
             var wb = AddComboCore(x0 + cw + Px(8), y, ww, who, 0, Color.White);
+            /* 恢復／損失：只有上面那幾種體力類才用得到 */
+            string[] dirs = { "恢復", "損失" };
+            int dw = Math.Min(Px(88), Math.Max(Px(64), ComboWidth(dirs)));
+            var db = AddComboCore(x0 + cw + ww + Px(16), y, dw, dirs, 0, Color.White);
             var amt = new TextBox();
             amt.BackColor = Color.FromArgb(40, 40, 44);
             amt.ForeColor = Color.White;
             amt.BorderStyle = BorderStyle.FixedSingle;
-            amt.SetBounds(x0 + cw + ww + Px(16), y + Px(2), Px(56), _fieldH);
+            amt.SetBounds(x0 + cw + ww + dw + Px(24), y + Px(2), Px(52), _fieldH);
             _panel.Controls.Add(amt);
             var tip = new ToolTip();
-            tip.SetToolTip(amt, "要加多少：回復填 2、損失填 -2");
+            tip.SetToolTip(amt, "經驗／記憶碎片／出口進度 才填數字，例如 5 或 -2");
+            Action sync = delegate
+            {
+                string k = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
+                bool stat = OverlayForm.IsStatKind(k);
+                db.Enabled = stat;
+                amt.Enabled = !stat;
+                db.BackColor = stat ? Color.FromArgb(44, 44, 47) : Color.FromArgb(40, 40, 44);
+                amt.BackColor = stat ? Color.FromArgb(40, 40, 44) : Color.FromArgb(40, 40, 44);
+                amt.ForeColor = stat ? Color.FromArgb(120, 120, 128) : Color.White;
+                db.ForeColor = stat ? Color.White : Color.FromArgb(120, 120, 128);
+            };
+            cb.SelectedIndexChanged += delegate { sync(); };
+            sync();
             int bh = Math.Max(_fieldH, _buttonH);
             var add = new Button();
             add.Text = "加入";
-            add.SetBounds(x0 + cw + ww + Px(16) + Px(56) + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
+            add.SetBounds(x0 + cw + ww + dw + Px(24) + Px(52) + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
             add.FlatStyle = FlatStyle.Flat;
             add.BackColor = Color.FromArgb(44, 48, 44);
             add.ForeColor = Color.FromArgb(214, 236, 214);
             add.FlatAppearance.BorderColor = Color.FromArgb(70, 96, 70);
             add.Click += delegate
             {
+                string kind = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
                 int amount;
-                string raw = (amt.Text ?? "").Trim().Replace("＋", "+").Replace("−", "-").Replace("－", "-");
-                if (!int.TryParse(raw, out amount))
+                if (OverlayForm.IsStatKind(kind))
                 {
-                    SetStatus("數值要填整數，例如 2 或 -2", Color.FromArgb(240, 186, 120));
-                    return;
+                    amount = (db.SelectedIndex < 0 ? 0 : db.SelectedIndex) == 0 ? 1 : -1;
                 }
-                ApplyNewEffect(st, kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex], amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex]);
+                else
+                {
+                    string raw = (amt.Text ?? "").Trim().Replace("＋", "+").Replace("−", "-").Replace("－", "-");
+                    if (!int.TryParse(raw, out amount))
+                    {
+                        SetStatus("這個種類要填數字，例如 5 或 -2", Color.FromArgb(240, 186, 120));
+                        return;
+                    }
+                }
+                ApplyNewEffect(st, kind, amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex]);
                 amt.Text = "";
                 QueueRelayout(true);
             };
@@ -4454,8 +4481,17 @@ namespace ExpeditionRecorder
             var d = new Dictionary<string, object>();
             d["target"] = OverlayForm.EffectTargetLabel(target);
             d["kind"] = kind;
-            d["amount"] = amount;
-            d["text"] = OverlayForm.EffectText(kind, amount);
+            if (OverlayForm.IsStatKind(kind))
+            {
+                d["amount"] = amount < 0 ? -1 : 1;
+                d["text"] = OverlayForm.EffectPlainText(kind, amount);
+                d["plain"] = true;
+            }
+            else
+            {
+                d["amount"] = amount;
+                d["text"] = OverlayForm.EffectText(kind, amount);
+            }
             arr.Add(d);
         }
 
@@ -5962,13 +5998,16 @@ namespace ExpeditionRecorder
             if (ed == null) return "";
             string text = Str(ed, "text");
             string amount = Str(ed, "amount");
+            /* 體力／理智／飢餓／飽食／口渴 只記方向，不顯示數字 */
+            bool plain = OverlayForm.IsStatKind(Str(ed, "kind"));
             if (text == "") text = (Str(ed, "target") + " " + Str(ed, "kind") + " " + amount).Trim();
-            else if (amount != "" && amount != "0" && text.IndexOf(amount, StringComparison.Ordinal) < 0)
+            else if (!plain && amount != "" && amount != "0" && text.IndexOf(amount, StringComparison.Ordinal) < 0)
             {
                 /* 舊記錄的文字沒帶正負號（例如「獲得經驗」），顯示時補上 + */
                 int av;
                 text += " " + (int.TryParse(amount, out av) && av > 0 ? "+" + av : amount);
             }
+            if (plain) text = System.Text.RegularExpressions.Regex.Replace(text, @"\s*[+-]?\d+\s*$", "");
             string target = Str(ed, "target");
             if (target != "" && text.IndexOf(target, StringComparison.Ordinal) < 0) return target + "：" + text;
             return text;
@@ -7230,25 +7269,46 @@ namespace ExpeditionRecorder
                     list.Add(d);
                     continue;
                 }
-                var mr = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神|經驗|经验)\s*([+-]?\s*\d+)\s*$");
+                var mr = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|飽食|饱食|口渴|生命|精神|算力|耐久|經驗|经验)\s*([+-]?\s*\d+)\s*$");
                 if (mr.Success)
                 {
                     string kind = EffectKind(mr.Groups[1].Value);
                     int amount = int.Parse(System.Text.RegularExpressions.Regex.Replace(mr.Groups[2].Value, @"\s+", ""));
                     var d = new Dictionary<string, object>();
-                    d["target"] = target; d["kind"] = kind; d["amount"] = amount;
-                    d["text"] = EffectText(kind, amount);
+                    d["target"] = target; d["kind"] = kind;
+                    if (IsStatKind(kind))
+                    {
+                        /* 體力／理智／飢餓／飽食／口渴 只記方向，遊戲不給數字 */
+                        d["amount"] = amount < 0 ? -1 : 1;
+                        d["text"] = EffectPlainText(kind, amount);
+                        d["plain"] = true;
+                    }
+                    else
+                    {
+                        d["amount"] = amount;
+                        d["text"] = EffectText(kind, amount);
+                    }
                     list.Add(d);
                     continue;
                 }
-                var mv = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|口渴|生命|精神)\s*(\d+)\s*$");
+                var mv = System.Text.RegularExpressions.Regex.Match(p, @"^(體力|体力|理智|飢餓|饥饿|飽食|饱食|口渴|生命|精神|算力|耐久)\s*(\d+)\s*$");
                 if (mv.Success)
                 {
                     string kind = EffectKind(mv.Groups[1].Value);
                     int amount = int.Parse(mv.Groups[2].Value);
                     var d = new Dictionary<string, object>();
-                    d["target"] = target; d["kind"] = kind; d["amount"] = amount;
-                    d["text"] = kind + " " + amount;
+                    d["target"] = target; d["kind"] = kind;
+                    if (IsStatKind(kind))
+                    {
+                        d["amount"] = 1;
+                        d["text"] = EffectPlainText(kind, amount);
+                        d["plain"] = true;
+                    }
+                    else
+                    {
+                        d["amount"] = amount;
+                        d["text"] = kind + " " + amount;
+                    }
                     list.Add(d);
                     continue;
                 }
@@ -7263,8 +7323,27 @@ namespace ExpeditionRecorder
         {
             if (kind == "体力") return "體力";
             if (kind == "饥饿") return "飢餓";
+            if (kind == "饱食") return "飽食";
             if (kind == "经验") return "經驗";
+            if (kind == "算力") return "理智";     /* 算力就是理智 */
+            if (kind == "耐久") return "體力";     /* 耐久就是體力 */
             return kind;
+        }
+
+        /* 這幾種只記「恢復／損失」，遊戲不給數字 */
+        internal static bool IsStatKind(string kind)
+        {
+            string k = kind ?? "";
+            return k == "體力" || k == "生命" || k == "耐久"
+                || k == "理智" || k == "精神" || k == "算力"
+                || k == "飢餓" || k == "飽食" || k == "口渴";
+        }
+
+        internal static string EffectPlainText(string kind, int amount)
+        {
+            bool neg = amount < 0;
+            if (kind == "飢餓" || kind == "飽食" || kind == "口渴") return (neg ? "減少" : "增加") + kind;
+            return (neg ? "損失" : "恢復") + kind;
         }
 
         /* 影響的文字固定帶數值（經驗／記憶碎片／出口進度都一樣）。
