@@ -4396,7 +4396,7 @@ namespace ExpeditionRecorder
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "經驗", "記憶碎片", "出口進度" };
+            string[] kinds = { "體力", "理智", "飢餓", "飽食", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度" };
             AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
@@ -4474,6 +4474,25 @@ namespace ExpeditionRecorder
                 int cur = 0;
                 int.TryParse(S(pg, "delta"), out cur);
                 pg["delta"] = cur + amount;
+                return;
+            }
+            if (kind == "硬幣")
+            {
+                var arrc = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (arrc == null) { arrc = new System.Collections.ArrayList(); st["effects"] = arrc; }
+                string tg = OverlayForm.EffectTargetLabel(target);
+                var dc = new Dictionary<string, object>();
+                dc["target"] = tg;
+                dc["kind"] = "item";
+                dc["name"] = "硬幣";
+                dc["amount"] = amount;
+                if (tg == "所有人")
+                {
+                    dc["shared"] = true;
+                    dc["text"] = "所有人 各得到 " + amount + " 硬幣";
+                }
+                else dc["text"] = "得到 " + amount + " 硬幣";
+                arrc.Add(dc);
                 return;
             }
             var arr = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
