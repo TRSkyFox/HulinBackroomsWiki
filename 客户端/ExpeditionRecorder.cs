@@ -3680,6 +3680,10 @@ namespace ExpeditionRecorder
         bool _dirty;
         bool _normalized;
         bool _firstShown;
+        /* 新增影響面板的狀態：0=健康 1=物資 2=事件；-1 表示還沒選 */
+        int _fxCat = -1;
+        string _fxKind = "";
+        int _fxWho = 0;
 
         int Px(int v) { return UiScale.Px(v); }
 
@@ -4389,90 +4393,165 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(b);
         }
 
-        /* 「＋ 新增影響」：選種類才出現對應的欄位。
-           體力／理智／飢餓／口渴 → 只出現「恢復／損失」；
-           硬幣 → 數字 + 對象（你／所有人）；
-           經驗／記憶碎片／出口進度 → 只出現數字；
-           物品 → 只出現名稱。文字一律由程式產生。 */
+        /* 「＋ 新增影響」操作面板：三大類（健康／物資／事件）→ 種類 → 參數，全部按鈕式。
+           文字一律由程式產生，玩家只挑選、填名稱或數字。 */
         void AddEffectAdder(Dictionary<string, object> st)
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string[] kinds = { "體力", "理智", "飢餓", "口渴", "硬幣", "經驗", "記憶碎片", "出口進度", "物品" };
-            AddLabel("新增影響", rowTop, narrow ? _fieldH : _comboH, null);
+            int bh = Math.Max(_fieldH, _buttonH);
+            AddLabel("新增影響", rowTop, _comboH, null);
             int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             int x0 = narrow ? PageLeft : FieldX;
-            int cw = Math.Min(Px(112), Math.Max(Px(88), ComboWidth(kinds)));
-            var cb = AddComboCore(x0, y, cw, kinds, 0, Color.White);
-            /* 恢復／損失：體力類才出現 */
-            string[] dirs = { "恢復", "損失" };
-            int dw = Math.Min(Px(88), Math.Max(Px(64), ComboWidth(dirs)));
-            var db = AddComboCore(x0 + cw + Px(8), y, dw, dirs, 0, Color.White);
-            /* 數字或名稱 */
-            var amt = new TextBox();
-            amt.BackColor = Color.FromArgb(40, 40, 44);
-            amt.ForeColor = Color.White;
-            amt.BorderStyle = BorderStyle.FixedSingle;
-            amt.SetBounds(x0 + cw + Px(8), y + Px(2), Px(104), _fieldH);
-            _panel.Controls.Add(amt);
-            /* 對象：只有硬幣才出現 */
-            string[] who = { "你", "所有人" };
-            int ww = Math.Min(Px(94), Math.Max(Px(70), ComboWidth(who)));
-            var wb = AddComboCore(x0 + cw + Px(8), y, ww, who, 0, Color.White);
-            var tip = new ToolTip();
-            int bh = Math.Max(_fieldH, _buttonH);
-            var add = new Button();
-            add.Text = "加入";
-            add.SetBounds(x0 + cw + Px(8), y, Math.Max(Px(54), TextW("加入", BasePt) + Px(20)), bh);
-            add.FlatStyle = FlatStyle.Flat;
-            add.BackColor = Color.FromArgb(44, 48, 44);
-            add.ForeColor = Color.FromArgb(214, 236, 214);
-            add.FlatAppearance.BorderColor = Color.FromArgb(70, 96, 70);
-            Action sync = delegate
+
+            string[] cats = { "健康", "物資", "事件" };
+            int x = x0;
+            for (int i = 0; i < cats.Length; i++)
             {
-                string k = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
-                bool stat = OverlayForm.IsStatKind(k);
-                bool coin = k == "硬幣";
-                int x = x0 + cw + Px(8);
-                db.Visible = stat;
-                if (stat) { db.Left = x; x += dw + Px(8); }
-                amt.Visible = !stat;
-                if (!stat) { amt.Left = x; x += amt.Width + Px(8); }
-                wb.Visible = coin;
-                if (coin) { wb.Left = x; x += ww + Px(8); }
-                else if (wb.SelectedIndex != 0) wb.SelectedIndex = 0;   /* 非硬幣一律記「你」 */
-                add.Left = x;
-                tip.SetToolTip(amt, k == "物品" ? "填物品名稱" : "填數字，例如 5 或 -2");
-            };
-            cb.SelectedIndexChanged += delegate { sync(); };
-            sync();
-            add.Click += delegate
-            {
-                string kind = kinds[cb.SelectedIndex < 0 ? 0 : cb.SelectedIndex];
-                string raw = (amt.Text ?? "").Trim();
-                int amount = 0;
-                if (OverlayForm.IsStatKind(kind))
+                int ci = i;
+                int w = Math.Max(Px(62), TextW(cats[i], BasePt) + Px(22));
+                AddChip(cats[i], x, y, w, _fxCat == ci, delegate
                 {
-                    amount = (db.SelectedIndex < 0 ? 0 : db.SelectedIndex) == 0 ? 1 : -1;
+                    _fxCat = (_fxCat == ci ? -1 : ci);
+                    _fxKind = "";
+                    QueueRelayout(true);
+                });
+                x += w + Px(6);
+            }
+            _y = y + bh + Px(4);
+            if (_fxCat < 0) return;
+
+            string[] kinds = _fxCat == 0 ? new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" }
+                           : _fxCat == 1 ? new[] { "物品", "硬幣", "經驗", "出口進度", "記憶碎片" }
+                           : new[] { "實體", "切層" };
+            y = _y; x = x0;
+            foreach (var kk0 in kinds)
+            {
+                string kk = kk0;
+                int w = Math.Max(Px(56), TextW(kk, BasePt) + Px(20));
+                AddChip(kk, x, y, w, _fxKind == kk, delegate
+                {
+                    _fxKind = (_fxKind == kk ? "" : kk);
+                    QueueRelayout(true);
+                });
+                x += w + Px(6);
+            }
+            _y = y + bh + Px(4);
+            if (_fxKind == "") return;
+
+            y = _y; x = x0;
+            string kind = _fxKind;
+            Action add = delegate { QueueRelayout(true); };
+            if (OverlayForm.IsStatKind(kind))
+            {
+                /* 體力類：恢復／損失，按下去就加入 */
+                string[] dirs = { "恢復", "損失" };
+                for (int i = 0; i < dirs.Length; i++)
+                {
+                    string dname = dirs[i];
+                    int dir = i == 0 ? 1 : -1;
+                    int w = Math.Max(Px(56), TextW(dname, BasePt) + Px(20));
+                    AddChip(dname, x, y, w, false, delegate
+                    {
+                        ApplyNewEffect(st, kind, dir, "你", "");
+                        add();
+                    });
+                    x += w + Px(6);
                 }
-                else if (kind == "物品")
+            }
+            else
+            {
+                bool needName = kind == "物品" || kind == "狀態效果" || kind == "實體" || kind == "切層";
+                int bw = needName ? Px(168) : Px(64);
+                var box = AddChipBox(x, y, bw, needName
+                    ? (kind == "實體" ? "實體名稱，多個用、分隔" : kind == "切層" ? "樓層編號，例如 3" : "填名稱")
+                    : "填數字，例如 5 或 -2");
+                x += bw + Px(6);
+                if (kind == "硬幣")
                 {
-                    if (raw == "") { SetStatus("物品要填名稱", Color.FromArgb(240, 186, 120)); return; }
+                    string[] who = { "你", "所有人" };
+                    for (int i = 0; i < who.Length; i++)
+                    {
+                        int wi = i;
+                        int w = Math.Max(Px(52), TextW(who[i], BasePt) + Px(18));
+                        AddChip(who[i], x, y, w, _fxWho == wi, delegate
+                        {
+                            _fxWho = wi;
+                            QueueRelayout(true);
+                        });
+                        x += w + Px(6);
+                    }
+                }
+                if (kind == "狀態效果")
+                {
+                    string[] ops = { "獲得", "消除" };
+                    for (int i = 0; i < ops.Length; i++)
+                    {
+                        string op = ops[i];
+                        int dir = i == 0 ? 1 : -1;
+                        int w = Math.Max(Px(54), TextW(op, BasePt) + Px(18));
+                        AddChip(op, x, y, w, false, delegate
+                        {
+                            string nm = (box.Text ?? "").Trim();
+                            if (nm == "") { SetStatus("狀態效果要填名稱", Color.FromArgb(240, 186, 120)); return; }
+                            ApplyNewEffect(st, kind, dir, "你", nm);
+                            box.Text = "";
+                            add();
+                        });
+                        x += w + Px(6);
+                    }
                 }
                 else
                 {
-                    if (!int.TryParse(raw.Replace("＋", "+").Replace("−", "-").Replace("－", "-"), out amount))
+                    int w = Math.Max(Px(54), TextW("加入", BasePt) + Px(20));
+                    AddChip("加入", x, y, w, false, delegate
                     {
-                        SetStatus("這個種類要填數字，例如 5 或 -2", Color.FromArgb(240, 186, 120));
-                        return;
-                    }
+                        string raw = (box.Text ?? "").Trim();
+                        int amount = 0;
+                        if (kind == "物品" || kind == "實體" || kind == "切層")
+                        {
+                            if (raw == "") { SetStatus("要先填" + (kind == "實體" ? "實體名稱" : kind == "切層" ? "樓層編號" : "物品名稱"), Color.FromArgb(240, 186, 120)); return; }
+                        }
+                        else if (!int.TryParse(raw.Replace("＋", "+").Replace("−", "-").Replace("－", "-"), out amount))
+                        {
+                            SetStatus("這個種類要填數字，例如 5 或 -2", Color.FromArgb(240, 186, 120));
+                            return;
+                        }
+                        string target = kind == "硬幣" && _fxWho == 1 ? "所有人" : "你";
+                        ApplyNewEffect(st, kind, amount, target, raw);
+                        box.Text = "";
+                        add();
+                    });
+                    x += w + Px(6);
                 }
-                ApplyNewEffect(st, kind, amount, who[wb.SelectedIndex < 0 ? 0 : wb.SelectedIndex], raw);
-                amt.Text = "";
-                QueueRelayout(true);
-            };
-            _panel.Controls.Add(add);
+            }
             _y = y + bh + RowGap;
+        }
+
+        Button AddChip(string text, int x, int y, int w, bool on, Action onClick)
+        {
+            var b = new Button();
+            b.Text = text;
+            b.SetBounds(x, y, w, Math.Max(_fieldH, _buttonH));
+            b.FlatStyle = FlatStyle.Flat;
+            b.BackColor = on ? Color.FromArgb(48, 66, 52) : Color.FromArgb(44, 44, 47);
+            b.ForeColor = on ? Color.FromArgb(196, 240, 196) : Color.FromArgb(228, 228, 232);
+            b.FlatAppearance.BorderColor = on ? Color.FromArgb(80, 160, 90) : Color.FromArgb(78, 78, 84);
+            b.Click += delegate { onClick(); };
+            _panel.Controls.Add(b);
+            return b;
+        }
+
+        TextBox AddChipBox(int x, int y, int w, string tip)
+        {
+            var t = new TextBox();
+            t.BackColor = Color.FromArgb(40, 40, 44);
+            t.ForeColor = Color.White;
+            t.BorderStyle = BorderStyle.FixedSingle;
+            t.SetBounds(x, y + Px(3), w, _fieldH);
+            _panel.Controls.Add(t);
+            if (!string.IsNullOrEmpty(tip)) { var tp = new ToolTip(); tp.SetToolTip(t, tip); }
+            return t;
         }
 
         void ApplyNewEffect(Dictionary<string, object> st, string kind, int amount, string target, string name)
@@ -4499,6 +4578,53 @@ namespace ExpeditionRecorder
                 di["name"] = nm;
                 di["text"] = "得到「" + nm + "」";
                 arri.Add(di);
+                return;
+            }
+            if (kind == "狀態效果")
+            {
+                string nm = (name ?? "").Trim().Trim('「', '」');
+                if (nm == "") return;
+                var arrs = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (arrs == null) { arrs = new System.Collections.ArrayList(); st["effects"] = arrs; }
+                var ds = new Dictionary<string, object>();
+                ds["target"] = OverlayForm.EffectTargetLabel(target);
+                ds["kind"] = "status";
+                ds["name"] = nm;
+                ds["text"] = (amount < 0 ? "消除「" : "獲得「") + nm + "」";
+                arrs.Add(ds);
+                return;
+            }
+            if (kind == "實體")
+            {
+                string nm = (name ?? "").Trim().Trim('「', '」');
+                if (nm == "") return;
+                var arre = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (arre == null) { arre = new System.Collections.ArrayList(); st["effects"] = arre; }
+                foreach (var one in System.Text.RegularExpressions.Regex.Split(nm, @"[、,，;；]"))
+                {
+                    string e = (one ?? "").Trim().Trim('「', '」');
+                    if (e == "") continue;
+                    var de = new Dictionary<string, object>();
+                    de["target"] = OverlayForm.EffectTargetLabel(target);
+                    de["kind"] = "entity";
+                    de["name"] = e;
+                    de["text"] = "實體「" + e + "」";
+                    arre.Add(de);
+                }
+                return;
+            }
+            if (kind == "切層")
+            {
+                string nm = (name ?? "").Trim().Replace("Level ", "").Replace("level ", "").Trim();
+                if (nm == "") return;
+                var arrf = st.ContainsKey("effects") ? st["effects"] as System.Collections.ArrayList : null;
+                if (arrf == null) { arrf = new System.Collections.ArrayList(); st["effects"] = arrf; }
+                var df = new Dictionary<string, object>();
+                df["target"] = OverlayForm.EffectTargetLabel(target);
+                df["kind"] = "floor";
+                df["name"] = nm;
+                df["text"] = "切層 Level " + nm;
+                arrf.Add(df);
                 return;
             }
             if (kind == "硬幣")
