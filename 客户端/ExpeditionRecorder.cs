@@ -5750,6 +5750,8 @@ namespace ExpeditionRecorder
             if (Array.IndexOf(Types, t) >= 0) _type = t;
             _consume = Str(req, "consume") == "true";
             if (Str(req, "cmp") != "") _cmp = Str(req, "cmp");
+            if (_cmp == ">") _cmp = ">=";
+            if (_cmp == "<") _cmp = "<=";
         }
 
         static void Clear(Control host)
@@ -5924,12 +5926,13 @@ namespace ExpeditionRecorder
 
             if (_type == "attribute")
             {
-                string[] cmps = { ">", "<" };
+                string[] cmps = { ">=", "<=" };
+                string[] cmpText = { "≥", "≤" };
                 for (int i = 0; i < cmps.Length; i++)
                 {
                     string cv = cmps[i];
-                    int w = Math.Max(P(46), ChipW(cv));
-                    _r3.Controls.Add(Chip(cv, x, y, w, Accent, _cmp == cv, delegate
+                    int w = Math.Max(P(46), ChipW(cmpText[i]));
+                    _r3.Controls.Add(Chip(cmpText[i], x, y, w, Accent, _cmp == cv, delegate
                     {
                         _cmp = cv;
                         var r = Req();
