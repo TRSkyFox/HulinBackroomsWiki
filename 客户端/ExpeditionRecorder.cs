@@ -1876,7 +1876,10 @@ namespace ExpeditionRecorder
             { "你", "You" },
             { "所有人", "Everyone" },
             { "先選一個分類，再選要加的東西", "Pick a category, then what to add" },
-            { "（還沒有影響）", "(no effects yet)" }
+            { "（還沒有影響）", "(no effects yet)" },
+            { "高名聲", "High reputation" },
+            { "低名聲", "Low reputation" },
+            { "休息處", "Rest area" }
         };
 
         static void Ensure()
@@ -4229,30 +4232,43 @@ namespace ExpeditionRecorder
         void AddRestTag(Dictionary<string, object> d)
         {
             int rowTop = _y;
-            var cb = new CheckBox();
-            cb.Text = "休息處";
-            cb.ForeColor = Color.FromArgb(225, 225, 230);
+            bool narrow = Narrow;
+            string[] keys = { "rest", "highRep", "lowRep" };
+            string[] labels = { "休息處", "高名聲", "低名聲" };
             string tags = A(d, "tags");
-            cb.Checked = tags.IndexOf("rest", StringComparison.Ordinal) >= 0;
-            if (Narrow)
+            AddLabel("事件標籤", rowTop, _fieldH, null);
+            int y = narrow ? rowTop + _fieldH + Px(2) : rowTop;
+            int startX = narrow ? PageLeft : FieldX;
+            int maxX = narrow ? PageLeft + FieldW : FieldRight;
+            int x = startX;
+            var boxes = new List<CheckBox>();
+            for (int i = 0; i < keys.Length; i++)
             {
-                AddLabel("事件標籤", rowTop, _fieldH, null);
-                cb.SetBounds(PageLeft, rowTop + _fieldH + Px(2), FieldW, _fieldH);
-                _y = rowTop + _fieldH * 2 + Px(2) + RowGap;
+                int bw = Math.Max(Px(64), TextW(labels[i], BasePt) + Px(30));
+                if (x > startX && x + bw > maxX) { x = startX; y += _fieldH + Px(2); }
+                var cb = new CheckBox();
+                cb.Text = labels[i];
+                cb.ForeColor = Color.FromArgb(225, 225, 230);
+                cb.Checked = tags.IndexOf(keys[i], StringComparison.Ordinal) >= 0;
+                cb.SetBounds(x, y, bw, _fieldH);
+                _panel.Controls.Add(cb);
+                boxes.Add(cb);
+                x += bw + Px(8);
             }
-            else
-            {
-                AddLabel("事件標籤", rowTop, _fieldH, null);
-                cb.SetBounds(FieldX, rowTop, Math.Min(FieldW, Px(180)), _fieldH);
-                _y = rowTop + _fieldH + RowGap;
-            }
-            _panel.Controls.Add(cb);
+            _y = y + _fieldH + RowGap;
             _savers.Add(delegate
             {
                 var arr = new System.Collections.ArrayList();
                 var old = d.ContainsKey("tags") ? d["tags"] as System.Collections.ArrayList : null;
-                if (old != null) foreach (var x in old) { string s = Convert.ToString(x); if (s != "" && s != "rest") arr.Add(s); }
-                if (cb.Checked) arr.Add("rest");
+                if (old != null)
+                {
+                    foreach (var z in old)
+                    {
+                        string s = Convert.ToString(z);
+                        if (s != "" && Array.IndexOf(keys, s) < 0) arr.Add(s);
+                    }
+                }
+                for (int i = 0; i < keys.Length; i++) if (boxes[i].Checked) arr.Add(keys[i]);
                 d["tags"] = arr;
             });
         }
@@ -4504,8 +4520,8 @@ namespace ExpeditionRecorder
             _savers.Add(delegate { if (d != null) d["text"] = Program.CleanOptionText(t.Text); });
         }
 
-        static readonly string[] CondTypes = { "item", "attribute", "character", "status", "skill", "event" };
-        static readonly string[] CondLabels = { "物品", "屬性", "角色", "狀態", "技能", "事件" };
+        static readonly string[] CondTypes = { "item", "attribute", "character", "status", "skill", "event", "highRep", "lowRep" };
+        static readonly string[] CondLabels = { "物品", "屬性", "角色", "狀態", "技能", "事件", "高名聲", "低名聲" };
 
         static string InferConditionType(Dictionary<string, object> od)
         {
@@ -4550,12 +4566,28 @@ namespace ExpeditionRecorder
             box.BorderStyle = BorderStyle.FixedSingle;
             box.Text = ConditionRequirement(od);
             _panel.Controls.Add(box);
+            /* 高／低名聲沒有名稱可填，直接鎖成對應文字 */
+            Action syncCond = delegate
+            {
+                int ci = cb.SelectedIndex;
+                string ct = ci >= 0 && ci < CondTypes.Length ? CondTypes[ci] : "event";
+                if (ct == "highRep" || ct == "lowRep")
+                {
+                    box.Text = ct == "highRep" ? "高名聲" : "低名聲";
+                    box.ReadOnly = true;
+                }
+                else box.ReadOnly = false;
+            };
+            cb.SelectedIndexChanged += delegate { syncCond(); };
+            syncCond();
             _y = cy + _comboH + RowGap;
 
             _savers.Add(delegate
             {
                 string t = cb.SelectedIndex >= 0 && cb.SelectedIndex < CondTypes.Length ? CondTypes[cb.SelectedIndex] : "event";
                 string name = box.Text.Trim();
+                if (t == "highRep") name = "高名聲";
+                else if (t == "lowRep") name = "低名聲";
                 var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
                 if (req == null) { req = new Dictionary<string, object>(); od["requirement"] = req; }
                 req["type"] = t;
@@ -6745,7 +6777,7 @@ namespace ExpeditionRecorder
             if (outs == "") outs = Str(o, "outcome");
             sb.AppendLine("結果類型：" + OutcomeText(outs) + (Str(o, "jumpTo") != "" ? " → " + Str(o, "jumpTo") : ""));
             string tags = JoinArr(o, "tags");
-            if (tags != "") sb.AppendLine("事件標籤：" + tags.Replace("rest", "休息處"));
+            if (tags != "") sb.AppendLine("事件標籤：" + tags.Replace("highRep", "高名聲").Replace("lowRep", "低名聲").Replace("rest", "休息處"));
             var s1 = EventStep1(o);
             string intro = s1 != null ? Str(s1, "intro") : Str(o, "intro");
             if (intro != "")
