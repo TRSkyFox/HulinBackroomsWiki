@@ -235,6 +235,12 @@ BeginInvoke → 無限排隊、UI 執行緒永遠沒回到閒置（未回應）�
   存檔 `requirement:{type:"highRep",name:"高名聲"}`、`conditionText` 同步。
 - `AddRestTag` 從單一「休息處」勾選改成三個勾選：休息處 `rest`、高名聲 `highRep`、低名聲 `lowRep`（自動換行）。
 - 匯出的純文字摘要把 highRep／lowRep 也翻成中文；En 字典補 High/Low reputation、Rest area。
+**23:26 條件選項可勾選＋七種條件**：使用者：選項本身要有一顆「條件選項」勾選（像附加選項），勾了才能選所需條件，共七種。
+- 每個選項在文字下面多一顆 ☐ 條件選項（加提示），勾／取消會 `QueueRelayout` 重建：勾上建立 `requirement`，
+  取消則清掉 requirement／conditionText／specialReason／special／check。
+- 條件下拉收斂成七種：物品／屬性／角色／狀態／技能／事件／名聲；名聲再用［高］［低］兩顆按鈕，
+  存 `requirement:{type:"reputation", level:"high|low", name:"高名聲|低名聲"}`。舊資料的 highRep／lowRep 會自動對應。
+- 三語都對過（英文 High/Low 按鈕被裁 → 用按鈕字型重量、下拉寬度用翻譯字量，並修掉下拉蓋住按鈕的重疊）。
 **已提交**：`797d144 fix: 重制记录器编辑界面布局、滚动条与字号缩放`（只含 `客户端/ExpeditionRecorder.cs`、
 本文、`文档/报告/2026-11-08-*`）。其余 `_test-staging`／`例子截图` 是原先就有的改动，**不要一起提交**。
 
