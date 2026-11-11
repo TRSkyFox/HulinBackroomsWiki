@@ -4561,7 +4561,7 @@ namespace ExpeditionRecorder
         }
 
         /* 條件的操作面板（CondBox）：固定大小、按鈕式，改動只重畫框內。 */
-        /* 條件：勾選框在外面（跟附加選項一樣），勾了才畫 CondBox。 */
+        /* 條件：勾選框在外面；區域高度固定，勾選只切換框的可見度（不重排整個表單）。 */
         void AddConditionBox(Dictionary<string, object> od)
         {
             int rowTop = _y;
@@ -4576,14 +4576,28 @@ namespace ExpeditionRecorder
             cb.Checked = on;
             cb.SetBounds(x, rowTop, cbW, _fieldH);
             _panel.Controls.Add(cb);
-            if (!on)
-            {
-                var none = new Label();
-                UiText.SetText(none, "無條件");
-                none.ForeColor = Color.FromArgb(126, 126, 136);
-                none.SetBounds(x + cbW + Px(8), rowTop + Px(3), Math.Max(Px(60), FieldRight - x - cbW - Px(10)), _fieldH);
-                _panel.Controls.Add(none);
-            }
+            var none = new Label();
+            UiText.SetText(none, "無條件");
+            none.ForeColor = Color.FromArgb(126, 126, 136);
+            none.SetBounds(x + cbW + Px(8), rowTop + Px(3), Math.Max(Px(60), FieldRight - x - cbW - Px(10)), _fieldH);
+            none.Visible = !on;
+            _panel.Controls.Add(none);
+
+            int bw = narrow ? FieldW : (FieldRight - FieldX);
+            int bh = Px(92);
+            var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
+            box.SetBounds(narrow ? PageLeft : FieldX, rowTop + _comboH + Px(2), bw, bh);
+            box.Visible = on;
+            _panel.Controls.Add(box);
+            var hint = new Label();
+            UiText.SetText(hint, "勾選後可設定條件：物品／屬性／角色／狀態／技能／事件前置／名聲");
+            hint.ForeColor = Color.FromArgb(108, 108, 118);
+            hint.Font = Font;
+            hint.AutoEllipsis = true;
+            hint.SetBounds(narrow ? PageLeft : FieldX, rowTop + _comboH + Px(10), bw, Px(22));
+            hint.Visible = !on;
+            _panel.Controls.Add(hint);
+
             cb.CheckedChanged += delegate
             {
                 if (UiText.Applying) return;
@@ -4601,21 +4615,52 @@ namespace ExpeditionRecorder
                     od.Remove("conditionText");
                     od.Remove("specialReason");
                     od.Remove("special");
-                    od.Remove("check");
                 }
+                none.Visible = !cb.Checked;
+                box.Visible = cb.Checked;
+                hint.Visible = !cb.Checked;
                 _normalized = true;
                 ScheduleSave();
-                QueueRelayout(true);
             };
-            _y = rowTop + _fieldH + RowGap;
-            if (!on) return;
+            _y = rowTop + _comboH + Px(2) + bh + RowGap;
+        }
 
-            int bw = narrow ? FieldW : (FieldRight - FieldX);
-            int bh = Px(92);
-            var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
-            box.SetBounds(narrow ? PageLeft : FieldX, _y, bw, bh);
-            _panel.Controls.Add(box);
-            _y = _y + bh + Px(8);
+        /* 屬性檢定：任何選項都能有（不一定有條件）。點一次選屬性，再點同一個取消。 */
+        void AddCheckRow(Dictionary<string, object> od)
+        {
+            int rowTop = _y;
+            bool narrow = Narrow;
+            string[] attrs = { "力量", "敏捷", "體質", "感知", "智力", "魅力" };
+            AddLabel("檢定", rowTop, narrow ? _fieldH : _comboH, Color.FromArgb(190, 202, 226));
+            int x = narrow ? PageLeft : FieldX;
+            int y = narrow ? rowTop + _fieldH + Px(2) : rowTop + Px(2);
+            var chips = new List<FxChip>();
+            for (int i = 0; i < attrs.Length; i++)
+            {
+                string av = attrs[i];
+                var c = new FxChip();
+                c.Text = UiText.T(av);
+                c.Accent = Color.FromArgb(190, 202, 226);
+                c.On = S(od, "check") == av;
+                c.Font = Font;
+                c.SetBounds(x, y, TextW(c.Text, BasePt) + Px(24), Px(24));
+                c.Click += delegate
+                {
+                    if (S(od, "check") == av) od.Remove("check");
+                    else od["check"] = av;
+                    for (int j = 0; j < chips.Count; j++)
+                    {
+                        chips[j].On = S(od, "check") == attrs[j];
+                        chips[j].Invalidate();
+                    }
+                    _normalized = true;
+                    ScheduleSave();
+                };
+                _panel.Controls.Add(c);
+                chips.Add(c);
+                x += c.Width + Px(5);
+            }
+            _y = y + Px(24) + RowGap;
         }
 
         void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
@@ -5135,12 +5180,8 @@ namespace ExpeditionRecorder
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        bool condOpt = IsConditionOption(od);
                         AddConditionBox(od);
-                        string condType = condOpt ? InferConditionType(od) : "";
-                        /* 屬性檢定：條件面板已經選了「屬性」時不再重複顯示 */
-                        if (od.ContainsKey("check") && condType != "attribute")
-                            AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
+                        AddCheckRow(od);
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
                         foreach (var st in branches)
@@ -5890,22 +5931,6 @@ namespace ExpeditionRecorder
                 };
                 _r3.Controls.Add(vbox);
                 x += lw + P(12);
-
-                int cw = Math.Max(P(100), TextW(UiText.T("需要檢定")) + P(34));
-                var chk = new CheckBox();
-                UiText.SetText(chk, "需要檢定");
-                chk.ForeColor = Color.FromArgb(222, 222, 230);
-                chk.Font = Font;
-                chk.Checked = Str(req, "needCheck") != "false";
-                chk.SetBounds(x, y, cw, P(24));
-                chk.CheckedChanged += delegate
-                {
-                    if (UiText.Applying) return;
-                    var r = Req();
-                    r["needCheck"] = chk.Checked ? "true" : "false";
-                    Apply();
-                };
-                _r3.Controls.Add(chk);
             }
             else if (_type == "item")
             {
