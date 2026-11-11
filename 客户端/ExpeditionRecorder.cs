@@ -4554,166 +4554,19 @@ namespace ExpeditionRecorder
             return S(od, "check");
         }
 
-        /* 條件選項的「條件」：七種（物品／屬性／角色／狀態／技能／事件／名聲）。
-           名聲再分高／低，用兩顆按鈕選。 */
-        void AddConditionRow(Dictionary<string, object> od)
+        /* 條件的操作面板（CondBox）：固定大小、按鈕式，改動只重畫框內。 */
+        void AddConditionBox(Dictionary<string, object> od)
         {
             int rowTop = _y;
             bool narrow = Narrow;
-            string type = InferConditionType(od);
-            int idx = Array.IndexOf(CondTypes, type);
-            if (idx < 0) idx = 0;
-            int fx = narrow ? PageLeft : FieldX;
-            int cy = narrow ? rowTop + _fieldH + Px(2) : rowTop;
+            int bw = narrow ? FieldW : (FieldRight - FieldX);
+            int bh = Px(66);
             AddLabel("條件", rowTop, narrow ? _fieldH : _comboH, Color.FromArgb(255, 196, 92));
-            var condLabels = new string[CondLabels.Length];
-            for (int li = 0; li < CondLabels.Length; li++) condLabels[li] = UiText.T(CondLabels[li]);
-            int cwMax = 0;
-            foreach (var s in condLabels) cwMax = Math.Max(cwMax, TextW(s, BasePt));
-            int cw2 = Math.Min(Math.Max(Px(76), cwMax + Px(46)), FieldW / 2);
-            var cb = AddComboCore(fx, cy, cw2, condLabels, idx, Color.FromArgb(255, 226, 150));
-            cb.Width = cw2;
-            int bx = fx + cw2 + Px(6);
-            int bw = Math.Max(Px(80), FieldRight - bx);
-            var box = new TextBox();
-            box.SetBounds(bx, cy + Math.Max(0, (_comboH - _fieldH) / 2), bw, _fieldH);
-            box.BackColor = Color.FromArgb(40, 40, 44);
-            box.ForeColor = Color.FromArgb(255, 226, 150);
-            box.BorderStyle = BorderStyle.FixedSingle;
-            box.Text = ConditionRequirement(od);
+            int by = narrow ? rowTop + _fieldH + Px(2) : rowTop;
+            var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
+            box.SetBounds(narrow ? PageLeft : FieldX, by, bw, bh);
             _panel.Controls.Add(box);
-
-            /* 名聲：高／低 兩顆按鈕，取代名稱框 */
-            string reqLevel = "high";
-            var req0 = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
-            if (req0 != null)
-            {
-                string lv = S(req0, "level");
-                if (lv == "low" || lv == "high") reqLevel = lv;
-                else if (S(req0, "name").IndexOf("低", StringComparison.Ordinal) >= 0) reqLevel = "low";
-                else if (S(req0, "type") == "lowRep") reqLevel = "low";
-            }
-            int bh = Math.Max(_fieldH, _buttonH);
-            int hw = Math.Max(Px(58), Px(20));
-            var bHigh = new Button();
-            UiText.SetText(bHigh, "高");
-            bHigh.SetBounds(bx, cy, hw, bh);
-            bHigh.FlatStyle = FlatStyle.Flat;
-            bHigh.Font = Font;
-            var bLow = new Button();
-            UiText.SetText(bLow, "低");
-            bLow.SetBounds(bx + hw + Px(6), cy, hw, bh);
-            bLow.FlatStyle = FlatStyle.Flat;
-            bLow.Font = Font;
-            /* 用按鈕字型重量一次，避免英文被裁掉 */
-            int hwReal = Math.Max(Px(56), Math.Max(
-                TextRenderer.MeasureText(bHigh.Text, bHigh.Font).Width,
-                TextRenderer.MeasureText(bLow.Text, bLow.Font).Width) + Px(40));
-            bHigh.Width = hwReal;
-            bLow.Left = bx + hwReal + Px(6);
-            bLow.Width = hwReal;
-            Action paintRep = delegate
-            {
-                bool hi = reqLevel == "high";
-                bHigh.BackColor = hi ? Color.FromArgb(74, 62, 30) : Color.FromArgb(44, 44, 47);
-                bHigh.ForeColor = hi ? Color.FromArgb(255, 226, 150) : Color.FromArgb(210, 210, 216);
-                bHigh.FlatAppearance.BorderColor = hi ? Color.FromArgb(200, 170, 90) : Color.FromArgb(78, 78, 84);
-                bLow.BackColor = !hi ? Color.FromArgb(74, 62, 30) : Color.FromArgb(44, 44, 47);
-                bLow.ForeColor = !hi ? Color.FromArgb(255, 226, 150) : Color.FromArgb(210, 210, 216);
-                bLow.FlatAppearance.BorderColor = !hi ? Color.FromArgb(200, 170, 90) : Color.FromArgb(78, 78, 84);
-            };
-            bHigh.Click += delegate { reqLevel = "high"; paintRep(); };
-            bLow.Click += delegate { reqLevel = "low"; paintRep(); };
-            paintRep();
-            _panel.Controls.Add(bHigh);
-            _panel.Controls.Add(bLow);
-
-            Action syncCond = delegate
-            {
-                int ci = cb.SelectedIndex;
-                string ct = ci >= 0 && ci < CondTypes.Length ? CondTypes[ci] : "event";
-                bool rep = ct == "reputation";
-                box.Visible = !rep;
-                bHigh.Visible = rep;
-                bLow.Visible = rep;
-                if (rep) box.Text = reqLevel == "low" ? "低名聲" : "高名聲";
-            };
-            cb.SelectedIndexChanged += delegate { syncCond(); };
-            syncCond();
-            _y = cy + Math.Max(_comboH, bh) + RowGap;
-
-            _savers.Add(delegate
-            {
-                string t = cb.SelectedIndex >= 0 && cb.SelectedIndex < CondTypes.Length ? CondTypes[cb.SelectedIndex] : "event";
-                var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
-                if (req == null) { req = new Dictionary<string, object>(); od["requirement"] = req; }
-                string name;
-                if (t == "reputation")
-                {
-                    req["level"] = reqLevel;
-                    name = reqLevel == "low" ? "低名聲" : "高名聲";
-                }
-                else
-                {
-                    name = box.Text.Trim();
-                    if (req.ContainsKey("level")) req.Remove("level");
-                }
-                req["type"] = t;
-                req["name"] = name;
-                od["special"] = true;
-                od["specialReason"] = t;
-                if (name != "") od["conditionText"] = name;
-                else od.Remove("conditionText");
-            });
-        }
-
-        /* 每個選項前面多一顆「條件選項」勾選，勾了才出現條件列。 */
-        void AddConditionToggle(Dictionary<string, object> od)
-        {
-            int rowTop = _y;
-            bool on = IsConditionOption(od);
-            int x = Narrow ? PageLeft : FieldX;
-            int cbW = Math.Min(Math.Max(Px(96), TextW(UiText.T("條件選項"), BasePt) + Px(32)), Math.Max(Px(96), FieldRight - x));
-            var cb = new CheckBox();
-            UiText.SetText(cb, "條件選項");
-            cb.ForeColor = Color.FromArgb(255, 214, 130);
-            cb.Checked = on;
-            cb.SetBounds(x, rowTop, cbW, _fieldH);
-            _panel.Controls.Add(cb);
-            var hint = new Label();
-            UiText.SetText(hint, "（要滿足條件才會出現）");
-            hint.ForeColor = Color.FromArgb(146, 146, 154);
-            hint.TextAlign = ContentAlignment.MiddleLeft;
-            hint.AutoEllipsis = true;
-            hint.Cursor = Cursors.Hand;
-            int hintX = x + cbW + Px(2);
-            hint.SetBounds(hintX, rowTop, Math.Max(Px(40), FieldRight - hintX), _fieldH);
-            hint.Click += delegate { cb.Checked = !cb.Checked; };
-            _panel.Controls.Add(hint);
-            _y = rowTop + _fieldH + RowGap;
-            cb.CheckedChanged += delegate
-            {
-                if (UiText.Applying) return;
-                if (cb.Checked)
-                {
-                    var req = od.ContainsKey("requirement") ? od["requirement"] as Dictionary<string, object> : null;
-                    if (req == null) { req = new Dictionary<string, object>(); od["requirement"] = req; }
-                    if (S(req, "type") == "") req["type"] = "item";
-                    od["special"] = true;
-                    if (S(od, "specialReason") == "") od["specialReason"] = S(req, "type");
-                }
-                else
-                {
-                    od.Remove("requirement");
-                    od.Remove("conditionText");
-                    od.Remove("specialReason");
-                    od.Remove("special");
-                    od.Remove("check");
-                }
-                _normalized = true;
-                ScheduleSave();
-                QueueRelayout(true);
-            };
+            _y = by + bh + Px(8);
         }
 
         void AddChoice(Dictionary<string, object> d, string key, string label, string[] values, string[] texts)
@@ -5234,20 +5087,11 @@ namespace ExpeditionRecorder
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
                         bool condOpt = IsConditionOption(od);
-                        AddConditionToggle(od);
-                        condOpt = IsConditionOption(od);
+                        AddConditionBox(od);
                         string condType = condOpt ? InferConditionType(od) : "";
-                        if (condOpt) AddConditionRow(od);
-                        if ((!condOpt && od.ContainsKey("check")) || (condOpt && condType == "attribute"))
-                        {
-                            if (condOpt && !od.ContainsKey("check"))
-                            {
-                                string inferred = ConditionRequirement(od);
-                                if (inferred != "") od["check"] = inferred;
-                            }
-                            if (od.ContainsKey("check"))
-                                AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
-                        }
+                        /* 屬性檢定只在資料本來就有 check 時才顯示（條件面板已經選了屬性，不重複） */
+                        if (od.ContainsKey("check"))
+                            AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
                         foreach (var st in branches)
@@ -5716,6 +5560,237 @@ namespace ExpeditionRecorder
                     g.DrawPolygon(pen, pts);
                 }
             }
+        }
+    }
+
+    /* ══ 條件選項的「條件」面板 ══════════════════════════════════
+       參考影響框：一整塊固定大小、按鈕式，改動只重畫框內，不重建整個表單。
+       第一排：無條件＋七種條件（物品／屬性／角色／狀態／技能／事件／名聲）。
+       第二排：該條件的具體選項（屬性六項、名聲高低；其餘自己填）。 */
+    class CondBox : Panel
+    {
+        readonly Dictionary<string, object> _od;
+        readonly Action _changed;
+        readonly Panel _body = new Panel();
+        readonly Panel _vals = new Panel();
+        readonly List<string> _chipType = new List<string>();
+        string _type = "";
+        string _val = "";
+
+        static readonly string[] Types = { "item", "attribute", "character", "status", "skill", "event", "reputation" };
+        static readonly string[] Labels = { "物品", "屬性", "角色", "狀態", "技能", "事件", "名聲" };
+        static readonly string[] Attrs = { "力量", "敏捷", "體質", "感知", "智力", "魅力" };
+        static readonly Color Accent = Color.FromArgb(255, 214, 130);
+
+        static int P(int v) { return UiScale.Px(v); }
+
+        static string Str(Dictionary<string, object> d, string k)
+        {
+            if (d == null || !d.ContainsKey(k) || d[k] == null) return "";
+            return Convert.ToString(d[k]);
+        }
+
+        public CondBox(Dictionary<string, object> od, int width, int height, Action changed)
+        {
+            _od = od;
+            _changed = changed;
+            DoubleBuffered = true;
+            BackColor = Color.FromArgb(33, 33, 37);
+            SetBounds(0, 0, width, height);
+            _body.BackColor = Color.FromArgb(38, 38, 44);
+            _vals.BackColor = _body.BackColor;
+            Controls.Add(_body);
+            Controls.Add(_vals);
+            _body.SetBounds(0, 0, Width, P(34));
+            _vals.SetBounds(0, P(36), Width, Math.Max(P(26), Height - P(36)));
+            Paint += delegate (object s, PaintEventArgs e)
+            {
+                using (var pen = new Pen(Color.FromArgb(74, 74, 84)))
+                    e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
+            };
+            Load();
+            RebuildBody();
+            RebuildVals();
+        }
+
+        void Load()
+        {
+            var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
+            _type = "";
+            _val = "";
+            if (req != null)
+            {
+                string t = Str(req, "type");
+                if (t == "attr") t = "attribute";
+                if (t == "highRep" || t == "lowRep")
+                {
+                    _type = "reputation";
+                    _val = t == "lowRep" || Str(req, "level") == "low" ? "低" : "高";
+                }
+                else if (Array.IndexOf(Types, t) >= 0) _type = t;
+                if (_type != "") _val = Str(req, "name");
+                if (_type == "reputation") _val = (Str(req, "level") == "low" || Str(req, "name").IndexOf("低", StringComparison.Ordinal) >= 0) ? "低" : "高";
+            }
+            else if (Str(_od, "conditionText") != "")
+            {
+                _type = "item";
+                _val = Str(_od, "conditionText");
+            }
+        }
+
+        static void Clear(Control host)
+        {
+            var old = new List<Control>();
+            foreach (Control c in host.Controls) old.Add(c);
+            host.Controls.Clear();
+            foreach (var c in old) c.Dispose();
+        }
+
+        FxChip Chip(string text, int x, int y, int w, Color accent, bool on, Action click)
+        {
+            var c = new FxChip();
+            c.Text = text;
+            c.Accent = accent;
+            c.On = on;
+            c.Font = Font;
+            c.SetBounds(x, y, w, P(26));
+            c.Click += delegate { click(); };
+            return c;
+        }
+
+        int ChipW(string text)
+        {
+            Font f = Font ?? SystemFonts.DefaultFont;
+            return TextRenderer.MeasureText(text, f).Width + P(24);
+        }
+
+        void RebuildBody()
+        {
+            _body.SuspendLayout();
+            Clear(_body);
+            int x = P(6), y = P(4);
+            int w = ChipW(UiText.T("無條件"));
+            _body.Controls.Add(Chip(UiText.T("無條件"), x, y, w, Color.FromArgb(150, 150, 162), _type == "", delegate
+            {
+                _type = "";
+                _val = "";
+                Apply();
+                RebuildBody();
+                RebuildVals();
+            }));
+            x += w + P(5);
+            for (int i = 0; i < Types.Length; i++)
+            {
+                string t = Types[i];
+                int tw = ChipW(UiText.T(Labels[i]));
+                _body.Controls.Add(Chip(UiText.T(Labels[i]), x, y, tw, Accent, _type == t, delegate
+                {
+                    if (_type == t) { _type = ""; _val = ""; }
+                    else { _type = t; _val = ""; }
+                    Apply();
+                    RebuildBody();
+                    RebuildVals();
+                }));
+                x += tw + P(5);
+            }
+            _body.ResumeLayout();
+        }
+
+        void RebuildVals()
+        {
+            _vals.SuspendLayout();
+            Clear(_vals);
+            if (_type == "")
+            {
+                var none = new Label();
+                none.Text = UiText.T("無條件");
+                none.ForeColor = Color.FromArgb(126, 126, 136);
+                none.Font = Font;
+                none.SetBounds(P(8), P(4), Math.Max(P(80), _vals.Width - P(16)), P(22));
+                _vals.Controls.Add(none);
+                _vals.ResumeLayout();
+                return;
+            }
+            int x = P(6), y = P(2);
+            if (_type == "attribute" || _type == "reputation")
+            {
+                string[] opts = _type == "attribute" ? Attrs : new[] { "高", "低" };
+                foreach (var o in opts)
+                {
+                    string ov = o;
+                    int w = ChipW(ov);
+                    _vals.Controls.Add(Chip(ov, x, y, w, Accent, _val == ov, delegate
+                    {
+                        _val = ov;
+                        Apply();
+                        RebuildVals();
+                    }));
+                    x += w + P(5);
+                }
+                _vals.ResumeLayout();
+                return;
+            }
+
+            int bw = Math.Max(P(160), _vals.Width - P(150));
+            var box = new TextBox();
+            box.BackColor = Color.FromArgb(30, 30, 34);
+            box.ForeColor = Color.White;
+            box.BorderStyle = BorderStyle.FixedSingle;
+            box.Font = Font;
+            box.Text = _val;
+            box.SetBounds(x, y + P(2), bw, P(22));
+            _vals.Controls.Add(box);
+            x += bw + P(6);
+            Action commit = delegate
+            {
+                _val = (box.Text ?? "").Trim();
+                Apply();
+                RebuildVals();
+            };
+            box.TextChanged += delegate { _val = (box.Text ?? "").Trim(); Apply(); };
+            _vals.Controls.Add(Chip(UiText.T("加入"), x, y, ChipW(UiText.T("加入")), Color.FromArgb(120, 200, 140), false, commit));
+            _vals.ResumeLayout();
+        }
+
+        /* 寫回選項資料；選「無條件」就把 requirement 相關欄位清乾淨 */
+        void Apply()
+        {
+            if (_od == null) return;
+            if (_type == "")
+            {
+                _od.Remove("requirement");
+                _od.Remove("conditionText");
+                _od.Remove("specialReason");
+                _od.Remove("special");
+                if (Str(_od, "text").TrimStart().StartsWith("★", StringComparison.Ordinal) ||
+                    Str(_od, "text").TrimStart().StartsWith("☆", StringComparison.Ordinal))
+                {
+                    /* 文字前面的星號是 OCR 標記，改成條件時才需要 */
+                }
+            }
+            else
+            {
+                var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
+                if (req == null) { req = new Dictionary<string, object>(); _od["requirement"] = req; }
+                req["type"] = _type;
+                string name = _val;
+                if (_type == "reputation")
+                {
+                    req["level"] = _val == "低" ? "low" : "high";
+                    name = _val == "低" ? "低名聲" : "高名聲";
+                }
+                else
+                {
+                    if (req.ContainsKey("level")) req.Remove("level");
+                }
+                if (name != "") req["name"] = name;
+                else req.Remove("name");
+                _od["special"] = true;
+                _od["specialReason"] = _type;
+                if (name != "") _od["conditionText"] = name;
+                else _od.Remove("conditionText");
+            }
+            if (_changed != null) _changed();
         }
     }
 
