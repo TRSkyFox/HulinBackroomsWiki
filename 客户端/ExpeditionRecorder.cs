@@ -5532,8 +5532,8 @@ namespace ExpeditionRecorder
             {
                 if (On || Strong)
                 {
-                    using (var b = new SolidBrush(Color.FromArgb(Strong ? 90 : 62, Accent))) g.FillPath(b, path);
-                    using (var pen = new Pen(Color.FromArgb(220, Accent), 1.4f)) g.DrawPath(pen, path);
+                    using (var b = new SolidBrush(Color.FromArgb(Strong ? 110 : 80, Accent))) g.FillPath(b, path);
+                    using (var pen = new Pen(Color.FromArgb(255, Accent), 1.5f)) g.DrawPath(pen, path);
                 }
                 else if (_hot)
                 {
@@ -5542,11 +5542,11 @@ namespace ExpeditionRecorder
                 }
                 else
                 {
-                    using (var pen = new Pen(Color.FromArgb(72, Accent), 1f)) g.DrawPath(pen, path);
+                    using (var pen = new Pen(Color.FromArgb(112, Accent), 1f)) g.DrawPath(pen, path);
                 }
             }
-            Color fg = (On || Strong) ? Color.FromArgb(246, 246, 252)
-                     : (_hot ? Color.FromArgb(232, 232, 240) : Color.FromArgb(198, 198, 208));
+            Color fg = (On || Strong) ? Color.FromArgb(255, 255, 255)
+                     : (_hot ? Color.FromArgb(244, 244, 250) : Color.FromArgb(228, 228, 238));
             TextRenderer.DrawText(g, Text, Font, r, fg,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
         }
@@ -5944,10 +5944,11 @@ namespace ExpeditionRecorder
                 }
                 int lw = Math.Max(P(58), TextW("0000") + P(26));
                 var vbox = new TextBox();
-                vbox.BackColor = Color.FromArgb(30, 30, 34);
+                vbox.BackColor = Color.FromArgb(46, 46, 52);
                 vbox.ForeColor = Color.White;
                 vbox.BorderStyle = BorderStyle.FixedSingle;
                 vbox.Font = Font;
+                vbox.TextAlign = HorizontalAlignment.Center;
                 vbox.Text = Str(req, "value");
                 vbox.SetBounds(x, y + P(1), lw, P(22));
                 vbox.TextChanged += delegate
