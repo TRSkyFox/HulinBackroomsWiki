@@ -3723,6 +3723,7 @@ namespace ExpeditionRecorder
         bool _saving;
         bool _dirty;
         bool _normalized;
+        Label _lastLabel;
         bool _firstShown;
 
         int Px(int v) { return UiScale.Px(v); }
@@ -4039,6 +4040,17 @@ namespace ExpeditionRecorder
             return d;
         }
 
+        /* 依矩形找出標題 Label（AddCaption 只回傳矩形），讓勾選時能即時換成星號 */
+        Label CaptionLabel(Rectangle r)
+        {
+            foreach (Control c in _panel.Controls)
+            {
+                var lb = c as Label;
+                if (lb != null && lb.Left == r.X && lb.Top == r.Y && lb.Width == r.Width) return lb;
+            }
+            return null;
+        }
+
         /* 結果區：一條分隔線 + 標題，不再畫第二個框（避免兩條框線疊在一起）。 */
         Decor AddDivider(int top, string caption)
         {
@@ -4119,6 +4131,7 @@ namespace ExpeditionRecorder
                 l.TextAlign = ContentAlignment.MiddleRight;
             }
             l.ForeColor = color ?? Color.FromArgb(170, 170, 178);
+            _lastLabel = l;
             _panel.Controls.Add(l);
         }
 
@@ -4562,8 +4575,9 @@ namespace ExpeditionRecorder
 
         /* 條件的操作面板（CondBox）：固定大小、按鈕式，改動只重畫框內。 */
         /* 條件：勾選框在外面；區域高度固定，勾選只切換框的可見度（不重排整個表單）。 */
-        void AddConditionBox(Dictionary<string, object> od)
+        void AddConditionBox(Dictionary<string, object> od, Label optLabel, string optName, Label frameCaption)
         {
+            Color optLabelFg = optLabel != null ? optLabel.ForeColor : Color.FromArgb(170, 170, 178);
             int rowTop = _y;
             bool narrow = Narrow;
             bool on = IsConditionOption(od);
@@ -4619,6 +4633,16 @@ namespace ExpeditionRecorder
                 none.Visible = !cb.Checked;
                 box.Visible = cb.Checked;
                 hint.Visible = !cb.Checked;
+                if (optLabel != null)
+                {
+                    UiText.SetText(optLabel, cb.Checked ? "⭐條件選項" : (optName ?? "選項"));
+                    optLabel.ForeColor = cb.Checked ? Color.FromArgb(255, 196, 92) : optLabelFg;
+                }
+                if (frameCaption != null)
+                {
+                    frameCaption.Text = cb.Checked ? "⭐條件選項" : (optName ?? "選項");
+                    frameCaption.Width = TextW(frameCaption.Text, BasePt) + Px(12);
+                }
                 _normalized = true;
                 ScheduleSave();
             };
@@ -5180,7 +5204,7 @@ namespace ExpeditionRecorder
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        AddConditionBox(od);
+                        AddConditionBox(od, _lastLabel, optName, CaptionLabel(optFrame.Caption));
                         AddCheckRow(od);
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;

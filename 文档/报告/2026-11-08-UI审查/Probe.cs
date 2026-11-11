@@ -120,7 +120,32 @@ static class Probe
             if (panel != null) CaptureControl(panel, Path.Combine(OutDir, tag + "-panel.png"));
         }
         Dump(f, tag);
-        string probeItem = Environment.GetEnvironmentVariable("PROBE_ITEM");
+        string probeCond = Environment.GetEnvironmentVariable("PROBE_COND");
+        if (!string.IsNullOrEmpty(probeCond))
+        {
+            var onClick2 = typeof(Control).GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            CheckBox target = null;
+            foreach (Control c in AllControls(f))
+            {
+                var cbx = c as CheckBox;
+                if (cbx != null && cbx.Text == "條件選項" && cbx.Checked == false) { target = cbx; break; }
+            }
+            Log.AppendLine("cond checkbox: " + (target == null ? "none" : "found"));
+            string before = "";
+            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && l.Text.Contains("條件選項")) { before = l.Text; break; } }
+            Log.AppendLine("label before: " + before);
+            if (target != null) { onClick2.Invoke(target, new object[] { EventArgs.Empty }); Pump(400); }
+            string after = "";
+            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && l.Text.Contains("條件選項")) { after = l.Text; break; } }
+            Log.AppendLine("label after: " + after + " checked=" + (target == null ? "?" : target.Checked.ToString()));
+            var dataField2 = f.GetType().GetField("_data", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (dataField2 != null)
+            {
+                var js2 = new System.Web.Script.Serialization.JavaScriptSerializer();
+                Log.AppendLine("DATA2: " + js2.Serialize(dataField2.GetValue(f)));
+            }
+            CaptureClient(f, Path.Combine(OutDir, tag + "-cond.png"));
+        }        string probeItem = Environment.GetEnvironmentVariable("PROBE_ITEM");
         if (!string.IsNullOrEmpty(probeItem))
         {
             Control box = null;
