@@ -1886,6 +1886,12 @@ namespace ExpeditionRecorder
             { "高", "High" },
             { "低", "Low" },
             { "條件", "Condition" },
+            { "需要", "Requires" },
+            { "事件前置", "Event prereq" },
+            { "會消耗", "Consumed" },
+            { "需要檢定", "Check required" },
+            { "需要手動記錄條件", "Record the condition manually" },
+            { "無條件", "No condition" },
             { "附加選項", "Side option" }
         };
 
@@ -4560,7 +4566,7 @@ namespace ExpeditionRecorder
             int rowTop = _y;
             bool narrow = Narrow;
             int bw = narrow ? FieldW : (FieldRight - FieldX);
-            int bh = Px(66);
+            int bh = Px(94);
             AddLabel("條件", rowTop, narrow ? _fieldH : _comboH, Color.FromArgb(255, 196, 92));
             int by = narrow ? rowTop + _fieldH + Px(2) : rowTop;
             var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
@@ -5089,8 +5095,8 @@ namespace ExpeditionRecorder
                         bool condOpt = IsConditionOption(od);
                         AddConditionBox(od);
                         string condType = condOpt ? InferConditionType(od) : "";
-                        /* 屬性檢定只在資料本來就有 check 時才顯示（條件面板已經選了屬性，不重複） */
-                        if (od.ContainsKey("check"))
+                        /* 屬性檢定：條件面板已經選了「屬性」時不再重複顯示 */
+                        if (od.ContainsKey("check") && condType != "attribute")
                             AddChoice(od, "check", "屬性檢定", new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" }, new[] { "力量", "敏捷", "體質", "感知", "智力", "魅力" });
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
@@ -5563,24 +5569,26 @@ namespace ExpeditionRecorder
         }
     }
 
-    /* ══ 條件選項的「條件」面板 ══════════════════════════════════
-       參考影響框：一整塊固定大小、按鈕式，改動只重畫框內，不重建整個表單。
-       第一排：無條件＋七種條件（物品／屬性／角色／狀態／技能／事件／名聲）。
-       第二排：該條件的具體選項（屬性六項、名聲高低；其餘自己填）。 */
+    /* ══ 條件面板（CondBox）════════════════════════════════════
+       固定大小、按鈕式；所有改動只重畫框內，不會重建整個表單。
+       ☐ 條件選項 → 需要 [物品|屬性|角色|狀態|技能|事件前置|名聲] → 該條件的細節。 */
     class CondBox : Panel
     {
         readonly Dictionary<string, object> _od;
         readonly Action _changed;
-        readonly Panel _body = new Panel();
-        readonly Panel _vals = new Panel();
-        readonly List<string> _chipType = new List<string>();
+        readonly Panel _r0 = new Panel();
+        readonly Panel _r1 = new Panel();
+        readonly Panel _r2 = new Panel();
         string _type = "";
-        string _val = "";
+        bool _consume;
+        string _cmp = ">";
+        string _needCheck;
+        bool _on;
 
         static readonly string[] Types = { "item", "attribute", "character", "status", "skill", "event", "reputation" };
-        static readonly string[] Labels = { "物品", "屬性", "角色", "狀態", "技能", "事件", "名聲" };
         static readonly string[] Attrs = { "力量", "敏捷", "體質", "感知", "智力", "魅力" };
         static readonly Color Accent = Color.FromArgb(255, 214, 130);
+        static readonly Color EventAccent = Color.FromArgb(150, 150, 162);
 
         static int P(int v) { return UiScale.Px(v); }
 
@@ -5590,6 +5598,11 @@ namespace ExpeditionRecorder
             return Convert.ToString(d[k]);
         }
 
+        static string[] Labels
+        {
+            get { return new[] { "物品", "屬性", "角色", "狀態", "技能", "事件前置", "名聲" }; }
+        }
+
         public CondBox(Dictionary<string, object> od, int width, int height, Action changed)
         {
             _od = od;
@@ -5597,44 +5610,46 @@ namespace ExpeditionRecorder
             DoubleBuffered = true;
             BackColor = Color.FromArgb(33, 33, 37);
             SetBounds(0, 0, width, height);
-            _body.BackColor = Color.FromArgb(38, 38, 44);
-            _vals.BackColor = _body.BackColor;
-            Controls.Add(_body);
-            Controls.Add(_vals);
-            _body.SetBounds(0, 0, Width, P(34));
-            _vals.SetBounds(0, P(36), Width, Math.Max(P(26), Height - P(36)));
+            _r0.BackColor = Color.FromArgb(38, 38, 44);
+            _r1.BackColor = _r0.BackColor;
+            _r2.BackColor = _r0.BackColor;
+            Controls.Add(_r0);
+            Controls.Add(_r1);
+            Controls.Add(_r2);
+            _r0.SetBounds(0, 0, Width, P(30));
+            _r1.SetBounds(0, P(32), Width, P(28));
+            _r2.SetBounds(0, P(62), Width, Math.Max(P(26), Height - P(62)));
             Paint += delegate (object s, PaintEventArgs e)
             {
                 using (var pen = new Pen(Color.FromArgb(74, 74, 84)))
                     e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
             };
             Load();
-            RebuildBody();
-            RebuildVals();
+            RebuildAll();
         }
 
         void Load()
         {
             var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
+            _on = false;
             _type = "";
-            _val = "";
-            if (req != null)
+            _consume = false;
+            _cmp = ">";
+            _needCheck = "true";
+            if (req != null && req.Count > 0)
             {
                 string t = Str(req, "type");
                 if (t == "attr") t = "attribute";
-                if (t == "highRep" || t == "lowRep")
-                {
-                    _type = "reputation";
-                    _val = t == "lowRep" || Str(req, "level") == "low" ? "低" : "高";
-                }
-                else if (Array.IndexOf(Types, t) >= 0) _type = t;
-                if (_type != "") _val = Str(req, "name");
-                if (_type == "reputation") _val = (Str(req, "level") == "low" || Str(req, "name").IndexOf("低", StringComparison.Ordinal) >= 0) ? "低" : "高";
+                if (t == "highRep" || t == "lowRep") t = "reputation";
+                if (Array.IndexOf(Types, t) >= 0) { _type = t; _on = true; }
+                _consume = Str(req, "consume") == "true";
+                if (Str(req, "cmp") != "") _cmp = Str(req, "cmp");
+                _needCheck = Str(req, "needCheck") == "" ? "true" : Str(req, "needCheck");
             }
             else if (Str(_od, "conditionText") != "")
             {
+                _on = true;
                 _type = "item";
-                _val = Str(_od, "conditionText");
             }
         }
 
@@ -5646,6 +5661,12 @@ namespace ExpeditionRecorder
             foreach (var c in old) c.Dispose();
         }
 
+        int TextW(string t)
+        {
+            Font f = Font ?? SystemFonts.DefaultFont;
+            return TextRenderer.MeasureText(t, f).Width;
+        }
+
         FxChip Chip(string text, int x, int y, int w, Color accent, bool on, Action click)
         {
             var c = new FxChip();
@@ -5653,138 +5674,281 @@ namespace ExpeditionRecorder
             c.Accent = accent;
             c.On = on;
             c.Font = Font;
-            c.SetBounds(x, y, w, P(26));
+            c.SetBounds(x, y, w, P(24));
             c.Click += delegate { click(); };
             return c;
         }
 
-        int ChipW(string text)
+        int ChipW(string text) { return TextW(text) + P(24); }
+
+        void RebuildAll()
         {
-            Font f = Font ?? SystemFonts.DefaultFont;
-            return TextRenderer.MeasureText(text, f).Width + P(24);
+            Rebuild0();
+            Rebuild1();
+            Rebuild2();
         }
 
-        void RebuildBody()
+        void Rebuild0()
         {
-            _body.SuspendLayout();
-            Clear(_body);
-            int x = P(6), y = P(4);
-            int w = ChipW(UiText.T("無條件"));
-            _body.Controls.Add(Chip(UiText.T("無條件"), x, y, w, Color.FromArgb(150, 150, 162), _type == "", delegate
+            _r0.SuspendLayout();
+            Clear(_r0);
+            var cb = new CheckBox();
+            UiText.SetText(cb, "條件選項");
+            cb.ForeColor = Accent;
+            cb.Font = Font;
+            cb.Checked = _on;
+            int w = Math.Min(P(110), Math.Max(P(96), MathUtil(TextW(cb.Text) + P(30))));
+            cb.SetBounds(P(6), P(3), w, P(24));
+            cb.CheckedChanged += delegate
             {
-                _type = "";
-                _val = "";
+                if (UiText.Applying) return;
+                _on = cb.Checked;
+                if (!_on) { _type = ""; }
                 Apply();
-                RebuildBody();
-                RebuildVals();
-            }));
-            x += w + P(5);
+                Rebuild1();
+                Rebuild2();
+            };
+            _r0.Controls.Add(cb);
+            if (!_on)
+            {
+                var none = new Label();
+                UiText.SetText(none, "無條件");
+                none.ForeColor = Color.FromArgb(126, 126, 136);
+                none.Font = Font;
+                none.SetBounds(P(6) + w + P(8), P(4), Math.Max(P(60), _r0.Width - w - P(20)), P(22));
+                _r0.Controls.Add(none);
+            }
+            _r0.ResumeLayout();
+        }
+
+        static int MathUtil(int v) { return Math.Max(24, v); }
+
+        void Rebuild1()
+        {
+            _r1.SuspendLayout();
+            Clear(_r1);
+            if (!_on) { _r1.ResumeLayout(); return; }
+            var lb = new Label();
+            UiText.SetText(lb, "需要");
+            lb.ForeColor = Color.FromArgb(200, 200, 208);
+            lb.Font = Font;
+            int lx = P(8);
+            int lw = Math.Max(P(34), TextW(lb.Text) + P(6));
+            lb.SetBounds(lx, P(3), lw, P(22));
+            _r1.Controls.Add(lb);
+            int x = lx + lw + P(4);
             for (int i = 0; i < Types.Length; i++)
             {
                 string t = Types[i];
-                int tw = ChipW(UiText.T(Labels[i]));
-                _body.Controls.Add(Chip(UiText.T(Labels[i]), x, y, tw, Accent, _type == t, delegate
+                string lab = UiText.T(Labels[i]);
+                int tw = ChipW(lab);
+                Color acc = t == "event" ? EventAccent : Accent;
+                _r1.Controls.Add(Chip(lab, x, P(2), tw, _type == t ? acc : acc, _type == t, delegate
                 {
-                    if (_type == t) { _type = ""; _val = ""; }
-                    else { _type = t; _val = ""; }
+                    _type = (_type == t ? "" : t);
                     Apply();
-                    RebuildBody();
-                    RebuildVals();
+                    Rebuild1();
+                    Rebuild2();
                 }));
-                x += tw + P(5);
+                x += tw + P(4);
             }
-            _body.ResumeLayout();
+            _r1.ResumeLayout();
         }
 
-        void RebuildVals()
+        void Rebuild2()
         {
-            _vals.SuspendLayout();
-            Clear(_vals);
-            if (_type == "")
+            _r2.SuspendLayout();
+            Clear(_r2);
+            if (!_on || _type == "") { _r2.ResumeLayout(); return; }
+
+            int x = P(8), y = P(2);
+            var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
+            string cur = Str(req, "name");
+
+            if (_type == "reputation")
             {
-                var none = new Label();
-                none.Text = UiText.T("無條件");
-                none.ForeColor = Color.FromArgb(126, 126, 136);
-                none.Font = Font;
-                none.SetBounds(P(8), P(4), Math.Max(P(80), _vals.Width - P(16)), P(22));
-                _vals.Controls.Add(none);
-                _vals.ResumeLayout();
-                return;
-            }
-            int x = P(6), y = P(2);
-            if (_type == "attribute" || _type == "reputation")
-            {
-                string[] opts = _type == "attribute" ? Attrs : new[] { "高", "低" };
-                foreach (var o in opts)
+                string lv = Str(req, "level");
+                if (lv == "") lv = cur.IndexOf("低", StringComparison.Ordinal) >= 0 ? "low" : "high";
+                string[] opts = { "高", "低" };
+                for (int i = 0; i < opts.Length; i++)
                 {
-                    string ov = o;
+                    string ov = opts[i];
+                    bool on = (ov == "高" ? lv != "low" : lv == "low");
                     int w = ChipW(ov);
-                    _vals.Controls.Add(Chip(ov, x, y, w, Accent, _val == ov, delegate
+                    _r2.Controls.Add(Chip(ov, x, y, w, Accent, on, delegate
                     {
-                        _val = ov;
-                        Apply();
-                        RebuildVals();
+                        SetLevel(ov == "低" ? "low" : "high");
+                        Rebuild2();
                     }));
                     x += w + P(5);
                 }
-                _vals.ResumeLayout();
+                _r2.ResumeLayout();
                 return;
             }
 
-            int bw = Math.Max(P(160), _vals.Width - P(150));
+            if (_type == "attribute")
+            {
+                foreach (var a in Attrs)
+                {
+                    string av = a;
+                    int w = ChipW(av);
+                    _r2.Controls.Add(Chip(av, x, y, w, Accent, cur == av, delegate
+                    {
+                        var r = Req();
+                        r["name"] = av;
+                        Apply();
+                        Rebuild2();
+                    }));
+                    x += w + P(4);
+                }
+                /* 大於／小於 */
+                string[] cmps = { ">", "<" };
+                for (int i = 0; i < cmps.Length; i++)
+                {
+                    string cv = cmps[i];
+                    int w = ChipW(cv);
+                    _r2.Controls.Add(Chip(cv, x, y, w, Accent, _cmp == cv, delegate
+                    {
+                        _cmp = cv;
+                        Apply();
+                        Rebuild2();
+                    }));
+                    x += w + P(4);
+                }
+                var vbox = new TextBox();
+                vbox.BackColor = Color.FromArgb(30, 30, 34);
+                vbox.ForeColor = Color.White;
+                vbox.BorderStyle = BorderStyle.FixedSingle;
+                vbox.Font = Font;
+                vbox.Text = Str(req, "value");
+                vbox.SetBounds(x, y + P(1), P(52), P(22));
+                vbox.TextChanged += delegate
+                {
+                    var r = Req();
+                    r["value"] = (vbox.Text ?? "").Trim();
+                    Apply();
+                };
+                _r2.Controls.Add(vbox);
+                x += P(52) + P(6);
+
+                var chk = new CheckBox();
+                UiText.SetText(chk, "需要檢定");
+                chk.ForeColor = Color.FromArgb(220, 220, 228);
+                chk.Font = Font;
+                chk.Checked = Str(req, "needCheck") != "false";
+                chk.SetBounds(x, y, Math.Max(P(96), TextW(chk.Text) + P(30)), P(24));
+                chk.CheckedChanged += delegate
+                {
+                    if (UiText.Applying) return;
+                    var r = Req();
+                    r["needCheck"] = chk.Checked ? "true" : "false";
+                    Apply();
+                };
+                _r2.Controls.Add(chk);
+                _r2.ResumeLayout();
+                return;
+            }
+
+            /* 物品／角色／狀態／技能／事件前置：直接輸入 */
+            int bw = Math.Max(P(140), _r2.Width - P(300));
             var box = new TextBox();
             box.BackColor = Color.FromArgb(30, 30, 34);
-            box.ForeColor = Color.White;
+            box.ForeColor = _type == "event" ? Color.FromArgb(190, 190, 200) : Color.White;
             box.BorderStyle = BorderStyle.FixedSingle;
             box.Font = Font;
-            box.Text = _val;
-            box.SetBounds(x, y + P(2), bw, P(22));
-            _vals.Controls.Add(box);
-            x += bw + P(6);
-            Action commit = delegate
+            box.Text = cur;
+            box.SetBounds(x, y + P(1), bw, P(22));
+            _r2.Controls.Add(box);
+            if (_type == "event")
             {
-                _val = (box.Text ?? "").Trim();
+                var ph = new Label();
+                UiText.SetText(ph, "需要手動記錄條件");
+                ph.ForeColor = Color.FromArgb(120, 120, 128);
+                ph.BackColor = box.BackColor;
+                ph.Font = Font;
+                ph.SetBounds(box.Left + P(3), box.Top + P(2), bw - P(6), P(18));
+                ph.Cursor = Cursors.IBeam;
+                ph.Click += delegate { box.Focus(); };
+                _r2.Controls.Add(ph);
+                ph.Visible = (box.Text ?? "") == "";
+                box.TextChanged += delegate { ph.Visible = (box.Text ?? "") == ""; };
+                box.GotFocus += delegate { ph.Visible = false; };
+                box.LostFocus += delegate { ph.Visible = (box.Text ?? "") == ""; };
+                ph.BringToFront();
+            }
+            box.TextChanged += delegate
+            {
+                var r = Req();
+                string v = (box.Text ?? "").Trim();
+                if (v == "") r.Remove("name"); else r["name"] = v;
                 Apply();
-                RebuildVals();
             };
-            box.TextChanged += delegate { _val = (box.Text ?? "").Trim(); Apply(); };
-            _vals.Controls.Add(Chip(UiText.T("加入"), x, y, ChipW(UiText.T("加入")), Color.FromArgb(120, 200, 140), false, commit));
-            _vals.ResumeLayout();
+            x += bw + P(8);
+
+            if (_type == "item")
+            {
+                var chk = new CheckBox();
+                UiText.SetText(chk, "會消耗");
+                chk.ForeColor = Color.FromArgb(220, 220, 228);
+                chk.Font = Font;
+                chk.Checked = _consume;
+                chk.SetBounds(x, y, Math.Max(P(84), TextW(chk.Text) + P(30)), P(24));
+                chk.CheckedChanged += delegate
+                {
+                    if (UiText.Applying) return;
+                    _consume = chk.Checked;
+                    var r = Req();
+                    if (_consume) r["consume"] = "true"; else if (r.ContainsKey("consume")) r.Remove("consume");
+                    Apply();
+                };
+                _r2.Controls.Add(chk);
+            }
+            _r2.ResumeLayout();
         }
 
-        /* 寫回選項資料；選「無條件」就把 requirement 相關欄位清乾淨 */
+        Dictionary<string, object> Req()
+        {
+            var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
+            if (req == null) { req = new Dictionary<string, object>(); _od["requirement"] = req; }
+            req["type"] = _type;
+            return req;
+        }
+
+        void SetLevel(string lv)
+        {
+            var r = Req();
+            r["level"] = lv;
+            r["name"] = lv == "low" ? "低名聲" : "高名聲";
+            Apply();
+        }
+
+        /* 寫回選項資料：關掉就清乾淨 */
         void Apply()
         {
             if (_od == null) return;
-            if (_type == "")
+            if (!_on || _type == "")
             {
                 _od.Remove("requirement");
                 _od.Remove("conditionText");
                 _od.Remove("specialReason");
                 _od.Remove("special");
-                if (Str(_od, "text").TrimStart().StartsWith("★", StringComparison.Ordinal) ||
-                    Str(_od, "text").TrimStart().StartsWith("☆", StringComparison.Ordinal))
-                {
-                    /* 文字前面的星號是 OCR 標記，改成條件時才需要 */
-                }
             }
             else
             {
-                var req = _od.ContainsKey("requirement") ? _od["requirement"] as Dictionary<string, object> : null;
-                if (req == null) { req = new Dictionary<string, object>(); _od["requirement"] = req; }
-                req["type"] = _type;
-                string name = _val;
+                var r = Req();
+                r["type"] = _type;
+                string name = Str(r, "name");
                 if (_type == "reputation")
                 {
-                    req["level"] = _val == "低" ? "low" : "high";
-                    name = _val == "低" ? "低名聲" : "高名聲";
+                    if (Str(r, "level") == "") r["level"] = "high";
+                    name = Str(r, "level") == "low" ? "低名聲" : "高名聲";
+                    r["name"] = name;
                 }
-                else
+                if (_type == "attribute")
                 {
-                    if (req.ContainsKey("level")) req.Remove("level");
+                    if (!r.ContainsKey("cmp")) r["cmp"] = _cmp;
+                    if (!r.ContainsKey("needCheck")) r["needCheck"] = "true";
                 }
-                if (name != "") req["name"] = name;
-                else req.Remove("name");
                 _od["special"] = true;
                 _od["specialReason"] = _type;
                 if (name != "") _od["conditionText"] = name;
