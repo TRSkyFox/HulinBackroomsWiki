@@ -5521,6 +5521,8 @@ namespace ExpeditionRecorder
             TabStop = false;
         }
 
+        protected override void OnFontChanged(EventArgs e) { base.OnFontChanged(e); Invalidate(); }
+
         protected override void OnMouseEnter(EventArgs e) { _hot = true; Invalidate(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { _hot = false; Invalidate(); base.OnMouseLeave(e); }
 
@@ -5734,6 +5736,16 @@ namespace ExpeditionRecorder
                     e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
             };
             Load();
+            Rebuild1();
+            Rebuild2();
+            Rebuild3();
+        }
+
+        /* 表單會在建立後才套用縮放字型；字型一變就重建框內，尺寸才會一致 */
+        protected override void OnFontChanged(EventArgs e)
+        {
+            base.OnFontChanged(e);
+            if (_r1 == null || !_r1.IsHandleCreated && _r1.Controls.Count == 0) return;
             Rebuild1();
             Rebuild2();
             Rebuild3();
