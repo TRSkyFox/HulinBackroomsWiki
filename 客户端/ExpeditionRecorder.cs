@@ -1859,6 +1859,8 @@ namespace ExpeditionRecorder
             { "飢餓", "Hunger" },
             { "口渴", "Thirst" },
             { "狀態效果", "Status" },
+            { "狀態", "Status" },
+            { "領悟技能", "Skill" },
             { "物品", "Item" },
             { "硬幣", "Coins" },
             { "經驗", "EXP" },
@@ -4598,7 +4600,7 @@ namespace ExpeditionRecorder
             _panel.Controls.Add(none);
 
             int bw = narrow ? FieldW : (FieldRight - FieldX);
-            int bh = Px(92);
+            int bh = Px(86);
             var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
             box.SetBounds(narrow ? PageLeft : FieldX, rowTop + _comboH + Px(2), bw, bh);
             box.Visible = on;
@@ -5204,8 +5206,10 @@ namespace ExpeditionRecorder
                         var optFrame = AddOptionFrame(optTop, optName);
                         AddOptionText(od);
                         if (od.ContainsKey("desc")) AddLongText(od, "desc", "選項說明");
-                        AddConditionBox(od, _lastLabel, optName, CaptionLabel(optFrame.Caption));
+                        var optLabelCtl = _lastLabel;
+                        var frameCaptionCtl = CaptionLabel(optFrame.Caption);
                         AddCheckRow(od);
+                        AddConditionBox(od, optLabelCtl, optName, frameCaptionCtl);
                         string optText = Convert.ToString(od["text"]);
                         Dictionary<string, object> branch = null;
                         foreach (var st in branches)
@@ -5725,7 +5729,7 @@ namespace ExpeditionRecorder
             Controls.Add(_r3);
             _r1.SetBounds(0, P(4), Width, P(26));
             _r2.SetBounds(0, P(32), Width, P(26));
-            _r3.SetBounds(0, P(60), Width, Math.Max(P(24), Height - P(60)));
+            _r3.SetBounds(0, P(60), Width, P(26));
             Paint += delegate (object s, PaintEventArgs e)
             {
                 using (var pen = new Pen(Color.FromArgb(74, 74, 84)))
@@ -6032,7 +6036,7 @@ namespace ExpeditionRecorder
         string _kind = "";
         int _who = 0;
 
-        static readonly string[] Cats = { "健康", "物資", "事件" };
+        static readonly string[] Cats = { "狀態", "物資", "事件" };
         static readonly Color[] CatColors =
         {
             Color.FromArgb(222, 118, 118),
@@ -6041,7 +6045,7 @@ namespace ExpeditionRecorder
         };
         static readonly string[][] Kinds =
         {
-            new[] { "體力", "理智", "飢餓", "口渴", "狀態效果" },
+            new[] { "體力", "理智", "飢餓", "口渴", "狀態效果", "領悟技能" },
             new[] { "物品", "硬幣", "經驗", "出口進度", "記憶碎片" },
             new[] { "戰鬥", "切層" }
         };
@@ -6075,6 +6079,7 @@ namespace ExpeditionRecorder
         static readonly Color CCoin = Color.FromArgb(0xE3, 0xCD, 0x5B);
         static readonly Color CShard = Color.FromArgb(0xA0, 0x91, 0xBB);
         static readonly Color CEntity = Color.FromArgb(0xE0, 0x70, 0x5A);
+        static readonly Color CSkill = Color.FromArgb(0xB4, 0x9C, 0xE0);
         static readonly Color CNeutral = Color.FromArgb(150, 150, 162);
 
         static Color KindColor(string kind)
@@ -6088,6 +6093,7 @@ namespace ExpeditionRecorder
                 case "硬幣": return CCoin;
                 case "記憶碎片": return CShard;
                 case "戰鬥": return CEntity;
+                case "領悟技能": return CSkill;
             }
             return CNeutral;
         }
@@ -6593,6 +6599,11 @@ namespace ExpeditionRecorder
                     d["kind"] = "item"; d["name"] = "硬幣"; d["amount"] = amount;
                     if (tg == "所有人") { d["shared"] = true; d["text"] = "所有人 各得到 " + amount + " 硬幣"; }
                     else d["text"] = "得到 " + amount + " 硬幣";
+                    break;
+                case "領悟技能":
+                    if (nm == "") return;
+                    if (MergeOrAdd(arr, tg, "skill", nm, "領悟")) return;
+                    d["kind"] = "skill"; d["name"] = nm; d["text"] = "領悟「" + nm + "」";
                     break;
                 case "狀態效果":
                     if (nm == "") return;
@@ -8344,6 +8355,16 @@ namespace ExpeditionRecorder
                 string p = part.Trim();
                 if (p.Length == 0) continue;
 
+                var msk = System.Text.RegularExpressions.Regex.Match(p, @"^(?:領悟|领悟|學會|学会|習得|习得|學會了|学会了)\s*(?:技能)?\s*[「『]([^」』]+)");
+                if (msk.Success)
+                {
+                    string name = msk.Groups[1].Value.Trim();
+                    var d = new Dictionary<string, object>();
+                    d["target"] = target; d["kind"] = "skill"; d["name"] = name;
+                    d["text"] = "領悟「" + name + "」";
+                    list.Add(d);
+                    continue;
+                }
                 var ms = System.Text.RegularExpressions.Regex.Match(p, @"^陷入\s*[「『]([^」』]+)");
                 if (ms.Success)
                 {
