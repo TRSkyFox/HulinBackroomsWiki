@@ -4587,7 +4587,7 @@ namespace ExpeditionRecorder
             int cbW = Math.Min(Math.Max(Px(96), TextW(UiText.T("條件選項"), BasePt) + Px(32)), Math.Max(Px(96), FieldRight - x));
             AddLabel("條件", rowTop, narrow ? _fieldH : _comboH, Color.FromArgb(255, 196, 92));
             var cb = new CheckBox();
-            UiText.SetText(cb, "條件選項");
+            UiText.SetText(cb, on ? "★條件選項" : "條件選項");
             cb.ForeColor = Color.FromArgb(255, 214, 130);
             cb.Checked = on;
             cb.SetBounds(x, rowTop, cbW, _fieldH);
@@ -4633,6 +4633,8 @@ namespace ExpeditionRecorder
                     od.Remove("special");
                 }
                 none.Visible = !cb.Checked;
+                UiText.SetText(cb, cb.Checked ? "★條件選項" : "條件選項");
+                cb.Width = Math.Min(Math.Max(Px(96), TextW(cb.Text, BasePt) + Px(32)), Math.Max(Px(96), FieldRight - x));
                 if (optLabel != null)
                 {
                     UiText.SetText(optLabel, cb.Checked ? "⭐條件選項" : (optName ?? "選項"));
@@ -5354,6 +5356,10 @@ namespace ExpeditionRecorder
             _relayout.Start();
         }
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+        const int WM_SETREDRAW = 0x000B;
+
         void RelayoutFields()
         {
             if (_rebuilding || _panel == null || _panel.IsDisposed) return;
@@ -5363,6 +5369,12 @@ namespace ExpeditionRecorder
             _lastPanelWidth = w;
             _rebuilding = true;
             int scrollY = -_panel.AutoScrollPosition.Y;
+            bool frozen = _panel.IsHandleCreated;
+            if (frozen)
+            {
+                _panel.SuspendLayout();
+                SendMessage(_panel.Handle, WM_SETREDRAW, (IntPtr)0, IntPtr.Zero);
+            }
             try
             {
                 if (_autoSave != null) _autoSave.Stop();
@@ -5393,7 +5405,17 @@ namespace ExpeditionRecorder
                 }
                 catch { }
             }
-            finally { _rebuilding = false; }
+            finally
+            {
+                if (frozen && _panel != null && !_panel.IsDisposed && _panel.IsHandleCreated)
+                {
+                    SendMessage(_panel.Handle, WM_SETREDRAW, (IntPtr)1, IntPtr.Zero);
+                    _panel.ResumeLayout(false);
+                    _panel.Invalidate(true);
+                    _panel.Update();
+                }
+                _rebuilding = false;
+            }
         }
 
         void HookAutoSave(Control root)
