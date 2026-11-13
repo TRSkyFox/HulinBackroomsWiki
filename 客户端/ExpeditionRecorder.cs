@@ -8347,7 +8347,7 @@ namespace ExpeditionRecorder
         /* 把“天狐：体力 -1、陷入「扭伤」”拆成结构化效果。
            体力/理智/饥饿/口渴等数值只记增减方向；状态与物品保留原文。
            只有整行都能识别时才从 results 移出，避免误吞普通叙述。 */
-        static List<object> ParseEffects(string raw, out bool all)
+        internal static List<object> ParseEffects(string raw, out bool all)
         {
             all = false;
             var list = new List<object>();
@@ -8382,6 +8382,7 @@ namespace ExpeditionRecorder
 
             string[] parts = body.Split(new char[] { '、', '丶', '，', ',', '；', ';', '·', '・' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return list;
+            bool noise = false;
             foreach (var part in parts)
             {
                 string p = part.Trim();
@@ -8401,6 +8402,7 @@ namespace ExpeditionRecorder
                 if (ms.Success)
                 {
                     string name = ms.Groups[1].Value.Trim();
+                    if (IsNoiseEffectName(name)) { noise = true; continue; }
                     var d = new Dictionary<string, object>();
                     d["target"] = target; d["kind"] = "status"; d["name"] = name;
                     d["text"] = "陷入「" + name + "」";
@@ -8411,6 +8413,7 @@ namespace ExpeditionRecorder
                 if (mi.Success)
                 {
                     string name = mi.Groups[1].Value.Trim();
+                    if (IsNoiseEffectName(name)) { noise = true; continue; }
                     var d = new Dictionary<string, object>();
                     d["target"] = target; d["kind"] = "item"; d["name"] = name;
                     d["text"] = "得到「" + name + "」";
@@ -8486,6 +8489,8 @@ namespace ExpeditionRecorder
                 list.Clear();
                 return list;
             }
+            /* 整行都是「吃飽喝足」這類雜訊 → 當成已處理，不進結果 */
+            if (list.Count == 0 && noise) { all = true; return list; }
             all = true;
             return list;
         }
@@ -8501,6 +8506,16 @@ namespace ExpeditionRecorder
         }
 
         /* 這幾種只記「恢復／損失」，遊戲不給數字 */
+        /* 「飽足／水分充足」是吃飽喝足後的短暫狀態，玩家不需要記錄 */
+        internal static bool IsNoiseEffectName(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            string t = s.Replace(" ", "").Replace("　", "").Trim();
+            if (t == "飽足" || t == "饱足" || t == "飽食" || t == "饱食") return true;
+            if (t.IndexOf("水分充足", StringComparison.Ordinal) >= 0) return true;
+            return false;
+        }
+
         internal static bool IsStatKind(string kind)
         {
             string k = kind ?? "";
@@ -9006,6 +9021,7 @@ namespace ExpeditionRecorder
                 LoadHotkeys();
                 if (args.Length > 2 && args[0] == "--capturedemo") return CaptureDemo(args[1], args[2], args.Length > 3 ? args[3] : "event");
                 if (args.Length > 1 && args[0] == "--checktest") return CheckTest(args[1]);
+                if (args.Length > 0 && args[0] == "--effecttest") return EffectTest();
                 if (args.Length > 0 && args[0] == "--parsetest") return ParseTest();
                 if (args.Length > 2 && args[0] == "--parsedump") return ParseDump(args[1], args[2]);
                 if (args.Length > 2 && args[0] == "--dimdemo") return DimDemo(args[1], args[2]);
@@ -11641,6 +11657,31 @@ namespace ExpeditionRecorder
             sb.AppendLine("ok=" + ok + " attr=" + attr + " dc=" + dc + " roll=" + roll + " outcome=" + outcome + " player=" + player);
             sb.AppendLine("norm=" + Party.Normalize("天狐：「冷静，这是症状。」"));
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "checktest.txt"), sb.ToString(), new UTF8Encoding(false));
+            return 0;
+        }
+
+        /* 效果解析的離線檢查：把幾個樣本丟進 ParseEffects，結果寫到 %TEMP% */
+        static int EffectTest()
+        {
+            var lines = new List<string>();
+            string[] samples =
+            {
+                "你：得到「飽足」",
+                "、得到「飽足」、得到「水分充足」",
+                "你：得到「麵包」、得到「硬幣」",
+                "你：陷入「扭傷」",
+                "你：領悟「尋寶」",
+                "天狐：體力 -2、理智 -1"
+            };
+            foreach (var raw in samples)
+            {
+                bool all;
+                var parsed = OverlayForm.ParseEffects(raw, out all);
+                var js = new System.Web.Script.Serialization.JavaScriptSerializer();
+                lines.Add(raw + "  => all=" + all + " " + js.Serialize(parsed));
+            }
+            string outp = Path.Combine(Path.GetTempPath(), "effect-test.txt");
+            File.WriteAllLines(outp, lines.ToArray(), new UTF8Encoding(false));
             return 0;
         }
 

@@ -120,6 +120,30 @@ static class Probe
             if (panel != null) CaptureControl(panel, Path.Combine(OutDir, tag + "-panel.png"));
         }
         Dump(f, tag);
+        string probeEff = Environment.GetEnvironmentVariable("PROBE_EFFECT");
+        if (!string.IsNullOrEmpty(probeEff))
+        {
+            var ov = Asm.GetType("ExpeditionRecorder.OverlayForm");
+            var mi = ov.GetMethod("ParseEffects", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            string[] samples =
+            {
+                "你：得到「飽足」",
+                "、得到「飽足」、得到「水分充足」",
+                "你：得到「麵包」、得到「硬幣」",
+                "你：陷入「扭傷」",
+                "你：領悟「尋寶」",
+                "天狐：體力 -2、理智 -1"
+            };
+            var js = new System.Web.Script.Serialization.JavaScriptSerializer();
+            foreach (var raw in samples)
+            {
+                var args2 = new object[] { raw, false };
+                var res = mi.Invoke(null, args2);
+                Console.WriteLine("EFF " + raw + " => all=" + args2[1] + " " + js.Serialize(res));
+            }
+            Console.WriteLine("effect test done");
+            return 0;
+        }
         string probeCond = Environment.GetEnvironmentVariable("PROBE_COND");
         if (!string.IsNullOrEmpty(probeCond))
         {
