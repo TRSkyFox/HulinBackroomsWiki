@@ -128,15 +128,15 @@ static class Probe
             foreach (Control c in AllControls(f))
             {
                 var cbx = c as CheckBox;
-                if (cbx != null && cbx.Text == "條件選項" && cbx.Checked == false) { target = cbx; break; }
+                if (cbx != null && cbx.Checked == false && (cbx.Text == "條件選項" || cbx.Text == "条件选项" || cbx.Text.Contains("條件選") || cbx.Text.Contains("条件选"))) { target = cbx; break; }
             }
             Log.AppendLine("cond checkbox: " + (target == null ? "none" : "found"));
             string before = "";
-            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && l.Text.Contains("條件選項")) { before = l.Text; break; } }
+            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && (l.Text.Contains("條件選項") || l.Text.Contains("条件选项"))) { before = l.Text; break; } }
             Log.AppendLine("label before: " + before);
             if (target != null) { onClick2.Invoke(target, new object[] { EventArgs.Empty }); Pump(400); }
             string after = "";
-            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && l.Text.Contains("條件選項")) { after = l.Text; break; } }
+            foreach (Control c in AllControls(f)) { var l = c as Label; if (l != null && (l.Text.Contains("條件選項") || l.Text.Contains("条件选项"))) { after = l.Text; break; } }
             Log.AppendLine("label after: " + after + " checked=" + (target == null ? "?" : target.Checked.ToString()));
             var dataField2 = f.GetType().GetField("_data", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             if (dataField2 != null)

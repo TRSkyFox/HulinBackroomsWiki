@@ -4601,18 +4601,18 @@ namespace ExpeditionRecorder
 
             int bw = narrow ? FieldW : (FieldRight - FieldX);
             int bh = Px(86);
-            var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
-            box.SetBounds(narrow ? PageLeft : FieldX, rowTop + _comboH + Px(2), bw, bh);
-            box.Visible = on;
-            _panel.Controls.Add(box);
-            var hint = new Label();
-            UiText.SetText(hint, "勾選後可設定條件：物品／屬性／角色／狀態／技能／事件前置／名聲");
-            hint.ForeColor = Color.FromArgb(108, 108, 118);
-            hint.Font = Font;
-            hint.AutoEllipsis = true;
-            hint.SetBounds(narrow ? PageLeft : FieldX, rowTop + _comboH + Px(10), bw, Px(22));
-            hint.Visible = !on;
-            _panel.Controls.Add(hint);
+            if (on)
+            {
+                /* 勾選才建立框，位置就貼在勾選框下面，不會跟後面的內容重疊 */
+                var box = new CondBox(od, bw, bh, delegate { _normalized = true; ScheduleSave(); });
+                box.SetBounds(narrow ? PageLeft : FieldX, cb.Bottom + Px(4), bw, bh);
+                _panel.Controls.Add(box);
+                _y = cb.Bottom + Px(4) + bh + RowGap;
+            }
+            else
+            {
+                _y = rowTop + _fieldH + RowGap;
+            }
 
             cb.CheckedChanged += delegate
             {
@@ -4633,8 +4633,6 @@ namespace ExpeditionRecorder
                     od.Remove("special");
                 }
                 none.Visible = !cb.Checked;
-                box.Visible = cb.Checked;
-                hint.Visible = !cb.Checked;
                 if (optLabel != null)
                 {
                     UiText.SetText(optLabel, cb.Checked ? "⭐條件選項" : (optName ?? "選項"));
@@ -4647,8 +4645,8 @@ namespace ExpeditionRecorder
                 }
                 _normalized = true;
                 ScheduleSave();
+                QueueRelayout(true);
             };
-            _y = rowTop + _comboH + Px(2) + bh + RowGap;
         }
 
         /* 屬性檢定：任何選項都能有（不一定有條件）。點一次選屬性，再點同一個取消。 */
