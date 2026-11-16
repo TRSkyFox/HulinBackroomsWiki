@@ -1,6 +1,6 @@
 {
   "session": "combat",
-  "generatedAt": "2026-10-29T15:55:11.479Z",
+  "generatedAt": "2026-11-07T20:02:43.899Z",
   "counts": {
     "floors": 1,
     "choices": 0,
@@ -45,6 +45,9 @@
           "钝击对它没什么用，看来它抵抗钝击、弱点是火焰。"
         ]
       },
+      "enemies": [
+        "流浪者的幻影"
+      ],
       "confidence": 0.78,
       "source": {
         "frame": 2,

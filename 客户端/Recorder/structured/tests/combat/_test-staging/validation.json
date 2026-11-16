@@ -1,6 +1,6 @@
 {
-  "staging": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging",
-  "checkedAt": "2026-10-29T15:55:11.650Z",
+  "staging": "D:\\Project\\HulinBackroomsWiki\\客户端\\Recorder\\structured\\tests\\combat\\_test-staging",
+  "checkedAt": "2026-11-07T20:02:44.066Z",
   "errors": [],
   "warnings": [
     "大廳: palette 缺 card",
@@ -13,7 +13,7 @@
     {
       "id": "0",
       "name": "大廳",
-      "file": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging\\floors\\0-大廳\\floor.json",
+      "file": "D:\\Project\\HulinBackroomsWiki\\客户端\\Recorder\\structured\\tests\\combat\\_test-staging\\floors\\0-大廳\\floor.json",
       "errors": [],
       "warnings": [
         "palette 缺 card",
@@ -26,7 +26,7 @@
   "entities": [
     {
       "name": "流浪者的幻影",
-      "file": "D:\\BACKROOMS\\logger\\structured\\tests\\combat\\_test-staging\\entities\\流浪者的幻影\\entity.json",
+      "file": "D:\\Project\\HulinBackroomsWiki\\客户端\\Recorder\\structured\\tests\\combat\\_test-staging\\entities\\流浪者的幻影\\entity.json",
       "errors": [],
       "warnings": [
         "實體已存在，合併前要確認"

@@ -1,6 +1,6 @@
 {
   "session": "edge-prefix",
-  "generatedAt": "2026-10-29T15:55:11.732Z",
+  "generatedAt": "2026-11-07T20:02:44.154Z",
   "counts": {
     "floors": 1,
     "choices": 0,
@@ -18,9 +18,9 @@
       "palette": {
         "bg": "#302810"
       },
-      "intro": "一只巨大的猎犬挡在走廊中间，嘴里不停念着数字。",
+      "intro": "一只巨大的猎犬挡在走廊中间，嘴里不停念着数字。\n弱點是火焰。",
       "introFrame": 1,
-      "introScore": 53,
+      "introScore": 60,
       "confidence": 0.85,
       "source": {
         "frame": 1,
@@ -34,7 +34,7 @@
       "floor": "0",
       "enemy": {
         "name": "獵犬",
-        "intro": "一只巨大的猎犬挡在走廊中间，嘴里不停念着数字。",
+        "intro": "一只巨大的猎犬挡在走廊中间，嘴里不停念着数字。\n战利品：獵犬的牙 想要的人按「想要」。\n你在四周翻了翻，找到 2 硬币。",
         "skills": [],
         "drops": [
           "獵犬的牙",
@@ -44,6 +44,9 @@
           "弱點是火焰。"
         ]
       },
+      "enemies": [
+        "獵犬"
+      ],
       "confidence": 0.78,
       "source": {
         "frame": 2,
